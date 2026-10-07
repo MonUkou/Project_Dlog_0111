@@ -1,147 +1,189 @@
-# 📸 DLog — Daily × Vlog
+# 📱 DLog – Ứng dụng mạng xã hội chia sẻ ảnh
 
-<p align="center">
-  <b>Share your moments. Save your memories.</b>
-</p>
+DLog là ứng dụng mạng xã hội dành cho việc chia sẻ hình ảnh và tương tác giữa người dùng. 
+Ứng dụng hỗ trợ đăng bài viết, theo dõi người dùng, thích, bình luận, lưu bài viết và nhận thông báo.
 
-<p align="center">
-  Một ứng dụng mạng xã hội chia sẻ hình ảnh được phát triển trong khuôn khổ đồ án môn
-  <b>Phát triển ứng dụng Mobile</b>.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Language-Java-orange?style=for-the-badge&logo=openjdk&logoColor=white"/>
-  <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Firebase-Backend-FFCA28?style=for-the-badge&logo=firebase&logoColor=black"/>
-</p>
+Hệ thống được tổ chức thành **5 module chính**, gồm **13 nhóm chức năng và 34 chức năng (F01–F34)**.
 
 ---
 
-## 📖 Giới thiệu
+# 1. 📌 Giới thiệu
 
-**DLog (Daily × Vlog)** là một ứng dụng mạng xã hội dành cho việc
-**chia sẻ hình ảnh và lưu giữ những khoảnh khắc trong cuộc sống**.
+DLog tập trung vào các chức năng cơ bản của một ứng dụng mạng xã hội chia sẻ ảnh:
 
-Người dùng có thể đăng tải những bức ảnh của mình, viết caption,
-tương tác với bài viết của người khác, theo dõi bạn bè và quản lý
-trang cá nhân.
-
-> 📷 **DLog — Share your moments.**
-
-Ứng dụng được xây dựng nhằm áp dụng các kiến thức về:
-
-- Phát triển ứng dụng Android
-- Thiết kế giao diện Mobile
-- Lập trình hướng đối tượng
-- Cơ sở dữ liệu
-- Xác thực người dùng
-- Firebase
-- Git & GitHub
-- Làm việc nhóm và quản lý source code
+- Quản lý tài khoản và đăng nhập.
+- Quản lý hồ sơ cá nhân.
+- Theo dõi và tìm kiếm người dùng.
+- Đăng, sửa, xóa và xem bài viết.
+- Thích và bình luận bài viết.
+- Lưu bài viết.
+- Nhận và quản lý thông báo.
 
 ---
 
-## ✨ Tính năng
+# 2. 🎯 Mục tiêu
 
-### 🔐 Tài khoản
+DLog được xây dựng nhằm cung cấp một ứng dụng mạng xã hội đơn giản, trong đó người dùng có thể:
 
-- Đăng ký tài khoản
-- Đăng nhập
-- Đăng xuất
-- Quên mật khẩu
-- Chỉnh sửa thông tin cá nhân
-- Thay đổi ảnh đại diện
-
-### 🏠 Trang chủ
-
-- Xem danh sách bài viết
-- Xem bài viết mới
-- Xem thông tin người đăng
-- Like bài viết
-- Bình luận bài viết
-- Lưu bài viết
-
-### 📝 Bài viết
-
-- Đăng bài viết
-- Upload hình ảnh
-- Thêm caption
-- Chỉnh sửa bài viết
-- Xóa bài viết
-- Xem chi tiết bài viết
-- Like / Unlike
-- Bình luận
-
-### 👥 Mạng xã hội
-
-- Theo dõi người dùng
-- Hủy theo dõi
-- Xem danh sách người theo dõi
-- Xem danh sách đang theo dõi
-- Xem trang cá nhân người khác
-- Tìm kiếm người dùng
-
-### 🔔 Thông báo
-
-Người dùng có thể nhận thông báo khi:
-
-- ❤️ Có người thích bài viết
-- 💬 Có người bình luận
-- 👤 Có người theo dõi
-
-### 🔖 Tiện ích
-
-- Lưu bài viết / hình ảnh
-- Xem danh sách ảnh đã lưu
+- Tạo và quản lý tài khoản.
+- Chia sẻ hình ảnh và nội dung.
+- Theo dõi những người dùng khác.
+- Tương tác với bài viết thông qua Like và Comment.
+- Lưu lại những bài viết yêu thích.
+- Theo dõi các hoạt động thông qua hệ thống thông báo.
 
 ---
 
-## 🖼️ Giao diện
+# 3. ✨ Tính năng
 
-> Một số màn hình chính của ứng dụng:
+## 3.1 🔐 Tài khoản & xác thực
 
-### 🔐 Authentication
+### Đăng ký & đăng nhập
 
-| Login | Register | Forgot Password |
-|:---:|:---:|:---:|
-| *Coming soon* | *Coming soon* | *Coming soon* |
+| Mã | Chức năng |
+|---|---|
+| F01 | Đăng ký tài khoản |
+| F02 | Đăng nhập |
+| F03 | Đăng xuất |
 
-### 🏠 Main
+### Phiên đăng nhập
 
-| Home | Search | Post Detail |
-|:---:|:---:|:---:|
-| *Coming soon* | *Coming soon* | *Coming soon* |
-
-### 👤 Profile
-
-| My Profile | Edit Profile | Other Profile |
-|:---:|:---:|:---:|
-| *Coming soon* | *Coming soon* | *Coming soon* |
-
-> 📌 Screenshot sẽ được cập nhật sau khi hoàn thiện giao diện Figma và Android.
+| Mã | Chức năng |
+|---|---|
+| F04 | Kiểm tra trạng thái đăng nhập |
+| F05 | Lấy mã người dùng hiện tại |
 
 ---
 
-## 🧩 Function Diagram
+## 3.2 👤 Hồ sơ & theo dõi
+
+### Hồ sơ cá nhân
+
+| Mã | Chức năng |
+|---|---|
+| F06 | Xem hồ sơ |
+| F07 | Cập nhật hồ sơ |
+| F08 | Đổi ảnh đại diện |
+
+### Theo dõi
+
+| Mã | Chức năng |
+|---|---|
+| F09 | Theo dõi người dùng |
+| F10 | Bỏ theo dõi |
+| F11 | Kiểm tra đang theo dõi |
+| F12 | Danh sách người theo dõi |
+| F13 | Danh sách đang theo dõi |
+
+### Tìm kiếm
+
+| Mã | Chức năng |
+|---|---|
+| F14 | Tìm kiếm người dùng |
+
+---
+
+## 3.3 📝 Bài viết
+
+### Quản lý bài viết
+
+| Mã | Chức năng |
+|---|---|
+| F15 | Đăng bài viết |
+| F16 | Sửa bài viết |
+| F17 | Xóa bài viết |
+| F18 | Xem chi tiết bài viết |
+
+### Bảng tin & trang cá nhân
+
+| Mã | Chức năng |
+|---|---|
+| F19 | Xem bảng tin |
+| F20 | Xem bài viết của một người |
+
+### Lưu bài viết
+
+| Mã | Chức năng |
+|---|---|
+| F21 | Lưu bài viết |
+| F22 | Bỏ lưu bài viết |
+| F23 | Danh sách bài đã lưu |
+
+### Tiện ích
+
+| Mã | Chức năng |
+|---|---|
+| F24 | Lưu ảnh về thiết bị |
+
+---
+
+## 3.4 ❤️ Tương tác
+
+### Thích bài viết
+
+| Mã | Chức năng |
+|---|---|
+| F25 | Thích bài viết |
+| F26 | Bỏ thích |
+| F27 | Kiểm tra đã thích |
+
+### Bình luận
+
+| Mã | Chức năng |
+|---|---|
+| F28 | Bình luận bài viết |
+| F29 | Xem bình luận |
+| F30 | Xóa bình luận |
+
+---
+
+## 3.5 🔔 Thông báo
+
+### Tạo thông báo
+
+| Mã | Chức năng |
+|---|---|
+| F31 | Tạo thông báo |
+
+Thông báo được tạo khi xảy ra các hoạt động:
+
+- Theo dõi người dùng.
+- Thích bài viết.
+- Bình luận bài viết.
+
+### Xem & quản lý thông báo
+
+| Mã | Chức năng |
+|---|---|
+| F32 | Danh sách thông báo |
+| F33 | Đánh dấu đã đọc |
+| F34 | Đếm thông báo chưa đọc |
+
+---
+
+# 4. 🏗️ Kiến trúc hệ thống
+
+DLog được tổ chức theo các thành phần **Entity – Service – Interface**.
 
 ```text
-                           ┌─────────────────┐
-                           │      DLog       │
-                           │ Photo Social App│
-                           └────────┬────────┘
-                                    │
-        ┌──────────────┬────────────┼────────────┬──────────────┐
-        │              │            │            │              │
-        ▼              ▼            ▼            ▼              ▼
-   👤 Account       📝 Post      👥 Social     🔍 Search     🔔 Notification
-        │              │            │            │              │
-        ├─ Register    ├─ Create    ├─ Follow    └─ User        ├─ Like
-        ├─ Login       ├─ Edit      ├─ Unfollow     Search       ├─ Comment
-        ├─ Logout      ├─ Delete    ├─ Followers                 └─ Follow
-        └─ Profile     ├─ Like      └─ Following
-                       └─ Comment
-
-                              │
-                              ▼
-                         🔖 Saved Photos
+                         DLog
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+     Entity            Service          Interface
+        │                 │                 │
+        │                 ├─ AuthService    ├─ IAuthService
+        │                 ├─ UserService    └─ INotificationService
+        │                 ├─ PostService
+        │                 ├─ InteractionService
+        │                 └─ NotificationService
+        │
+        ├─ BaseEntity
+        ├─ User
+        ├─ Follow
+        ├─ Post
+        ├─ Comment
+        ├─ Like
+        ├─ SavedPost
+        └─ Notification
