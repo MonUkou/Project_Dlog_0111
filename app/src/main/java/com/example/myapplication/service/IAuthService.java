@@ -1,5 +1,7 @@
 package com.example.myapplication.service;
 
+import com.example.myapplication.model.User;
+
 public interface IAuthService {
 
     User register(String email, String password, String username);
