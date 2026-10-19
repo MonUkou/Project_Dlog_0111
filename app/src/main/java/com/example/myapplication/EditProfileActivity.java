@@ -1,10 +1,8 @@
 package com.example.myapplication;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -17,39 +15,34 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide;
 import com.example.myapplication.model.User;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.UserService;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class EditProfileActivity extends AppCompatActivity {
 
-    private ImageView btnBackEditProfile;
-    private Button btnSaveProfile;
-    private ImageView ivEditAvatar;
-    private TextView btnChangeAvatar;
-    private EditText etEditUsername;
-    private EditText etEditFullName;
-    private EditText etEditBio;
-    private ProgressBar progressBarEditProfile;
+    private ImageView ivAvatarEdit;
+    private EditText etDisplayName, etBio;
+    private ProgressBar progressBarEdit;
+    private TextView tvCancel, tvSaveTop;
+    private Button btnLogout;
 
     private UserService userService;
     private AuthService authService;
+    private String currentUserId;
+    private Uri selectedImageUri;
 
-    private Uri newAvatarUri;
-    private User currentUserModel;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    private final ActivityResultLauncher<Intent> avatarPickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    newAvatarUri = result.getData().getData();
-                    Glide.with(this)
-                            .load(newAvatarUri)
-                            .circleCrop()
-                            .into(ivEditAvatar);
+    private final ActivityResultLauncher<String> imagePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    selectedImageUri = uri;
+                    ivAvatarEdit.setImageURI(uri);
                 }
             }
     );
@@ -59,119 +52,94 @@ public class EditProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
 
-        userService = UserService.getInstance();
-        authService = AuthService.getInstance();
+        ivAvatarEdit = findViewById(R.id.ivAvatarEdit);
+        TextView btnChangeAvatar = findViewById(R.id.btnChangeAvatar);
+        tvCancel = findViewById(R.id.tvCancel);
+        tvSaveTop = findViewById(R.id.tvSaveTop);
+        btnLogout = findViewById(R.id.btnLogout);
+        etDisplayName = findViewById(R.id.etDisplayName);
+        etBio = findViewById(R.id.etBio);
+        progressBarEdit = findViewById(R.id.progressBarEdit);
 
-        initViews();
-        loadCurrentProfile();
-    }
+        userService = new UserService();
+        authService = new AuthService();
 
-    private void initViews() {
-        btnBackEditProfile = findViewById(R.id.btnBackEditProfile);
-        btnSaveProfile = findViewById(R.id.btnSaveProfile);
-        ivEditAvatar = findViewById(R.id.ivEditAvatar);
-        btnChangeAvatar = findViewById(R.id.btnChangeAvatar);
-        etEditUsername = findViewById(R.id.etEditUsername);
-        etEditFullName = findViewById(R.id.etEditFullName);
-        etEditBio = findViewById(R.id.etEditBio);
-        progressBarEditProfile = findViewById(R.id.progressBarEditProfile);
-
-        btnBackEditProfile.setOnClickListener(v -> finish());
-        btnChangeAvatar.setOnClickListener(v -> openGalleryForAvatar());
-        btnSaveProfile.setOnClickListener(v -> handleSaveProfile());
-    }
-
-    private void openGalleryForAvatar() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        avatarPickerLauncher.launch(intent);
-    }
-
-    private void loadCurrentProfile() {
-        String uid = authService.getCurrentUserId();
-        userService.getUserProfile(uid, new UserService.Callback<User>() {
-            @Override
-            public void onSuccess(User user) {
-                currentUserModel = user;
-                if (user != null) {
-                    etEditUsername.setText(user.getUsername());
-                    etEditFullName.setText(user.getFullName());
-                    etEditBio.setText(user.getBio());
-
-                    if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
-                        Glide.with(EditProfileActivity.this)
-                                .load(user.getAvatarUrl())
-                                .circleCrop()
-                                .into(ivEditAvatar);
-                    }
-                }
-            }
-
-            @Override
-            public void onError(Exception e) {}
-        });
-    }
-
-    private void handleSaveProfile() {
-        String newUsername = etEditUsername.getText().toString().trim();
-        String newFullName = etEditFullName.getText().toString().trim();
-        String newBio = etEditBio.getText().toString().trim();
-
-        if (newUsername.isEmpty()) {
-            Toast.makeText(this, "Tên người dùng không được để trống!", Toast.LENGTH_SHORT).show();
+        if (!authService.isLoggedIn()) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
 
-        progressBarEditProfile.setVisibility(View.VISIBLE);
-        btnSaveProfile.setEnabled(false);
+        currentUserId = authService.getCurrentUserId();
+        loadCurrentUserData();
 
-        if (currentUserModel == null) {
-            currentUserModel = new User();
-            currentUserModel.setId(authService.getCurrentUserId());
-        }
-
-        currentUserModel.setUsername(newUsername);
-        currentUserModel.setFullName(newFullName);
-        currentUserModel.setBio(newBio);
-
-        if (newAvatarUri != null) {
-            // Upload new avatar to Firebase Storage
-            StorageReference avatarRef = FirebaseStorage.getInstance().getReference()
-                    .child("avatars/" + currentUserModel.getId() + "_" + System.currentTimeMillis() + ".jpg");
-
-            avatarRef.putFile(newAvatarUri)
-                    .addOnSuccessListener(taskSnapshot -> avatarRef.getDownloadUrl()
-                            .addOnSuccessListener(downloadUri -> {
-                                currentUserModel.setAvatarUrl(downloadUri.toString());
-                                saveUserToFirestore();
-                            })
-                            .addOnFailureListener(e -> {
-                                currentUserModel.setAvatarUrl(newAvatarUri.toString());
-                                saveUserToFirestore();
-                            }))
-                    .addOnFailureListener(e -> {
-                        currentUserModel.setAvatarUrl(newAvatarUri.toString());
-                        saveUserToFirestore();
-                    });
-        } else {
-            saveUserToFirestore();
-        }
+        btnChangeAvatar.setOnClickListener(v -> imagePickerLauncher.launch("image/*"));
+        tvCancel.setOnClickListener(v -> finish());
+        tvSaveTop.setOnClickListener(v -> saveProfile());
+        btnLogout.setOnClickListener(v -> {
+            authService.logout();
+            Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        });
     }
 
-    private void saveUserToFirestore() {
-        userService.updateUserProfile(currentUserModel, new UserService.Callback<User>() {
-            @Override
-            public void onSuccess(User user) {
-                progressBarEditProfile.setVisibility(View.GONE);
-                btnSaveProfile.setEnabled(true);
-                Toast.makeText(EditProfileActivity.this, "Đã cập nhật hồ sơ!", Toast.LENGTH_SHORT).show();
-                finish();
+    private void loadCurrentUserData() {
+        progressBarEdit.setVisibility(View.VISIBLE);
+        executorService.execute(() -> {
+            try {
+                User user = userService.getUserProfile(currentUserId);
+                runOnUiThread(() -> {
+                    progressBarEdit.setVisibility(View.GONE);
+                    if (user != null) {
+                        etDisplayName.setText(user.getDisplayName() != null ? user.getDisplayName() : "");
+                        etBio.setText(user.getBio() != null ? user.getBio() : "");
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressBarEdit.setVisibility(View.GONE);
+                    Toast.makeText(EditProfileActivity.this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
             }
+        });
+    }
 
-            @Override
-            public void onError(Exception e) {
-                progressBarEditProfile.setVisibility(View.GONE);
-                btnSaveProfile.setEnabled(true);
-                Toast.makeText(EditProfileActivity.this, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+    private void saveProfile() {
+        String displayName = etDisplayName.getText().toString().trim();
+        String bio = etBio.getText().toString().trim();
+
+        if (displayName.isEmpty()) {
+            etDisplayName.setError("Display name cannot be empty");
+            return;
+        }
+
+        progressBarEdit.setVisibility(View.VISIBLE);
+        executorService.execute(() -> {
+            try {
+                String avatarUrl = null;
+                if (selectedImageUri != null) {
+                    avatarUrl = userService.uploadAvatar(currentUserId, selectedImageUri);
+                } else {
+                    User existing = userService.getUserProfile(currentUserId);
+                    if (existing != null) {
+                        avatarUrl = existing.getAvatarUrl();
+                    }
+                }
+
+                userService.updateProfile(currentUserId, displayName, bio, avatarUrl);
+
+                runOnUiThread(() -> {
+                    progressBarEdit.setVisibility(View.GONE);
+                    Toast.makeText(EditProfileActivity.this, "Profile updated successfully", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressBarEdit.setVisibility(View.GONE);
+                    Toast.makeText(EditProfileActivity.this, "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
             }
         });
     }
