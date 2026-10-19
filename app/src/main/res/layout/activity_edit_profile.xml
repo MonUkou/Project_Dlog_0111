@@ -115,8 +115,8 @@
         android:layout_margin="16dp"
         android:backgroundTint="@android:color/white"
         android:text="Đăng xuất"
-        android:textColor="#FF3B30"
         android:textAllCaps="false"
+        android:textColor="#0F0C0C"
         android:textSize="16sp"
         android:textStyle="bold" />
 
