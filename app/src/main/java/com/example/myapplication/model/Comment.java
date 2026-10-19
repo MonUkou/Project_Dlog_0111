@@ -8,6 +8,8 @@ public class Comment extends BaseEntity {
     private String postId;
     private String authorId;
     private String content;
+    private String username;
+    private String avatarUrl;
 
     public Comment() {
         super();
@@ -38,6 +40,33 @@ public class Comment extends BaseEntity {
         touch();
     }
 
+    public String getUserId() {
+        return authorId;
+    }
+
+    public void setUserId(String userId) {
+        this.authorId = userId;
+        touch();
+    }
+
+    public String getUsername() {
+        return username != null && !username.isEmpty() ? username : authorId;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+        touch();
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+        touch();
+    }
+
     public String getContent() {
         return content;
     }
@@ -64,6 +93,20 @@ public class Comment extends BaseEntity {
         map.put("postId", postId);
         map.put("authorId", authorId);
         map.put("content", content);
+        if (username != null) map.put("username", username);
+        if (avatarUrl != null) map.put("avatarUrl", avatarUrl);
         return map;
+    }
+
+    public static Comment fromMap(Map<String, Object> map) {
+        if (map == null) return null;
+        Comment comment = new Comment();
+        if (map.containsKey("id") && map.get("id") != null) comment.setId((String) map.get("id"));
+        if (map.containsKey("postId") && map.get("postId") != null) comment.setPostId((String) map.get("postId"));
+        if (map.containsKey("authorId") && map.get("authorId") != null) comment.setAuthorId((String) map.get("authorId"));
+        if (map.containsKey("content") && map.get("content") != null) comment.setContent((String) map.get("content"));
+        if (map.containsKey("username") && map.get("username") != null) comment.setUsername((String) map.get("username"));
+        if (map.containsKey("avatarUrl") && map.get("avatarUrl") != null) comment.setAvatarUrl((String) map.get("avatarUrl"));
+        return comment;
     }
 }

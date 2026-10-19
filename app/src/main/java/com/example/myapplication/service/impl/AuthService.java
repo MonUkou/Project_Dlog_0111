@@ -139,7 +139,6 @@ public class AuthService implements IAuthService {
         return fallbackUserId;
     }
 
-    @Override
     public User getCurrentUser() {
         String uid = getCurrentUserId();
         User user = new User();
