@@ -1,130 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="#FFFFFF">
 
-    <!-- Top Action Bar -->
+    <!-- Header -->
     <RelativeLayout
+        android:id="@+id/headerEditProfile"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:paddingHorizontal="16dp">
+        android:layout_height="56dp"
+        android:paddingHorizontal="16dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <ImageView
+            android:id="@+id/btnBackEditProfile"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_back"
+            android:contentDescription="Back"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
         <TextView
-            android:id="@+id/tvCancel"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:text="Hủy"
-            android:textSize="16sp"
-            android:textColor="@android:color/black" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:gravity="center"
             android:text="Sửa hồ sơ"
+            android:textColor="#000000"
             android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/black" />
+            android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tvSaveTop"
+        <Button
+            android:id="@+id/btnSaveProfile"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="36dp"
             android:layout_alignParentEnd="true"
-            android:gravity="center_vertical"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_button_black"
             android:text="Lưu"
-            android:textSize="16sp"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black" />
+            android:paddingHorizontal="16dp" />
     </RelativeLayout>
 
     <View
+        android:id="@+id/dividerEditProfile"
         android:layout_width="match_parent"
         android:layout_height="1dp"
+        android:layout_below="@id/headerEditProfile"
         android:background="#E0E0E0" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+        android:layout_height="match_parent"
+        android:layout_below="@id/dividerEditProfile"
+        android:padding="20dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
             android:gravity="center_horizontal">
 
             <ImageView
-                android:id="@+id/ivAvatarEdit"
-                android:layout_width="88dp"
-                android:layout_height="88dp"
-                android:layout_marginTop="16dp"
-                android:contentDescription="Avatar"
+                android:id="@+id/ivEditAvatar"
+                android:layout_width="90dp"
+                android:layout_height="90dp"
+                android:background="@drawable/bg_circle_avatar"
                 android:scaleType="centerCrop"
-                android:src="@mipmap/ic_launcher" />
+                android:contentDescription="Avatar" />
 
             <TextView
                 android:id="@+id/btnChangeAvatar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:text="Đổi ảnh đại diện"
-                android:textSize="15sp"
+                android:textColor="#000000"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="#0095F6" />
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="8dp" />
+
+            <!-- Username -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Tên người dùng (Username)"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <EditText
-                android:id="@+id/etDisplayName"
+                android:id="@+id/etEditUsername"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="24dp"
-                android:autofillHints="name"
-                android:background="@android:drawable/editbox_background_normal"
-                android:hint="Tên hiển thị"
-                android:inputType="textPersonName"
-                android:paddingHorizontal="12dp"
-                android:textSize="14sp" />
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_rounded_edittext"
+                android:hint="Tên người dùng"
+                android:inputType="text"
+                android:paddingHorizontal="14dp"
+                android:textColor="#000000"
+                android:textSize="15sp" />
+
+            <!-- Full Name -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Tên hiển thị"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <EditText
-                android:id="@+id/etBio"
+                android:id="@+id/etEditFullName"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_rounded_edittext"
+                android:hint="Tên hiển thị"
+                android:inputType="textPersonName"
+                android:paddingHorizontal="14dp"
+                android:textColor="#000000"
+                android:textSize="15sp" />
+
+            <!-- Bio -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:autofillHints="description"
-                android:background="@android:drawable/editbox_background_normal"
+                android:text="Giới thiệu bản thân"
+                android:textColor="#000000"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etEditBio"
+                android:layout_width="match_parent"
+                android:layout_height="90dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_rounded_edittext"
                 android:gravity="top|start"
-                android:hint="Giới thiệu"
-                android:inputType="textMultiLine"
+                android:hint="Giới thiệu ngắn về bản thân..."
                 android:padding="12dp"
-                android:textSize="14sp" />
+                android:textColor="#000000"
+                android:textSize="15sp" />
+
+            <ProgressBar
+                android:id="@+id/progressBarEditProfile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:visibility="gone" />
 
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Logout Button pinned at absolute bottom -->
-    <Button
-        android:id="@+id/btnLogout"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_margin="16dp"
-        android:backgroundTint="@android:color/white"
-        android:text="Đăng xuất"
-        android:textColor="#FF3B30"
-        android:textAllCaps="false"
-        android:textSize="16sp"
-        android:textStyle="bold" />
-
-    <ProgressBar
-        android:id="@+id/progressBarEdit"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone" />
-
-</LinearLayout>
+</RelativeLayout>
