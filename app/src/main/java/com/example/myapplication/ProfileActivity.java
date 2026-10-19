@@ -1,170 +1,314 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.example.myapplication.adapter.PostGridAdapter;
+import com.example.myapplication.model.Follow;
+import com.example.myapplication.model.Post;
 import com.example.myapplication.model.User;
 import com.example.myapplication.service.impl.AuthService;
+import com.example.myapplication.service.impl.NotificationService;
+import com.example.myapplication.service.impl.PostService;
 import com.example.myapplication.service.impl.UserService;
+import com.example.myapplication.util.BottomNavHelper;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.List;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    private ImageView ivAvatar;
-    private TextView tvHeaderUsername, tvDisplayName, tvBio;
-    private TextView tvPostsCount, tvFollowersCount, tvFollowingCount;
-    private Button btnAction;
-    private ProgressBar progressBar;
+    private TextView tvProfileTitleUsername;
+    private ImageView ivProfileAvatar;
+    private TextView tvPostsCount;
+    private TextView tvFollowersCount;
+    private TextView tvFollowingCount;
+    private TextView tvFullName;
+    private TextView tvBio;
+    private Button btnProfileActionButton;
 
+    private LinearLayout llProfileTabs;
+    private TextView tabUserPosts;
+    private TextView tabSavedPosts;
+
+    private RecyclerView rvProfilePosts;
+    private ProgressBar progressBarProfile;
+    private TextView tvStateProfile;
+
+    private PostGridAdapter postGridAdapter;
     private UserService userService;
+    private PostService postService;
     private AuthService authService;
-    private String profileUserId;
-    private String currentUserId;
-    private boolean isMyProfile = true;
-    private boolean isFollowing = false;
+    private NotificationService notificationService;
 
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private String targetUserId;
+    private String currentUserId;
+    private boolean isSelfProfile;
+    private boolean isShowingSavedPosts = false;
+    private boolean isFollowingTarget = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
-        ivAvatar = findViewById(R.id.ivAvatar);
-        tvHeaderUsername = findViewById(R.id.tvHeaderUsername);
-        tvDisplayName = findViewById(R.id.tvDisplayName);
-        tvBio = findViewById(R.id.tvBio);
+        userService = UserService.getInstance();
+        postService = PostService.getInstance();
+        authService = AuthService.getInstance();
+        notificationService = NotificationService.getInstance();
+
+        currentUserId = authService.getCurrentUserId();
+        targetUserId = getIntent().getStringExtra("userId");
+        if (targetUserId == null || targetUserId.isEmpty()) {
+            targetUserId = currentUserId;
+        }
+
+        isSelfProfile = targetUserId.equals(currentUserId);
+
+        initViews();
+        setupRecyclerView();
+        BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.PROFILE);
+
+        loadUserProfile();
+        loadUserPosts();
+    }
+
+    private void initViews() {
+        tvProfileTitleUsername = findViewById(R.id.tvProfileTitleUsername);
+        ivProfileAvatar = findViewById(R.id.ivProfileAvatar);
         tvPostsCount = findViewById(R.id.tvPostsCount);
         tvFollowersCount = findViewById(R.id.tvFollowersCount);
         tvFollowingCount = findViewById(R.id.tvFollowingCount);
-        btnAction = findViewById(R.id.btnAction);
-        progressBar = findViewById(R.id.progressBar);
+        tvFullName = findViewById(R.id.tvFullName);
+        tvBio = findViewById(R.id.tvBio);
+        btnProfileActionButton = findViewById(R.id.btnProfileActionButton);
 
-        userService = new UserService();
-        authService = new AuthService();
+        llProfileTabs = findViewById(R.id.llProfileTabs);
+        tabUserPosts = findViewById(R.id.tabUserPosts);
+        tabSavedPosts = findViewById(R.id.tabSavedPosts);
 
-        if (!authService.isLoggedIn()) {
-            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
+        rvProfilePosts = findViewById(R.id.rvProfilePosts);
+        progressBarProfile = findViewById(R.id.progressBarProfile);
+        tvStateProfile = findViewById(R.id.tvStateProfile);
 
-        currentUserId = authService.getCurrentUserId();
-        profileUserId = getIntent().getStringExtra("user_id");
-        if (profileUserId == null || profileUserId.trim().isEmpty()) {
-            profileUserId = currentUserId;
-        }
+        if (isSelfProfile) {
+            btnProfileActionButton.setText("Sửa hồ sơ");
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_outline);
+            btnProfileActionButton.setTextColor(0xFF000000);
 
-        isMyProfile = profileUserId.equals(currentUserId);
-
-        if (isMyProfile) {
-            btnAction.setText("Sửa hồ sơ");
-            btnAction.setOnClickListener(v -> {
-                Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
-                startActivity(intent);
-            });
+            llProfileTabs.setVisibility(View.VISIBLE);
+            tabUserPosts.setOnClickListener(v -> switchTab(false));
+            tabSavedPosts.setOnClickListener(v -> switchTab(true));
         } else {
+            llProfileTabs.setVisibility(View.GONE);
             checkFollowStatus();
         }
 
-        // Setup bottom navigation bar
-        findViewById(R.id.navSearch).setOnClickListener(v -> {
-            startActivity(new Intent(ProfileActivity.this, SearchActivity.class));
-            finish();
+        btnProfileActionButton.setOnClickListener(v -> {
+            if (isSelfProfile) {
+                Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                startActivity(intent);
+            } else {
+                handleFollowToggle();
+            }
         });
-        findViewById(R.id.navProfile).setOnClickListener(v -> {});
+    }
+
+    private void setupRecyclerView() {
+        rvProfilePosts.setLayoutManager(new GridLayoutManager(this, 3));
+        postGridAdapter = new PostGridAdapter(this);
+        rvProfilePosts.setAdapter(postGridAdapter);
+    }
+
+    private void switchTab(boolean showSaved) {
+        if (isShowingSavedPosts == showSaved) return;
+        isShowingSavedPosts = showSaved;
+
+        if (showSaved) {
+            tabUserPosts.setTextColor(0xFF888888);
+            tabUserPosts.setTypeface(null, Typeface.NORMAL);
+
+            tabSavedPosts.setTextColor(0xFF000000);
+            tabSavedPosts.setTypeface(null, Typeface.BOLD);
+
+            loadSavedPosts();
+        } else {
+            tabSavedPosts.setTextColor(0xFF888888);
+            tabSavedPosts.setTypeface(null, Typeface.NORMAL);
+
+            tabUserPosts.setTextColor(0xFF000000);
+            tabUserPosts.setTypeface(null, Typeface.BOLD);
+
+            loadUserPosts();
+        }
+    }
+
+    private void loadUserProfile() {
+        userService.getUserProfile(targetUserId, new UserService.Callback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                if (user != null) {
+                    tvProfileTitleUsername.setText(user.getUsername() != null ? user.getUsername() : user.getId());
+                    tvFullName.setText(user.getFullName() != null && !user.getFullName().isEmpty() ? user.getFullName() : "Tên hiển thị");
+                    tvBio.setText(user.getBio() != null && !user.getBio().isEmpty() ? user.getBio() : "Giới thiệu ngắn về bản thân.");
+
+                    tvPostsCount.setText(String.valueOf(user.getPostsCount()));
+                    tvFollowersCount.setText(String.valueOf(user.getFollowersCount()));
+                    tvFollowingCount.setText(String.valueOf(user.getFollowingCount()));
+
+                    if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                        Glide.with(ProfileActivity.this)
+                                .load(user.getAvatarUrl())
+                                .circleCrop()
+                                .into(ivProfileAvatar);
+                    } else {
+                        ivProfileAvatar.setImageResource(R.drawable.bg_circle_avatar);
+                    }
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {}
+        });
+    }
+
+    private void checkFollowStatus() {
+        userService.isFollowing(currentUserId, targetUserId, new UserService.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean isFollowing) {
+                isFollowingTarget = isFollowing;
+                updateFollowButtonUI();
+            }
+
+            @Override
+            public void onError(Exception e) {
+                isFollowingTarget = false;
+                updateFollowButtonUI();
+            }
+        });
+    }
+
+    private void updateFollowButtonUI() {
+        if (isFollowingTarget) {
+            btnProfileActionButton.setText("Đang theo dõi");
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_outline);
+            btnProfileActionButton.setTextColor(0xFF000000);
+        } else {
+            btnProfileActionButton.setText("Theo dõi");
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_black);
+            btnProfileActionButton.setTextColor(0xFFFFFFFF);
+        }
+    }
+
+    private void handleFollowToggle() {
+        if (isFollowingTarget) {
+            userService.unfollowUser(currentUserId, targetUserId, new UserService.Callback<Void>() {
+                @Override
+                public void onSuccess(Void result) {
+                    isFollowingTarget = false;
+                    updateFollowButtonUI();
+                    loadUserProfile();
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    Toast.makeText(ProfileActivity.this, "Lỗi bỏ theo dõi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            userService.followUser(currentUserId, targetUserId, new UserService.Callback<Follow>() {
+                @Override
+                public void onSuccess(Follow result) {
+                    isFollowingTarget = true;
+                    updateFollowButtonUI();
+                    loadUserProfile();
+
+                    notificationService.createNotificationAsync(targetUserId, currentUserId, currentUserId, "FOLLOW", "");
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    Toast.makeText(ProfileActivity.this, "Lỗi theo dõi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private void loadUserPosts() {
+        progressBarProfile.setVisibility(View.VISIBLE);
+        tvStateProfile.setVisibility(View.GONE);
+
+        postService.getPostsByUserId(targetUserId, new PostService.Callback<List<Post>>() {
+            @Override
+            public void onSuccess(List<Post> posts) {
+                progressBarProfile.setVisibility(View.GONE);
+                tvPostsCount.setText(String.valueOf(posts.size()));
+
+                if (posts.isEmpty()) {
+                    tvStateProfile.setVisibility(View.VISIBLE);
+                    tvStateProfile.setText("Chưa có bài viết nào");
+                } else {
+                    tvStateProfile.setVisibility(View.GONE);
+                }
+                postGridAdapter.setPosts(posts);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                progressBarProfile.setVisibility(View.GONE);
+                tvStateProfile.setVisibility(View.VISIBLE);
+                tvStateProfile.setText("Không thể tải bài viết");
+            }
+        });
+    }
+
+    private void loadSavedPosts() {
+        progressBarProfile.setVisibility(View.VISIBLE);
+        tvStateProfile.setVisibility(View.GONE);
+
+        postService.getSavedPosts(targetUserId, new PostService.Callback<List<Post>>() {
+            @Override
+            public void onSuccess(List<Post> posts) {
+                progressBarProfile.setVisibility(View.GONE);
+                if (posts.isEmpty()) {
+                    tvStateProfile.setVisibility(View.VISIBLE);
+                    tvStateProfile.setText("Chưa có bài viết đã lưu");
+                } else {
+                    tvStateProfile.setVisibility(View.GONE);
+                }
+                postGridAdapter.setPosts(posts);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                progressBarProfile.setVisibility(View.GONE);
+                tvStateProfile.setVisibility(View.VISIBLE);
+                tvStateProfile.setText("Không thể tải bài viết đã lưu");
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadProfileData();
-    }
-
-    private void loadProfileData() {
-        progressBar.setVisibility(View.VISIBLE);
-        executorService.execute(() -> {
-            try {
-                User user = userService.getUserProfile(profileUserId);
-                boolean following = false;
-                if (!isMyProfile) {
-                    following = userService.isFollowing(currentUserId, profileUserId);
-                }
-                boolean finalFollowing = following;
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    if (user != null) {
-                        tvHeaderUsername.setText(user.getUsername() != null ? user.getUsername() : "profile");
-                        tvDisplayName.setText(user.getDisplayName() != null ? user.getDisplayName() : "");
-                        tvBio.setText(user.getBio() != null ? user.getBio() : "");
-                        tvPostsCount.setText(String.valueOf(user.getPostsCount()));
-                        tvFollowersCount.setText(String.valueOf(user.getFollowerCount()));
-                        tvFollowingCount.setText(String.valueOf(user.getFollowingCount()));
-
-                        if (!isMyProfile) {
-                            isFollowing = finalFollowing;
-                            btnAction.setText(isFollowing ? "Đang theo dõi" : "Theo dõi");
-                            btnAction.setOnClickListener(v -> toggleFollow());
-                        }
-                    } else {
-                        Toast.makeText(ProfileActivity.this, "User profile not found", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(ProfileActivity.this, "Error loading profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
-    }
-
-    private void checkFollowStatus() {
-        executorService.execute(() -> {
-            boolean following = userService.isFollowing(currentUserId, profileUserId);
-            runOnUiThread(() -> {
-                isFollowing = following;
-                btnAction.setText(isFollowing ? "Đang theo dõi" : "Theo dõi");
-                btnAction.setOnClickListener(v -> toggleFollow());
-            });
-        });
-    }
-
-    private void toggleFollow() {
-        progressBar.setVisibility(View.VISIBLE);
-        executorService.execute(() -> {
-            try {
-                if (isFollowing) {
-                    userService.unfollowUser(currentUserId, profileUserId);
-                    isFollowing = false;
-                } else {
-                    userService.followUser(currentUserId, profileUserId);
-                    isFollowing = true;
-                }
-                User updatedUser = userService.getUserProfile(profileUserId);
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    btnAction.setText(isFollowing ? "Đang theo dõi" : "Theo dõi");
-                    if (updatedUser != null) {
-                        tvFollowersCount.setText(String.valueOf(updatedUser.getFollowerCount()));
-                    }
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(ProfileActivity.this, "Action failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
+        BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.PROFILE);
+        loadUserProfile();
+        if (isShowingSavedPosts) {
+            loadSavedPosts();
+        } else {
+            loadUserPosts();
+        }
     }
 }
