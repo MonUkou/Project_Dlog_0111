@@ -3,21 +3,21 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="@color/white">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:gravity="center"
-        android:text="Tìm kiếm"
+        android:text="@string/search"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="@android:color/black" />
+        android:textColor="@color/black" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#E0E0E0" />
+        android:background="@color/gray_divider" />
 
     <EditText
         android:id="@+id/etSearch"
@@ -26,7 +26,7 @@
         android:layout_margin="16dp"
         android:autofillHints="name"
         android:background="@android:drawable/editbox_background_normal"
-        android:hint="Tìm người dùng"
+        android:hint="@string/search_hint"
         android:inputType="text"
         android:paddingHorizontal="12dp"
         android:textSize="14sp" />
@@ -43,8 +43,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginTop="32dp"
-        android:text="Không tìm thấy người dùng"
-        android:textColor="@android:color/darker_gray"
+        android:text="@string/no_users_found"
+        android:textColor="@color/gray_text"
         android:visibility="gone" />
 
     <ProgressBar
@@ -59,12 +59,12 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#E0E0E0" />
+        android:background="@color/gray_divider" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:background="@android:color/white"
+        android:background="@color/white"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -74,9 +74,9 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Bảng tin"
+            android:text="@string/nav_feed"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray" />
+            android:textColor="@color/gray_text" />
 
         <TextView
             android:id="@+id/navSearch"
@@ -84,10 +84,10 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Tìm kiếm"
+            android:text="@string/nav_search"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black" />
+            android:textColor="@color/black" />
 
         <TextView
             android:id="@+id/navPost"
@@ -95,9 +95,9 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Đăng"
+            android:text="@string/nav_post"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray" />
+            android:textColor="@color/gray_text" />
 
         <TextView
             android:id="@+id/navNotification"
@@ -105,9 +105,9 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Thông báo"
+            android:text="@string/nav_notification"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray" />
+            android:textColor="@color/gray_text" />
 
         <TextView
             android:id="@+id/navProfile"
@@ -115,9 +115,9 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Hồ sơ"
+            android:text="@string/nav_profile"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray" />
+            android:textColor="@color/gray_text" />
     </LinearLayout>
 
 </LinearLayout>
