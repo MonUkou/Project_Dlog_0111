@@ -2,6 +2,7 @@ package com.example.myapplication;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -15,6 +16,7 @@ import com.example.myapplication.model.User;
 import com.example.myapplication.service.IAuthService;
 import com.example.myapplication.service.impl.AuthService;
 
+/** F02, F04, F05: đăng nhập và khôi phục phiên Firebase. */
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etLoginEmail;
@@ -24,6 +26,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextView tvGoToRegister;
 
     private AuthService authService;
+    private boolean requestInProgress = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,9 +34,15 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         authService = AuthService.getInstance();
-        authService.init(this);
+        authService.init(getApplicationContext());
 
         initViews();
+        setupListeners();
+
+        // FirebaseAuth tự khôi phục phiên đã đăng nhập sau khi mở lại ứng dụng.
+        if (authService.isLoggedIn() && authService.getCurrentUserId() != null) {
+            navigateHome();
+        }
     }
 
     private void initViews() {
@@ -42,55 +51,64 @@ public class LoginActivity extends AppCompatActivity {
         btnLoginSubmit = findViewById(R.id.btnLoginSubmit);
         progressBarLogin = findViewById(R.id.progressBarLogin);
         tvGoToRegister = findViewById(R.id.tvGoToRegister);
+    }
 
+    private void setupListeners() {
         btnLoginSubmit.setOnClickListener(v -> handleLogin());
-
-        tvGoToRegister.setOnClickListener(v -> {
-            Intent intent = new Intent(LoginActivity.this, RegisterActivity.class);
-            startActivity(intent);
-        });
+        tvGoToRegister.setOnClickListener(v ->
+                startActivity(new Intent(LoginActivity.this, RegisterActivity.class)));
     }
 
     private void handleLogin() {
-        String email = etLoginEmail.getText().toString().trim();
-        String password = etLoginPassword.getText().toString().trim();
+        if (requestInProgress) return;
 
-        if (email.isEmpty()) {
-            Toast.makeText(this, "Vui lòng nhập Email / Tên đăng nhập", Toast.LENGTH_SHORT).show();
+        String email = etLoginEmail.getText().toString().trim();
+        // Không trim mật khẩu vì dấu cách có thể là một phần của mật khẩu.
+        String password = etLoginPassword.getText().toString();
+
+        if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etLoginEmail.setError("Vui lòng nhập email hợp lệ");
+            etLoginEmail.requestFocus();
+            return;
+        }
+        if (password.isEmpty()) {
+            etLoginPassword.setError("Vui lòng nhập mật khẩu");
+            etLoginPassword.requestFocus();
             return;
         }
 
-        progressBarLogin.setVisibility(View.VISIBLE);
-        btnLoginSubmit.setEnabled(false);
-
+        setLoading(true);
         authService.login(email, password, new IAuthService.AuthCallback() {
             @Override
             public void onSuccess(User user) {
-                progressBarLogin.setVisibility(View.GONE);
-                btnLoginSubmit.setEnabled(true);
-
+                setLoading(false);
                 Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-
-                Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                finish();
+                navigateHome();
             }
 
             @Override
             public void onError(Exception e) {
-                progressBarLogin.setVisibility(View.GONE);
-                btnLoginSubmit.setEnabled(true);
-
-                // Fallback login so user can test without online auth
-                authService.login(email, password);
-                Toast.makeText(LoginActivity.this, "Đăng nhập chế độ thử nghiệm", Toast.LENGTH_SHORT).show();
-
-                Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                finish();
+                setLoading(false);
+                String message = (e == null || e.getMessage() == null)
+                        ? "Đăng nhập thất bại. Vui lòng thử lại."
+                        : e.getMessage();
+                Toast.makeText(LoginActivity.this, message, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void setLoading(boolean loading) {
+        requestInProgress = loading;
+        progressBarLogin.setVisibility(loading ? View.VISIBLE : View.GONE);
+        btnLoginSubmit.setEnabled(!loading);
+        btnLoginSubmit.setText(loading ? "Đang đăng nhập..." : "Đăng nhập");
+        tvGoToRegister.setEnabled(!loading);
+    }
+
+    private void navigateHome() {
+        Intent intent = new Intent(this, HomeActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }
