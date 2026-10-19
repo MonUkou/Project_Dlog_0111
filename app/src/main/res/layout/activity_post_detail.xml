@@ -1,149 +1,267 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_post_detail"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="#FFFFFF">
 
-    <!-- Header -->
+    <!-- Thanh Header: <   Bài viết   Sửa -->
     <RelativeLayout
-        android:id="@+id/headerPostDetail"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:paddingHorizontal="16dp"
-        android:background="#FFFFFF"
-        android:elevation="2dp">
-
-        <ImageView
-            android:id="@+id/btnBackDetail"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_centerVertical="true"
-            android:src="@drawable/ic_back"
-            android:contentDescription="Back"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+        android:layout_height="52dp"
+        android:paddingHorizontal="16dp">
 
         <TextView
+            android:id="@+id/tvBack"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_alignParentStart="true"
+            android:gravity="center_vertical"
+            android:paddingEnd="16dp"
+            android:text="‹"
+            android:textColor="#111111"
+            android:textSize="26sp" />
+
+        <TextView
+            android:id="@+id/tvHeaderTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="Bài viết"
-            android:textColor="#000000"
-            android:textSize="18sp"
+            android:textColor="#111111"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/btnEditPost"
+            android:id="@+id/tvEditPost"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
             android:text="Sửa"
-            android:textColor="#000000"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:padding="8dp"
-            android:visibility="gone"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground" />
+            android:textColor="#424242"
+            android:textSize="14sp" />
     </RelativeLayout>
 
     <View
-        android:id="@+id/dividerDetail"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_below="@id/headerPostDetail"
-        android:background="#E0E0E0" />
+        android:background="#EEEEEE" />
 
-    <!-- Comment Bar at bottom -->
-    <LinearLayout
-        android:id="@+id/commentInputBar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:background="#FFFFFF"
-        android:elevation="4dp"
-        android:gravity="center_vertical">
-
-        <EditText
-            android:id="@+id/etCommentInput"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_rounded_edittext"
-            android:hint="Viết bình luận"
-            android:paddingHorizontal="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#888888"
-            android:textSize="14sp" />
-
-        <Button
-            android:id="@+id/btnSendComment"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/bg_button_black"
-            android:text="Gửi"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:paddingHorizontal="18dp" />
-    </LinearLayout>
-
-    <!-- Post content & Comments -->
+    <!-- Vùng nội dung cuộn được khi xoay màn hình -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/dividerDetail"
-        android:layout_above="@id/commentInputBar">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Post item card -->
-            <include
-                android:id="@+id/postCardDetail"
-                layout="@layout/item_post" />
-
-            <View
+            <!-- Hàng thông tin tác giả: Avatar tròn + username -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#E0E0E0"
-                android:layout_marginVertical="8dp" />
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp">
 
-            <!-- Comments RecyclerView -->
+                <View
+                    android:id="@+id/viewAuthorAvatar"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="#D9D9D9" />
+
+                <TextView
+                    android:id="@+id/tvPostAuthor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="minh.anh"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Khung Ảnh bài viết -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="280dp"
+                android:background="#ECECEC">
+
+                <ImageView
+                    android:id="@+id/ivPostImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Ảnh bài viết" />
+
+                <TextView
+                    android:id="@+id/tvImagePlaceholder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Ảnh"
+                    android:textColor="#888888"
+                    android:textSize="14sp" />
+            </FrameLayout>
+
+            <!-- Hàng nút tương tác: Thích   Bình luận        Lưu -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="14dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="6dp">
+
+                <TextView
+                    android:id="@+id/btnLike"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="4dp"
+                    android:paddingEnd="16dp"
+                    android:text="Thích"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnFocusComment"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="4dp"
+                    android:text="Bình luận"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/btnSavePost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="4dp"
+                    android:text="Lưu"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Số lượt thích -->
+            <TextView
+                android:id="@+id/tvLikesCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="14dp"
+                android:text="0 lượt thích"
+                android:textColor="#111111"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Caption bài viết (in đậm tên tác giả + nội dung) -->
+            <TextView
+                android:id="@+id/tvPostCaption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:paddingHorizontal="14dp"
+                android:text="minh.anh Hoàng hôn Vũng Tàu"
+                android:textColor="#212121"
+                android:textSize="14sp" />
+
+            <!-- Bộ đếm bình luận (hỗ trợ theo dõi số lượng) -->
+            <TextView
+                android:id="@+id/tvCommentsCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:paddingHorizontal="14dp"
+                android:text="0 bình luận"
+                android:textColor="#757575"
+                android:textSize="13sp" />
+
+            <!-- Vòng xoay Loading khi đang tải bình luận -->
+            <ProgressBar
+                android:id="@+id/progressBarComments"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
+
+            <!-- Trạng thái danh sách bình luận rỗng -->
+            <TextView
+                android:id="@+id/tvEmptyComments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="Chưa có bình luận nào."
+                android:textColor="#888888"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <!-- Danh sách bình luận (lan_photo Đẹp quá!) -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvComments"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:paddingBottom="12dp" />
-
-            <ProgressBar
-                android:id="@+id/progressBarComments"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/tvNoComments"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:padding="16dp"
-                android:text="Chưa có bình luận nào"
-                android:textColor="#888888"
-                android:textSize="14sp"
-                android:visibility="gone" />
+                android:layout_marginTop="6dp"
+                android:paddingHorizontal="14dp"
+                android:paddingBottom="16dp"
+                android:nestedScrollingEnabled="false" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-</RelativeLayout>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#EEEEEE" />
+
+    <!-- Thanh nhập bình luận ở đáy màn hình: [Viết bình luận] [Gửi] -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp">
+
+        <EditText
+            android:id="@+id/edtComment"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@android:drawable/edit_text"
+            android:hint="Viết bình luận"
+            android:inputType="text"
+            android:maxLines="2"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btnSendComment"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#111111"
+            android:text="Gửi"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+</LinearLayout>

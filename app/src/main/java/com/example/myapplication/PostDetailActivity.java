@@ -1,416 +1,360 @@
 package com.example.myapplication;
 
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.StyleSpan;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
-import com.example.myapplication.adapter.CommentAdapter;
 import com.example.myapplication.model.Comment;
-import com.example.myapplication.model.Like;
-import com.example.myapplication.model.Post;
-import com.example.myapplication.model.SavedPost;
-import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.InteractionService;
-import com.example.myapplication.service.impl.NotificationService;
-import com.example.myapplication.service.impl.PostService;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PostDetailActivity extends AppCompatActivity {
 
-    private ImageView btnBackDetail;
-    private TextView btnEditPost;
+    public static final String EXTRA_POST_ID = "POST_ID";
+    private static final String STATE_COMMENT_DRAFT = "STATE_COMMENT_DRAFT";
+    private static final String STATE_IS_LIKED = "STATE_IS_LIKED";
+    private static final String STATE_LIKES_COUNT = "STATE_LIKES_COUNT";
+    private static final String STATE_COMMENTS_COUNT = "STATE_COMMENTS_COUNT";
+    private static final String STATE_AUTHOR = "STATE_AUTHOR";
+    private static final String STATE_CAPTION = "STATE_CAPTION";
 
-    // Post Card elements inside postCardDetail include
-    private View postCardDetail;
-    private View llAuthorHeader;
-    private ImageView ivAuthorAvatar;
-    private TextView tvAuthorUsername;
-    private ImageView ivPostImage;
-    private TextView tvImagePlaceholder;
-    private TextView btnLike;
-    private TextView btnComment;
-    private TextView btnSave;
-    private TextView tvLikesCount;
-    private TextView tvCaption;
-
-    // Comments section
-    private RecyclerView rvComments;
-    private ProgressBar progressBarComments;
-    private TextView tvNoComments;
-    private EditText etCommentInput;
+    private TextView tvBack, tvPostAuthor, tvPostCaption, tvLikesCount, tvCommentsCount, tvEmptyComments;
+    private TextView btnLike, btnFocusComment;
     private Button btnSendComment;
+    private EditText edtComment;
+    private ProgressBar progressBarComments;
+    private RecyclerView rvComments;
 
-    private CommentAdapter commentAdapter;
-    private PostService postService;
     private InteractionService interactionService;
-    private AuthService authService;
-    private NotificationService notificationService;
+    private CommentAdapter commentAdapter;
 
     private String postId;
-    private Post currentPost;
+    private String currentAuthor = "minh.anh";
+    private String currentCaption = "";
+    private boolean isLiked = false;
+    private long currentLikesCount = 0;
+    private long currentCommentsCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_post_detail);
 
-        postId = getIntent().getStringExtra("postId");
-        if (postId == null || postId.isEmpty()) {
-            Toast.makeText(this, "Bài viết không hợp lệ!", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+        interactionService = new InteractionService();
+
+        postId = getIntent().getStringExtra(EXTRA_POST_ID);
+        if (postId == null || postId.trim().isEmpty()) {
+            postId = "post_demo_1";
         }
 
-        postService = PostService.getInstance();
-        interactionService = InteractionService.getInstance();
-        authService = AuthService.getInstance();
-        notificationService = NotificationService.getInstance();
-
         initViews();
-        setupCommentsRecyclerView();
 
-        loadPostDetail();
-        loadComments();
+        if (savedInstanceState != null) {
+            edtComment.setText(savedInstanceState.getString(STATE_COMMENT_DRAFT, ""));
+            isLiked = savedInstanceState.getBoolean(STATE_IS_LIKED, false);
+            currentLikesCount = savedInstanceState.getLong(STATE_LIKES_COUNT, 0);
+            currentCommentsCount = savedInstanceState.getLong(STATE_COMMENTS_COUNT, 0);
+            currentAuthor = savedInstanceState.getString(STATE_AUTHOR, "minh.anh");
+            currentCaption = savedInstanceState.getString(STATE_CAPTION, "");
+            updatePostInfoUI();
+            updateLikeButtonUI();
+            updateCounterViews();
+        }
+
+        loadPostDetails();
+        checkLikeStatus();
+        loadCommentsList();
     }
 
     private void initViews() {
-        btnBackDetail = findViewById(R.id.btnBackDetail);
-        btnEditPost = findViewById(R.id.btnEditPost);
-
-        postCardDetail = findViewById(R.id.postCardDetail);
-        llAuthorHeader = postCardDetail.findViewById(R.id.llAuthorHeader);
-        ivAuthorAvatar = postCardDetail.findViewById(R.id.ivAuthorAvatar);
-        tvAuthorUsername = postCardDetail.findViewById(R.id.tvAuthorUsername);
-        ivPostImage = postCardDetail.findViewById(R.id.ivPostImage);
-        tvImagePlaceholder = postCardDetail.findViewById(R.id.tvImagePlaceholder);
-        btnLike = postCardDetail.findViewById(R.id.btnLike);
-        btnComment = postCardDetail.findViewById(R.id.btnComment);
-        btnSave = postCardDetail.findViewById(R.id.btnSave);
-        tvLikesCount = postCardDetail.findViewById(R.id.tvLikesCount);
-        tvCaption = postCardDetail.findViewById(R.id.tvCaption);
-
-        rvComments = findViewById(R.id.rvComments);
-        progressBarComments = findViewById(R.id.progressBarComments);
-        tvNoComments = findViewById(R.id.tvNoComments);
-        etCommentInput = findViewById(R.id.etCommentInput);
+        tvBack = findViewById(R.id.tvBack);
+        tvPostAuthor = findViewById(R.id.tvPostAuthor);
+        tvPostCaption = findViewById(R.id.tvPostCaption);
+        tvLikesCount = findViewById(R.id.tvLikesCount);
+        tvCommentsCount = findViewById(R.id.tvCommentsCount);
+        tvEmptyComments = findViewById(R.id.tvEmptyComments);
+        btnLike = findViewById(R.id.btnLike);
+        btnFocusComment = findViewById(R.id.btnFocusComment);
         btnSendComment = findViewById(R.id.btnSendComment);
+        edtComment = findViewById(R.id.edtComment);
+        progressBarComments = findViewById(R.id.progressBarComments);
+        rvComments = findViewById(R.id.rvComments);
 
-        btnBackDetail.setOnClickListener(v -> finish());
+        commentAdapter = new CommentAdapter(this::showDeleteCommentDialog);
+        rvComments.setLayoutManager(new LinearLayoutManager(this));
+        rvComments.setAdapter(commentAdapter);
 
+        tvBack.setOnClickListener(v -> finish());
+        btnLike.setOnClickListener(v -> handleLikeClick());
+        btnFocusComment.setOnClickListener(v -> edtComment.requestFocus());
         btnSendComment.setOnClickListener(v -> handleSendComment());
     }
 
-    private void setupCommentsRecyclerView() {
-        rvComments.setLayoutManager(new LinearLayoutManager(this));
-        commentAdapter = new CommentAdapter(this);
-        rvComments.setAdapter(commentAdapter);
+    private void loadPostDetails() {
+        FirebaseFirestore.getInstance().collection("posts").document(postId).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        String authorId = doc.getString("authorId");
+                        String caption = doc.getString("caption");
+                        Long likes = doc.getLong("likesCount");
+                        Long comments = doc.getLong("commentsCount");
+
+                        currentAuthor = (authorId != null && !authorId.isEmpty()) ? authorId : "minh.anh";
+                        currentCaption = (caption != null) ? caption : "";
+                        currentLikesCount = (likes != null) ? likes : 0;
+                        currentCommentsCount = (comments != null) ? comments : 0;
+
+                        updatePostInfoUI();
+                        updateCounterViews();
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Lỗi tải bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                );
     }
 
-    private void loadPostDetail() {
-        String currentUserId = authService.getCurrentUserId();
-
-        postService.getPostDetail(postId, new PostService.Callback<Post>() {
+    private void checkLikeStatus() {
+        interactionService.isLiked(postId, new InteractionService.ServiceCallback<Boolean>() {
             @Override
-            public void onSuccess(Post post) {
-                currentPost = post;
-                renderPostCard(post, currentUserId);
+            public void onSuccess(Boolean result) {
+                isLiked = Boolean.TRUE.equals(result);
+                updateLikeButtonUI();
             }
 
             @Override
-            public void onError(Exception e) {
-                Toast.makeText(PostDetailActivity.this, "Không thể tải bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                finish();
+            public void onError(String message) {
+                Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void renderPostCard(Post post, String currentUserId) {
-        String username = post.getAuthorUsername() != null ? post.getAuthorUsername() : post.getAuthorId();
-        tvAuthorUsername.setText(username);
-
-        if (post.getAuthorAvatarUrl() != null && !post.getAuthorAvatarUrl().isEmpty()) {
-            Glide.with(this)
-                    .load(post.getAuthorAvatarUrl())
-                    .circleCrop()
-                    .into(ivAuthorAvatar);
-        } else {
-            ivAuthorAvatar.setImageResource(R.drawable.bg_circle_avatar);
-        }
-
-        if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
-            tvImagePlaceholder.setVisibility(View.GONE);
-            Glide.with(this)
-                    .load(post.getImageUrl())
-                    .centerCrop()
-                    .into(ivPostImage);
-        } else {
-            ivPostImage.setImageDrawable(null);
-            tvImagePlaceholder.setVisibility(View.VISIBLE);
-        }
-
-        tvLikesCount.setText(post.getLikesCount() + " lượt thích");
-        String captionText = username + " " + (post.getCaption() != null ? post.getCaption() : "");
-        tvCaption.setText(captionText);
-
-        // Show Edit/Delete option on top right header if current user is author
-        boolean isAuthor = currentUserId != null && currentUserId.equals(post.getAuthorId());
-        if (isAuthor) {
-            btnEditPost.setVisibility(View.VISIBLE);
-            btnEditPost.setOnClickListener(v -> showPostAuthorMenu(post, currentUserId));
-        } else {
-            btnEditPost.setVisibility(View.GONE);
-        }
-
-        // Like status
-        interactionService.isPostLiked(currentUserId, post.getId(), new InteractionService.Callback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean isLiked) {
-                if (isLiked) {
-                    btnLike.setText("Đã thích");
-                    btnLike.setTextColor(0xFFE53935);
-                } else {
-                    btnLike.setText("Thích");
-                    btnLike.setTextColor(0xFF000000);
+    private void handleLikeClick() {
+        btnLike.setEnabled(false);
+        if (isLiked) {
+            interactionService.unlike(postId, new InteractionService.ServiceCallback<Void>() {
+                @Override
+                public void onSuccess(Void result) {
+                    isLiked = false;
+                    currentLikesCount = Math.max(0, currentLikesCount - 1);
+                    updateLikeButtonUI();
+                    updateCounterViews();
+                    btnLike.setEnabled(true);
                 }
-            }
 
-            @Override
-            public void onError(Exception e) {}
-        });
-
-        // Save status
-        postService.isPostSaved(currentUserId, post.getId(), new PostService.Callback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean isSaved) {
-                if (isSaved) {
-                    btnSave.setText("Đã lưu");
-                    btnSave.setTextColor(0xFF2E7D32);
-                } else {
-                    btnSave.setText("Lưu");
-                    btnSave.setTextColor(0xFF000000);
+                @Override
+                public void onError(String message) {
+                    Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
+                    btnLike.setEnabled(true);
                 }
-            }
+            });
+        } else {
+            interactionService.like(postId, new InteractionService.ServiceCallback<Void>() {
+                @Override
+                public void onSuccess(Void result) {
+                    isLiked = true;
+                    currentLikesCount++;
+                    updateLikeButtonUI();
+                    updateCounterViews();
+                    btnLike.setEnabled(true);
+                }
 
-            @Override
-            public void onError(Exception e) {}
-        });
-
-        // Like button listener
-        btnLike.setOnClickListener(v -> {
-            boolean wasLiked = btnLike.getText().toString().equals("Đã thích");
-            if (wasLiked) {
-                interactionService.unlikePost(currentUserId, post.getId(), new InteractionService.Callback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                        post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
-                        btnLike.setText("Thích");
-                        btnLike.setTextColor(0xFF000000);
-                        tvLikesCount.setText(post.getLikesCount() + " lượt thích");
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(PostDetailActivity.this, "Lỗi thích: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
-            } else {
-                interactionService.likePost(currentUserId, post.getId(), new InteractionService.Callback<Like>() {
-                    @Override
-                    public void onSuccess(Like result) {
-                        post.setLikesCount(post.getLikesCount() + 1);
-                        btnLike.setText("Đã thích");
-                        btnLike.setTextColor(0xFFE53935);
-                        tvLikesCount.setText(post.getLikesCount() + " lượt thích");
-
-                        notificationService.createNotificationAsync(post.getAuthorId(), currentUserId, currentUserId, "LIKE", post.getId());
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(PostDetailActivity.this, "Lỗi thích: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-        });
-
-        // Save button listener
-        btnSave.setOnClickListener(v -> {
-            boolean wasSaved = btnSave.getText().toString().equals("Đã lưu");
-            if (wasSaved) {
-                postService.unsavePost(currentUserId, post.getId(), new PostService.Callback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                        btnSave.setText("Lưu");
-                        btnSave.setTextColor(0xFF000000);
-                        Toast.makeText(PostDetailActivity.this, "Đã bỏ lưu bài viết", Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(PostDetailActivity.this, "Lỗi bỏ lưu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
-            } else {
-                postService.savePost(currentUserId, post.getId(), new PostService.Callback<SavedPost>() {
-                    @Override
-                    public void onSuccess(SavedPost result) {
-                        btnSave.setText("Đã lưu");
-                        btnSave.setTextColor(0xFF2E7D32);
-                        Toast.makeText(PostDetailActivity.this, "Đã lưu bài viết", Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(PostDetailActivity.this, "Lỗi lưu bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-        });
-
-        // Comment button focuses comment field
-        btnComment.setOnClickListener(v -> etCommentInput.requestFocus());
+                @Override
+                public void onError(String message) {
+                    Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
+                    btnLike.setEnabled(true);
+                }
+            });
+        }
     }
 
-    private void showPostAuthorMenu(Post post, String currentUserId) {
-        List<String> options = new ArrayList<>();
-        options.add("Sửa bài viết");
-        options.add("Xóa bài viết");
-        options.add("Lưu ảnh về thiết bị");
-
-        new AlertDialog.Builder(this)
-                .setTitle("Tùy chọn bài viết")
-                .setItems(options.toArray(new String[0]), (dialog, which) -> {
-                    String choice = options.get(which);
-                    if (choice.equals("Sửa bài viết")) {
-                        showEditDialog(post, currentUserId);
-                    } else if (choice.equals("Xóa bài viết")) {
-                        showDeleteConfirmDialog(post, currentUserId);
-                    } else if (choice.equals("Lưu ảnh về thiết bị")) {
-                        postService.saveImageToDevice(this, post.getImageUrl(), new PostService.Callback<String>() {
-                            @Override
-                            public void onSuccess(String result) {
-                                Toast.makeText(PostDetailActivity.this, result, Toast.LENGTH_LONG).show();
-                            }
-
-                            @Override
-                            public void onError(Exception e) {
-                                Toast.makeText(PostDetailActivity.this, "Lỗi lưu ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                })
-                .show();
-    }
-
-    private void showEditDialog(Post post, String currentUserId) {
-        final EditText input = new EditText(this);
-        input.setText(post.getCaption());
-        input.setPadding(32, 32, 32, 32);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Sửa bài viết")
-                .setView(input)
-                .setPositiveButton("Lưu", (dialog, which) -> {
-                    String newCaption = input.getText().toString().trim();
-                    postService.updatePost(currentUserId, post.getId(), newCaption, new PostService.Callback<Post>() {
-                        @Override
-                        public void onSuccess(Post updatedPost) {
-                            post.setCaption(newCaption);
-                            tvCaption.setText((post.getAuthorUsername() != null ? post.getAuthorUsername() : post.getAuthorId()) + " " + newCaption);
-                            Toast.makeText(PostDetailActivity.this, "Đã cập nhật bài viết!", Toast.LENGTH_SHORT).show();
-                        }
-
-                        @Override
-                        public void onError(Exception e) {
-                            Toast.makeText(PostDetailActivity.this, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void showDeleteConfirmDialog(Post post, String currentUserId) {
-        new AlertDialog.Builder(this)
-                .setTitle("Xóa bài viết")
-                .setMessage("Bạn có chắc chắn muốn xóa bài viết này?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
-                    postService.deletePost(currentUserId, post.getId(), new PostService.Callback<Void>() {
-                        @Override
-                        public void onSuccess(Void result) {
-                            Toast.makeText(PostDetailActivity.this, "Đã xóa bài viết!", Toast.LENGTH_SHORT).show();
-                            finish();
-                        }
-
-                        @Override
-                        public void onError(Exception e) {
-                            Toast.makeText(PostDetailActivity.this, "Lỗi xóa bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void loadComments() {
+    private void loadCommentsList() {
         progressBarComments.setVisibility(View.VISIBLE);
-        tvNoComments.setVisibility(View.GONE);
+        tvEmptyComments.setVisibility(View.GONE);
 
-        interactionService.getComments(postId, new InteractionService.Callback<List<Comment>>() {
+        interactionService.getComments(postId, new InteractionService.ServiceCallback<List<Comment>>() {
             @Override
-            public void onSuccess(List<Comment> comments) {
+            public void onSuccess(List<Comment> result) {
                 progressBarComments.setVisibility(View.GONE);
-                if (comments.isEmpty()) {
-                    tvNoComments.setVisibility(View.VISIBLE);
+                commentAdapter.setComments(result);
+                currentCommentsCount = result.size();
+                updateCounterViews();
+
+                if (result.isEmpty()) {
+                    tvEmptyComments.setVisibility(View.VISIBLE);
+                    rvComments.setVisibility(View.GONE);
                 } else {
-                    tvNoComments.setVisibility(View.GONE);
+                    tvEmptyComments.setVisibility(View.GONE);
+                    rvComments.setVisibility(View.VISIBLE);
                 }
-                commentAdapter.setComments(comments);
             }
 
             @Override
-            public void onError(Exception e) {
+            public void onError(String message) {
                 progressBarComments.setVisibility(View.GONE);
-                tvNoComments.setVisibility(View.VISIBLE);
-                tvNoComments.setText("Chưa có bình luận nào");
+                Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void handleSendComment() {
-        String text = etCommentInput.getText().toString().trim();
-        if (text.isEmpty()) return;
+        String content = edtComment.getText().toString().trim();
+        if (content.isEmpty()) {
+            edtComment.setError("Vui lòng nhập bình luận");
+            return;
+        }
 
-        String currentUserId = authService.getCurrentUserId();
-        etCommentInput.setText("");
-
-        interactionService.addComment(currentUserId, currentUserId, "", postId, text, new InteractionService.Callback<Comment>() {
+        btnSendComment.setEnabled(false);
+        interactionService.addComment(postId, content, new InteractionService.ServiceCallback<Comment>() {
             @Override
-            public void onSuccess(Comment comment) {
-                tvNoComments.setVisibility(View.GONE);
-                commentAdapter.addComment(comment);
-                if (currentPost != null) {
-                    notificationService.createNotificationAsync(currentPost.getAuthorId(), currentUserId, currentUserId, "COMMENT", postId);
-                }
+            public void onSuccess(Comment result) {
+                edtComment.setText("");
+                btnSendComment.setEnabled(true);
+                loadCommentsList();
             }
 
             @Override
-            public void onError(Exception e) {
-                Toast.makeText(PostDetailActivity.this, "Lỗi gửi bình luận: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            public void onError(String message) {
+                btnSendComment.setEnabled(true);
+                Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showDeleteCommentDialog(Comment comment) {
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa bình luận")
+                .setMessage("Bạn có chắc muốn xóa bình luận này không?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    interactionService.deleteComment(comment.getId(), new InteractionService.ServiceCallback<Void>() {
+                        @Override
+                        public void onSuccess(Void result) {
+                            Toast.makeText(PostDetailActivity.this, "Đã xóa bình luận", Toast.LENGTH_SHORT).show();
+                            loadCommentsList();
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void updatePostInfoUI() {
+        tvPostAuthor.setText(currentAuthor);
+        tvPostCaption.setText(formatBoldPrefix(currentAuthor, currentCaption));
+    }
+
+    private void updateLikeButtonUI() {
+        if (isLiked) {
+            btnLike.setText("Đã thích");
+            btnLike.setTextColor(Color.parseColor("#E53935"));
+        } else {
+            btnLike.setText("Thích");
+            btnLike.setTextColor(Color.parseColor("#111111"));
+        }
+    }
+
+    private void updateCounterViews() {
+        tvLikesCount.setText(currentLikesCount + " lượt thích");
+        tvCommentsCount.setText(currentCommentsCount + " bình luận");
+    }
+
+    private static SpannableStringBuilder formatBoldPrefix(String author, String text) {
+        String safeAuthor = (author != null) ? author : "";
+        String safeText = (text != null && !text.isEmpty()) ? " " + text : "";
+        SpannableStringBuilder builder = new SpannableStringBuilder(safeAuthor + safeText);
+        if (!safeAuthor.isEmpty()) {
+            builder.setSpan(new StyleSpan(Typeface.BOLD), 0, safeAuthor.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return builder;
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (edtComment != null) {
+            outState.putString(STATE_COMMENT_DRAFT, edtComment.getText().toString());
+        }
+        outState.putBoolean(STATE_IS_LIKED, isLiked);
+        outState.putLong(STATE_LIKES_COUNT, currentLikesCount);
+        outState.putLong(STATE_COMMENTS_COUNT, currentCommentsCount);
+        outState.putString(STATE_AUTHOR, currentAuthor);
+        outState.putString(STATE_CAPTION, currentCaption);
+    }
+
+    private static class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
+
+        interface OnCommentClickListener {
+            void onCommentClick(Comment comment);
+        }
+
+        private List<Comment> comments = new ArrayList<>();
+        private final OnCommentClickListener listener;
+
+        CommentAdapter(OnCommentClickListener listener) {
+            this.listener = listener;
+        }
+
+        void setComments(List<Comment> list) {
+            this.comments = list != null ? list : new ArrayList<>();
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            TextView tv = new TextView(parent.getContext());
+            tv.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+            tv.setPadding(0, 8, 0, 8);
+            tv.setTextColor(Color.parseColor("#212121"));
+            tv.setTextSize(14f);
+            return new CommentViewHolder(tv);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
+            Comment c = comments.get(position);
+            holder.tvCommentLine.setText(formatBoldPrefix(c.getAuthorId(), c.getContent()));
+            holder.itemView.setOnClickListener(v -> listener.onCommentClick(c));
+        }
+
+        @Override
+        public int getItemCount() {
+            return comments.size();
+        }
+
+        static class CommentViewHolder extends RecyclerView.ViewHolder {
+            TextView tvCommentLine;
+
+            CommentViewHolder(@NonNull TextView itemView) {
+                super(itemView);
+                this.tvCommentLine = itemView;
+            }
+        }
     }
 }

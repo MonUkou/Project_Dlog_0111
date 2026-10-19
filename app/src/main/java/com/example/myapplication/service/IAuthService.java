@@ -22,6 +22,4 @@ public interface IAuthService {
     boolean isLoggedIn();
 
     String getCurrentUserId();
-
-    User getCurrentUser();
 }
