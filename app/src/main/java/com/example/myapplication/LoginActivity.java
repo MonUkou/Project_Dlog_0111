@@ -43,11 +43,6 @@ public class LoginActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
-
-        // FirebaseAuth tự khôi phục phiên đã đăng nhập sau khi mở lại ứng dụng.
-        if (authService.isLoggedIn() && authService.getCurrentUserId() != null) {
-            navigateHome();
-        }
     }
 
     private void initViews() {

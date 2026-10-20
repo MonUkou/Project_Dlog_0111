@@ -24,6 +24,15 @@ public class InteractionService {
     private AuthService authService;
     private NotificationService notificationService;
 
+    private static InteractionService instance;
+
+    public static synchronized InteractionService getInstance() {
+        if (instance == null) {
+            instance = new InteractionService();
+        }
+        return instance;
+    }
+
     public InteractionService() {
         this.dbRef = FirebaseFirestore.getInstance();
         this.authService = new AuthService();
@@ -39,6 +48,54 @@ public class InteractionService {
     public interface ServiceCallback<T> {
         void onSuccess(T result);
         void onError(String message);
+    }
+
+    public interface Callback<T> {
+        void onSuccess(T result);
+        void onError(Exception e);
+    }
+
+    public void isPostLiked(String userId, String postId, Callback<Boolean> callback) {
+        isLiked(postId, new ServiceCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean result) {
+                if (callback != null) callback.onSuccess(result);
+            }
+
+            @Override
+            public void onError(String message) {
+                if (callback != null) callback.onError(new Exception(message));
+            }
+        });
+    }
+
+    public void likePost(String userId, String postId, Callback<Like> callback) {
+        like(postId, new ServiceCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                Like likeObj = new Like(postId, userId != null ? userId : getCurrentUid());
+                if (callback != null) callback.onSuccess(likeObj);
+            }
+
+            @Override
+            public void onError(String message) {
+                if (callback != null) callback.onError(new Exception(message));
+            }
+        });
+    }
+
+    public void unlikePost(String userId, String postId, Callback<Void> callback) {
+        unlike(postId, new ServiceCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                if (callback != null) callback.onSuccess(null);
+            }
+
+            @Override
+            public void onError(String message) {
+                if (callback != null) callback.onError(new Exception(message));
+            }
+        });
     }
 
     private String getCurrentUid() {

@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,7 +27,12 @@ import com.example.myapplication.util.BottomNavHelper;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity for searching users by username or keyword.
+ */
 public class SearchActivity extends AppCompatActivity {
+
+    private static final String TAG = "SearchActivity";
 
     private EditText etSearch;
     private RecyclerView rvSearchResults;
@@ -44,6 +50,7 @@ public class SearchActivity extends AppCompatActivity {
         userService = UserService.getInstance();
 
         initViews();
+        setupSearchListener();
         setupRecyclerView();
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.SEARCH);
     }
@@ -53,7 +60,9 @@ public class SearchActivity extends AppCompatActivity {
         rvSearchResults = findViewById(R.id.rvSearchResults);
         progressBarSearch = findViewById(R.id.progressBarSearch);
         tvEmptySearch = findViewById(R.id.tvEmptySearch);
+    }
 
+    private void setupSearchListener() {
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -76,12 +85,12 @@ public class SearchActivity extends AppCompatActivity {
 
     private void performSearch(String query) {
         if (query.isEmpty()) {
-            tvEmptySearch.setVisibility(View.VISIBLE);
-            tvEmptySearch.setText("Nhập từ khóa để tìm kiếm");
+            showEmptySearchState("Nhập từ khóa để tìm kiếm");
             searchAdapter.setUsers(new ArrayList<>());
             return;
         }
 
+        Log.d(TAG, "Performing user search with query: " + query);
         progressBarSearch.setVisibility(View.VISIBLE);
         tvEmptySearch.setVisibility(View.GONE);
 
@@ -90,8 +99,7 @@ public class SearchActivity extends AppCompatActivity {
             public void onSuccess(List<User> users) {
                 progressBarSearch.setVisibility(View.GONE);
                 if (users.isEmpty()) {
-                    tvEmptySearch.setVisibility(View.VISIBLE);
-                    tvEmptySearch.setText("Không tìm thấy người dùng nào");
+                    showEmptySearchState("Không tìm thấy người dùng nào");
                 } else {
                     tvEmptySearch.setVisibility(View.GONE);
                 }
@@ -100,11 +108,16 @@ public class SearchActivity extends AppCompatActivity {
 
             @Override
             public void onError(Exception e) {
+                Log.e(TAG, "Error executing user search", e);
                 progressBarSearch.setVisibility(View.GONE);
-                tvEmptySearch.setVisibility(View.VISIBLE);
-                tvEmptySearch.setText("Lỗi tìm kiếm: " + e.getMessage());
+                showEmptySearchState("Lỗi tìm kiếm: " + e.getMessage());
             }
         });
+    }
+
+    private void showEmptySearchState(String message) {
+        tvEmptySearch.setVisibility(View.VISIBLE);
+        tvEmptySearch.setText(message);
     }
 
     @Override
@@ -113,6 +126,9 @@ public class SearchActivity extends AppCompatActivity {
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.SEARCH);
     }
 
+    /**
+     * RecyclerView Adapter for displaying user search results.
+     */
     private static class UserSearchAdapter extends RecyclerView.Adapter<UserSearchAdapter.UserViewHolder> {
         private final Context context;
         private final List<User> users = new ArrayList<>();
@@ -139,21 +155,7 @@ public class SearchActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
             User user = users.get(position);
-            holder.tvNotifyText.setText((user.getUsername() != null ? user.getUsername() : user.getId())
-                    + (user.getFullName() != null && !user.getFullName().isEmpty() ? " (" + user.getFullName() + ")" : ""));
-            holder.vUnreadDot.setVisibility(View.GONE);
-
-            if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
-                Glide.with(context).load(user.getAvatarUrl()).circleCrop().into(holder.ivNotifyAvatar);
-            } else {
-                holder.ivNotifyAvatar.setImageResource(R.drawable.bg_circle_avatar);
-            }
-
-            holder.itemView.setOnClickListener(v -> {
-                Intent intent = new Intent(context, ProfileActivity.class);
-                intent.putExtra("userId", user.getId());
-                context.startActivity(intent);
-            });
+            holder.bind(context, user);
         }
 
         @Override
@@ -171,6 +173,25 @@ public class SearchActivity extends AppCompatActivity {
                 ivNotifyAvatar = itemView.findViewById(R.id.ivNotifyAvatar);
                 tvNotifyText = itemView.findViewById(R.id.tvNotifyText);
                 vUnreadDot = itemView.findViewById(R.id.vUnreadDot);
+            }
+
+            public void bind(Context context, User user) {
+                String displayName = (user.getUsername() != null ? user.getUsername() : user.getId())
+                        + (user.getFullName() != null && !user.getFullName().isEmpty() ? " (" + user.getFullName() + ")" : "");
+                tvNotifyText.setText(displayName);
+                vUnreadDot.setVisibility(View.GONE);
+
+                if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                    Glide.with(context).load(user.getAvatarUrl()).circleCrop().into(ivNotifyAvatar);
+                } else {
+                    ivNotifyAvatar.setImageResource(R.drawable.bg_circle_avatar);
+                }
+
+                itemView.setOnClickListener(v -> {
+                    Intent intent = new Intent(context, ProfileActivity.class);
+                    intent.putExtra("userId", user.getId());
+                    context.startActivity(intent);
+                });
             }
         }
     }

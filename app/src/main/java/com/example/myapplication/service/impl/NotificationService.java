@@ -101,9 +101,20 @@ public class NotificationService implements INotificationService {
         }
     }
 
+    public void markAsReadAsync(String notificationId, String userId, Callback<Void> callback) {
+        markAsRead(notificationId);
+        if (callback != null) {
+            callback.onSuccess(null);
+        }
+    }
+
     @Override
     public Integer getUnreadCount(String userId) {
         return 0;
+    }
+
+    public void countUnreadAsync(String userId, Callback<Integer> callback) {
+        getUnreadCountAsync(userId, callback);
     }
 
     public void getUnreadCountAsync(String userId, Callback<Integer> callback) {
