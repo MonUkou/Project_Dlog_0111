@@ -1,0 +1,14 @@
+<resources>
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">16dp</dimen>
+    <dimen name="space_lg">24dp</dimen>
+    <dimen name="space_xl">32dp</dimen>
+    <dimen name="auth_horizontal_padding">24dp</dimen>
+    <dimen name="auth_field_height">48dp</dimen>
+    <dimen name="auth_button_height">46dp</dimen>
+    <dimen name="auth_corner_radius">10dp</dimen>
+    <dimen name="auth_text_title">23sp</dimen>
+    <dimen name="auth_text_body">13sp</dimen>
+    <dimen name="auth_text_label">14sp</dimen>
+</resources>

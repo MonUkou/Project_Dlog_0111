@@ -206,30 +206,39 @@ public class InteractionService {
         }
 
         DocumentReference postRef = dbRef.collection(COLLECTION_POSTS).document(postId);
+        dbRef.collection("users").document(currentUid).get()
+                .addOnSuccessListener(userSnapshot -> {
+                    String username = userSnapshot.getString("username");
+                    String avatarUrl = userSnapshot.getString("avatarUrl");
+                    comment.setUsername(username != null && !username.trim().isEmpty() ? username : currentUid);
+                    comment.setAvatarUrl(avatarUrl);
 
-        dbRef.runTransaction(transaction -> {
-            DocumentSnapshot postSnap = transaction.get(postRef);
-            if (!postSnap.exists()) {
-                throw new FirebaseFirestoreException("Bài viết không tồn tại.",
-                        FirebaseFirestoreException.Code.NOT_FOUND);
-            }
+                    dbRef.runTransaction(transaction -> {
+                        DocumentSnapshot postSnap = transaction.get(postRef);
+                        if (!postSnap.exists()) {
+                            throw new FirebaseFirestoreException("Bài viết không tồn tại.",
+                                    FirebaseFirestoreException.Code.NOT_FOUND);
+                        }
 
-            String postAuthorId = postSnap.getString("authorId");
-            Long commentsCount = postSnap.getLong("commentsCount");
-            long updatedComments = (commentsCount != null ? commentsCount : 0L) + 1L;
+                        String postAuthorId = postSnap.getString("authorId");
+                        Long commentsCount = postSnap.getLong("commentsCount");
+                        long updatedComments = (commentsCount != null ? commentsCount : 0L) + 1L;
 
-            transaction.set(commentRef, comment.toMap());
-            transaction.update(postRef, "commentsCount", updatedComments);
-
-            return postAuthorId;
-        }).addOnSuccessListener(postAuthorId -> {
-            if (postAuthorId != null && !postAuthorId.equals(currentUid) && notificationService != null) {
-                notificationService.createNotification(postAuthorId, currentUid, "COMMENT", postId);
-            }
-            if (callback != null) callback.onSuccess(comment);
-        }).addOnFailureListener(e -> {
-            if (callback != null) callback.onError("Không thể gửi bình luận: " + e.getMessage());
-        });
+                        transaction.set(commentRef, comment.toMap());
+                        transaction.update(postRef, "commentsCount", updatedComments);
+                        return postAuthorId;
+                    }).addOnSuccessListener(postAuthorId -> {
+                        if (postAuthorId != null && !postAuthorId.equals(currentUid) && notificationService != null) {
+                            notificationService.createNotification(postAuthorId, currentUid, "COMMENT", postId);
+                        }
+                        if (callback != null) callback.onSuccess(comment);
+                    }).addOnFailureListener(e -> {
+                        if (callback != null) callback.onError("Không thể gửi bình luận: " + e.getMessage());
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    if (callback != null) callback.onError("Không thể tải hồ sơ để bình luận: " + e.getMessage());
+                });
     }
 
     // =========================================================================

@@ -7,6 +7,8 @@ public class Comment extends BaseEntity {
 
     private String postId;
     private String authorId;
+    private String username;
+    private String avatarUrl;
     private String content;
 
     public Comment() {
@@ -38,6 +40,14 @@ public class Comment extends BaseEntity {
         touch();
     }
 
+    public String getUsername() { return username; }
+
+    public void setUsername(String username) { this.username = username; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
     public String getContent() {
         return content;
     }
@@ -63,6 +73,8 @@ public class Comment extends BaseEntity {
         Map<String, Object> map = baseMap();
         map.put("postId", postId);
         map.put("authorId", authorId);
+        map.put("username", username);
+        map.put("avatarUrl", avatarUrl);
         map.put("content", content);
         return map;
     }

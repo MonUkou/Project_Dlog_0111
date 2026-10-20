@@ -1,10 +1,7 @@
 package com.example.myapplication;
 
-import android.app.Activity;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -41,18 +38,14 @@ public class EditProfileActivity extends AppCompatActivity {
     private Uri newAvatarUri;
     private User currentUserModel;
 
-    private final ActivityResultLauncher<Intent> avatarPickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    newAvatarUri = result.getData().getData();
-                    Glide.with(this)
-                            .load(newAvatarUri)
-                            .circleCrop()
-                            .into(ivEditAvatar);
+    private final ActivityResultLauncher<String> avatarPickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    newAvatarUri = uri;
+                    Glide.with(this).load(uri).circleCrop().into(ivEditAvatar);
                 }
-            }
-    );
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,8 +75,7 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void openGalleryForAvatar() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        avatarPickerLauncher.launch(intent);
+        avatarPickerLauncher.launch("image/*");
     }
 
     private void loadCurrentProfile() {
@@ -144,14 +136,8 @@ public class EditProfileActivity extends AppCompatActivity {
                                 currentUserModel.setAvatarUrl(downloadUri.toString());
                                 saveUserToFirestore();
                             })
-                            .addOnFailureListener(e -> {
-                                currentUserModel.setAvatarUrl(newAvatarUri.toString());
-                                saveUserToFirestore();
-                            }))
-                    .addOnFailureListener(e -> {
-                        currentUserModel.setAvatarUrl(newAvatarUri.toString());
-                        saveUserToFirestore();
-                    });
+                            .addOnFailureListener(this::showAvatarUploadError))
+                    .addOnFailureListener(this::showAvatarUploadError);
         } else {
             saveUserToFirestore();
         }
@@ -174,5 +160,12 @@ public class EditProfileActivity extends AppCompatActivity {
                 Toast.makeText(EditProfileActivity.this, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showAvatarUploadError(Exception error) {
+        progressBarEditProfile.setVisibility(View.GONE);
+        btnSaveProfile.setEnabled(true);
+        Toast.makeText(this, "Không tải được ảnh đại diện lên Firebase: " + error.getMessage(),
+                Toast.LENGTH_LONG).show();
     }
 }

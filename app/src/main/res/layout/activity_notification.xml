@@ -2,79 +2,92 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#F4F7FC"
-    android:paddingStart="18dp"
-    android:paddingEnd="18dp"
-    android:paddingTop="20dp"
-    android:paddingBottom="12dp">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Thông báo"
-        android:textColor="#243B67"
-        android:textSize="27sp"
-        android:textStyle="bold" />
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="8dp">
 
         <TextView
-            android:id="@+id/tvUnreadCount"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Chưa đọc: 0"
-            android:textColor="#65718A"
-            android:textSize="14sp" />
-
-        <Button
-            android:id="@+id/btnRefreshNotifications"
-            android:layout_width="wrap_content"
-            android:layout_height="42dp"
-            android:backgroundTint="#E0E8F7"
-            android:minHeight="0dp"
-            android:minWidth="0dp"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:text="Làm mới"
-            android:textAllCaps="false"
+            android:text="Thông báo"
             android:textColor="#243B67"
-            android:textSize="14sp" />
+            android:textSize="27sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvUnreadCount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Chưa đọc: 0"
+                android:textColor="#65718A"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btnRefreshNotifications"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:backgroundTint="#E0E8F7"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="Làm mới"
+                android:textAllCaps="false"
+                android:textColor="#243B67"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progressBarNotifications"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="12dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/tvEmptyNotifications"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="24dp"
+                android:text="Bạn chưa có thông báo nào."
+                android:textColor="#65718A"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvNotifications"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="12dp"
+                android:paddingBottom="8dp" />
+        </FrameLayout>
     </LinearLayout>
 
-    <ProgressBar
-        android:id="@+id/progressBarNotifications"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="4dp"
-        android:layout_marginTop="12dp"
-        android:indeterminate="true"
-        android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/tvEmptyNotifications"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:padding="24dp"
-        android:text="Bạn chưa có thông báo nào."
-        android:textColor="#65718A"
-        android:textSize="15sp"
-        android:visibility="gone" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvNotifications"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp" />
+    <include layout="@layout/inc_bottom_nav" />
 </LinearLayout>

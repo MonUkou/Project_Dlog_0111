@@ -56,7 +56,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
         Comment comment = comments.get(position);
 
-        String username = comment.getUsername() != null ? comment.getUsername() : comment.getUserId();
+        String username = comment.getUsername() != null && !comment.getUsername().isEmpty()
+                ? comment.getUsername() : comment.getAuthorId();
         String text = username + " " + (comment.getContent() != null ? comment.getContent() : "");
 
         SpannableStringBuilder ssb = new SpannableStringBuilder(text);

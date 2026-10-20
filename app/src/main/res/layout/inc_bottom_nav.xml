@@ -2,75 +2,97 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/bottomNavContainer"
     android:layout_width="match_parent"
-    android:layout_height="56dp"
+    android:layout_height="64dp"
     android:background="#FFFFFF"
+    android:elevation="8dp"
     android:orientation="horizontal"
-    android:elevation="4dp">
+    android:paddingTop="3dp"
+    android:paddingBottom="2dp">
 
     <TextView
         android:id="@+id/navFeed"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="center"
-        android:text="Bảng tin"
-        android:textColor="#000000"
-        android:textSize="13sp"
-        android:textStyle="bold"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
+        android:drawableTop="@drawable/ic_home_24"
+        android:drawablePadding="2dp"
+        android:drawableTint="#24569B"
         android:focusable="true"
-        android:background="?attr/selectableItemBackground" />
+        android:gravity="center"
+        android:paddingTop="3dp"
+        android:text="Bảng tin"
+        android:textColor="#24569B"
+        android:textSize="11sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/navSearch"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="center"
-        android:text="Tìm kiếm"
-        android:textColor="#666666"
-        android:textSize="13sp"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
+        android:drawableTop="@drawable/ic_explore_24"
+        android:drawablePadding="2dp"
+        android:drawableTint="#667A98"
         android:focusable="true"
-        android:background="?attr/selectableItemBackground" />
+        android:gravity="center"
+        android:paddingTop="3dp"
+        android:text="Khám phá"
+        android:textColor="#667A98"
+        android:textSize="11sp" />
 
     <TextView
         android:id="@+id/navCreate"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="center"
-        android:text="Đăng"
-        android:textColor="#666666"
-        android:textSize="13sp"
         android:clickable="true"
+        android:background="@drawable/bg_nav_create"
+        android:drawableTop="@drawable/ic_add_white"
+        android:drawablePadding="0dp"
         android:focusable="true"
-        android:background="?attr/selectableItemBackground" />
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:paddingTop="2dp"
+        android:text="Đăng"
+        android:textColor="#24569B"
+        android:textSize="10sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/navNotification"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="center"
-        android:text="Thông báo"
-        android:textColor="#666666"
-        android:textSize="13sp"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
+        android:drawableTop="@drawable/ic_notifications_24"
+        android:drawablePadding="2dp"
+        android:drawableTint="#667A98"
         android:focusable="true"
-        android:background="?attr/selectableItemBackground" />
+        android:gravity="center"
+        android:paddingTop="3dp"
+        android:text="Thông báo"
+        android:textColor="#667A98"
+        android:textSize="11sp" />
 
     <TextView
         android:id="@+id/navProfile"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="center"
-        android:text="Hồ sơ"
-        android:textColor="#666666"
-        android:textSize="13sp"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
+        android:drawableTop="@drawable/ic_menu_24"
+        android:drawablePadding="2dp"
+        android:drawableTint="#667A98"
         android:focusable="true"
-        android:background="?attr/selectableItemBackground" />
-
+        android:gravity="center"
+        android:paddingTop="3dp"
+        android:text="Menu"
+        android:textColor="#667A98"
+        android:textSize="11sp" />
 </LinearLayout>

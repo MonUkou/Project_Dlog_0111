@@ -9,7 +9,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -29,7 +28,6 @@ public class CreatePostActivity extends AppCompatActivity {
     private FrameLayout btnSelectImage;
     private ImageView ivSelectedImage;
     private LinearLayout llImagePlaceholder;
-    private TextView btnUseSampleImage;
     private EditText etCaption;
     private LinearLayout llLoadingCreate;
 
@@ -39,11 +37,18 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private static final String KEY_IMAGE_URI = "saved_image_uri";
 
-    private final ActivityResultLauncher<String> imagePickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.GetContent(),
+    private final ActivityResultLauncher<String[]> imagePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(),
             uri -> {
                 if (uri != null) {
                     selectedImageUri = uri;
+                    try {
+                        getContentResolver().takePersistableUriPermission(
+                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (SecurityException ignored) {
+                        // The provider may return a temporary grant; keep the activity alive
+                        // until the asynchronous upload completes.
+                    }
                     showSelectedImage();
                 }
             }
@@ -74,7 +79,6 @@ public class CreatePostActivity extends AppCompatActivity {
         btnSelectImage = findViewById(R.id.btnSelectImage);
         ivSelectedImage = findViewById(R.id.ivSelectedImage);
         llImagePlaceholder = findViewById(R.id.llImagePlaceholder);
-        btnUseSampleImage = findViewById(R.id.btnUseSampleImage);
         etCaption = findViewById(R.id.etCaption);
         llLoadingCreate = findViewById(R.id.llLoadingCreate);
 
@@ -82,18 +86,12 @@ public class CreatePostActivity extends AppCompatActivity {
 
         btnSelectImage.setOnClickListener(v -> openGallery());
 
-        btnUseSampleImage.setOnClickListener(v -> {
-            selectedImageUri = Uri.parse("https://picsum.photos/800/800");
-            showSelectedImage();
-            Toast.makeText(this, "Đã chọn ảnh mẫu thử nghiệm!", Toast.LENGTH_SHORT).show();
-        });
-
         btnSubmitPost.setOnClickListener(v -> handleCreatePost());
     }
 
     private void openGallery() {
         try {
-            imagePickerLauncher.launch("image/*");
+            imagePickerLauncher.launch(new String[]{"image/*"});
         } catch (Exception e) {
             Toast.makeText(this, "Không thể mở bộ sưu tập: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -103,9 +101,6 @@ public class CreatePostActivity extends AppCompatActivity {
         if (selectedImageUri != null) {
             llImagePlaceholder.setVisibility(View.GONE);
             ivSelectedImage.setVisibility(View.VISIBLE);
-            try {
-                ivSelectedImage.setImageURI(selectedImageUri);
-            } catch (Exception ignored) {}
             Glide.with(this)
                     .load(selectedImageUri)
                     .centerCrop()
@@ -122,6 +117,10 @@ public class CreatePostActivity extends AppCompatActivity {
 
         String caption = etCaption.getText().toString().trim();
         String currentUserId = authService.getCurrentUserId();
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            Toast.makeText(this, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         // Show loading & disable submit button
         llLoadingCreate.setVisibility(View.VISIBLE);
@@ -146,7 +145,10 @@ public class CreatePostActivity extends AppCompatActivity {
                 llLoadingCreate.setVisibility(View.GONE);
                 btnSubmitPost.setEnabled(true);
 
-                Toast.makeText(CreatePostActivity.this, "Lỗi đăng bài: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                String message = e == null || e.getMessage() == null
+                        ? "Không thể đăng bài. Vui lòng thử lại."
+                        : e.getMessage();
+                Toast.makeText(CreatePostActivity.this, "Lỗi đăng bài: " + message, Toast.LENGTH_LONG).show();
             }
         });
     }

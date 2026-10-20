@@ -21,6 +21,7 @@ import com.example.myapplication.model.Follow;
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.User;
 import com.example.myapplication.service.impl.AuthService;
+import com.example.myapplication.service.impl.ChatService;
 import com.example.myapplication.service.impl.NotificationService;
 import com.example.myapplication.service.impl.PostService;
 import com.example.myapplication.service.impl.UserService;
@@ -81,6 +82,10 @@ public class ProfileActivity extends AppCompatActivity {
         setupRecyclerView();
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.PROFILE);
 
+        if (getIntent().getBooleanExtra("showSavedPosts", false)) {
+            switchTab(true);
+        }
+
         loadUserProfile();
         loadUserPosts();
     }
@@ -103,16 +108,22 @@ public class ProfileActivity extends AppCompatActivity {
         progressBarProfile = findViewById(R.id.progressBarProfile);
         tvStateProfile = findViewById(R.id.tvStateProfile);
 
+        findViewById(R.id.btnProfileSettings).setOnClickListener(v ->
+                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class)));
+
         if (isSelfProfile) {
+            findViewById(R.id.btnMessageProfile).setVisibility(View.GONE);
             btnProfileActionButton.setText("Sửa hồ sơ");
             btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_outline);
-            btnProfileActionButton.setTextColor(0xFF000000);
+            btnProfileActionButton.setTextColor(0xFF102D57);
 
             llProfileTabs.setVisibility(View.VISIBLE);
             tabUserPosts.setOnClickListener(v -> switchTab(false));
             tabSavedPosts.setOnClickListener(v -> switchTab(true));
         } else {
             llProfileTabs.setVisibility(View.GONE);
+            findViewById(R.id.btnMessageProfile).setVisibility(View.VISIBLE);
+            findViewById(R.id.btnMessageProfile).setOnClickListener(v -> openPrivateChat());
             checkFollowStatus();
         }
 
@@ -160,6 +171,7 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onSuccess(User user) {
                 if (user != null) {
+                    loadedTargetUser = user;
                     tvProfileTitleUsername.setText(user.getUsername() != null ? user.getUsername() : user.getId());
                     tvFullName.setText(user.getFullName() != null && !user.getFullName().isEmpty() ? user.getFullName() : "Tên hiển thị");
                     tvBio.setText(user.getBio() != null && !user.getBio().isEmpty() ? user.getBio() : "Giới thiệu ngắn về bản thân.");
@@ -182,6 +194,32 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onError(Exception e) {}
         });
+    }
+
+    private User loadedTargetUser;
+
+    private void openPrivateChat() {
+        if (loadedTargetUser == null || currentUserId == null) {
+            Toast.makeText(this, "Đang tải hồ sơ người dùng, vui lòng thử lại.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ChatService.getInstance().getOrCreateConversation(currentUserId, loadedTargetUser,
+                new ChatService.Callback<String>() {
+                    @Override public void onSuccess(String conversationId) {
+                        Intent intent = new Intent(ProfileActivity.this, ChatConversationActivity.class);
+                        intent.putExtra(ChatConversationActivity.EXTRA_CONVERSATION_ID, conversationId);
+                        intent.putExtra(ChatConversationActivity.EXTRA_OTHER_USER_ID, loadedTargetUser.getId());
+                        intent.putExtra(ChatConversationActivity.EXTRA_OTHER_NAME,
+                                loadedTargetUser.getFullName() == null ? loadedTargetUser.getUsername() : loadedTargetUser.getFullName());
+                        intent.putExtra(ChatConversationActivity.EXTRA_OTHER_AVATAR, loadedTargetUser.getAvatarUrl());
+                        startActivity(intent);
+                    }
+                    @Override public void onError(Exception error) {
+                        Toast.makeText(ProfileActivity.this,
+                                "Không mở được tin nhắn: " + (error.getMessage() == null ? "Lỗi Firebase" : error.getMessage()),
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     private void checkFollowStatus() {
@@ -207,9 +245,10 @@ public class ProfileActivity extends AppCompatActivity {
             btnProfileActionButton.setTextColor(0xFF000000);
         } else {
             btnProfileActionButton.setText("Theo dõi");
-            btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_black);
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_auth_button);
             btnProfileActionButton.setTextColor(0xFFFFFFFF);
         }
+        btnProfileActionButton.setElevation(getResources().getDisplayMetrics().density * 4f);
     }
 
     private void handleFollowToggle() {

@@ -9,6 +9,7 @@ public class User extends BaseEntity {
     private String email;
     private String avatarUrl;
     private String bio;
+    private String role;
     private long postsCount;
     private long followersCount;
     private long followingCount;
@@ -24,6 +25,7 @@ public class User extends BaseEntity {
         this.email = email;
         this.avatarUrl = avatarUrl;
         this.bio = bio;
+        this.role = "user";
         this.postsCount = 0;
         this.followersCount = 0;
         this.followingCount = 0;
@@ -69,6 +71,10 @@ public class User extends BaseEntity {
         this.bio = bio;
     }
 
+    public String getRole() { return role; }
+
+    public void setRole(String role) { this.role = role; }
+
     public long getPostsCount() {
         return postsCount;
     }
@@ -107,6 +113,7 @@ public class User extends BaseEntity {
         map.put("email", email);
         map.put("avatarUrl", avatarUrl);
         map.put("bio", bio);
+        map.put("role", role == null ? "user" : role);
         map.put("postsCount", postsCount);
         map.put("followersCount", followersCount);
         map.put("followingCount", followingCount);
@@ -122,6 +129,7 @@ public class User extends BaseEntity {
         if (map.containsKey("email") && map.get("email") != null) user.setEmail((String) map.get("email"));
         if (map.containsKey("avatarUrl") && map.get("avatarUrl") != null) user.setAvatarUrl((String) map.get("avatarUrl"));
         if (map.containsKey("bio") && map.get("bio") != null) user.setBio((String) map.get("bio"));
+        if (map.containsKey("role") && map.get("role") != null) user.setRole((String) map.get("role"));
         if (map.containsKey("postsCount") && map.get("postsCount") instanceof Number) {
             user.setPostsCount(((Number) map.get("postsCount")).longValue());
         }

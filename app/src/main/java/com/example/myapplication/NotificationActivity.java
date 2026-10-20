@@ -18,6 +18,7 @@ import com.example.myapplication.adapter.NotificationAdapter;
 import com.example.myapplication.model.Notification;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.NotificationService;
+import com.example.myapplication.util.BottomNavHelper;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -113,6 +114,7 @@ public class NotificationActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.NOTIFICATION);
         if (currentUserId != null) loadNotifications();
     }
 
@@ -169,7 +171,7 @@ public class NotificationActivity extends AppCompatActivity {
 
     private void loadUnreadCount() {
         if (currentUserId == null) return;
-        notificationService.countUnreadAsync(currentUserId,
+        notificationService.getUnreadCountAsync(currentUserId,
                 new NotificationService.Callback<Integer>() {
                     @Override
                     public void onSuccess(Integer count) {
@@ -190,24 +192,11 @@ public class NotificationActivity extends AppCompatActivity {
                 || pendingReadIds.contains(notificationId)) return;
 
         pendingReadIds.add(notificationId);
-        notificationService.markAsReadAsync(notificationId, currentUserId,
-                new NotificationService.Callback<Void>() {
-                    @Override
-                    public void onSuccess(Void ignored) {
-                        pendingReadIds.remove(notificationId);
-                        notification.setRead(true);
-                        notificationAdapter.setNotifications(notifications);
-                        loadUnreadCount();
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        pendingReadIds.remove(notificationId);
-                        if (e != null && e.getMessage() != null) {
-                            Toast.makeText(NotificationActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
+        notificationService.markAsRead(notificationId);
+        notification.setRead(true);
+        pendingReadIds.remove(notificationId);
+        notificationAdapter.setNotifications(notifications);
+        loadUnreadCount();
     }
 
     private void goToLogin() {
