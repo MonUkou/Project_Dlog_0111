@@ -9,6 +9,11 @@ public interface IAuthService {
         void onError(Exception e);
     }
 
+    interface PasswordResetCallback {
+        void onSuccess();
+        void onError(Exception e);
+    }
+
     User register(String email, String password, String username);
 
     User login(String email, String password);
@@ -17,9 +22,13 @@ public interface IAuthService {
 
     void login(String email, String password, AuthCallback callback);
 
+    void sendPasswordResetEmail(String email, PasswordResetCallback callback);
+
     void logout();
 
     boolean isLoggedIn();
 
     String getCurrentUserId();
+
+    User getCurrentUser();
 }

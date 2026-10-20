@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dlog_feed_background"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/white"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+        <TextView
+            android:id="@+id/btnBackSettings"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:text="‹"
+            android:textColor="@color/dlog_navy"
+            android:textSize="30sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="Cài đặt"
+            android:textColor="@color/dlog_navy"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="TÀI KHOẢN"
+                android:textColor="@color/dlog_muted_blue"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+            <TextView android:id="@+id/rowAccountSettings" style="@style/DLogSettingsRow" android:text="Thông tin cá nhân\nTên, ảnh đại diện và giới thiệu     ›" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="8dp"
+                android:text="TÙY CHỌN"
+                android:textColor="@color/dlog_muted_blue"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+            <TextView android:id="@+id/rowPrivacySettings" style="@style/DLogSettingsRow" android:text="Quyền riêng tư\nKiểm soát nội dung và người theo dõi     ›" />
+            <TextView android:id="@+id/rowNotificationSettings" style="@style/DLogSettingsRow" android:text="Thông báo\nHoạt động và cập nhật từ DLog     ›" />
+            <TextView android:id="@+id/rowBackupSettings" style="@style/DLogSettingsRow" android:text="Sao lưu dữ liệu\nBackup và khôi phục     ›" />
+            <TextView android:id="@+id/rowLanguageSettings" style="@style/DLogSettingsRow" android:text="Ngôn ngữ\nTiếng Việt     ›" />
+            <TextView android:id="@+id/rowAboutSettings" style="@style/DLogSettingsRow" android:text="Thông tin ứng dụng\nDLog · Phiên bản 1.0.0     ›" />
+
+            <TextView
+                android:id="@+id/btnLogoutSettings"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_button_outline"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Đăng xuất"
+                android:textColor="@color/dlog_error"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

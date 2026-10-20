@@ -12,7 +12,12 @@
           "package_name": "com.example.myapplication"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "984911146232-t8inhgduc21am8thggr7h3dfv1c3d33t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCdJsdigC41tr6v3NNq5XFMBul7lp3VgDQ"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "984911146232-t8inhgduc21am8thggr7h3dfv1c3d33t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

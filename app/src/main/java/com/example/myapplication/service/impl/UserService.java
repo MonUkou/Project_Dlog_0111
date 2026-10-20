@@ -5,9 +5,12 @@ import com.example.myapplication.model.User;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class UserService {
 
@@ -60,8 +63,15 @@ public class UserService {
         }
 
         user.touch();
+        Map<String, Object> profileFields = new HashMap<>();
+        profileFields.put("username", user.getUsername());
+        profileFields.put("fullName", user.getFullName());
+        profileFields.put("bio", user.getBio());
+        profileFields.put("avatarUrl", user.getAvatarUrl());
+        profileFields.put("updatedAt", user.getUpdatedAt());
         db.collection("users").document(user.getId())
-                .set(user.toMap())
+                // Only profile fields are written; role and social counters stay intact.
+                .set(profileFields, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> callback.onSuccess(user))
                 .addOnFailureListener(callback::onError);
     }

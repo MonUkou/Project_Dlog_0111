@@ -2,12 +2,16 @@ package com.example.myapplication.service.impl;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.SavedPost;
@@ -17,6 +21,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.StorageMetadata;
+import com.google.firebase.storage.StorageException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -26,9 +32,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PostService {
+    private static final ExecutorService IO_EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
 
     public interface Callback<T> {
         void onSuccess(T result);
@@ -78,18 +88,128 @@ public class PostService {
             return;
         }
 
+        Context appContext = context.getApplicationContext();
         String postId = db.collection("posts").document().getId();
-        StorageReference imageRef = storage.getReference().child("posts/" + postId + "_" + System.currentTimeMillis() + ".jpg");
 
-        // Upload image to Firebase Storage
-        imageRef.putFile(imageUri)
-                .addOnSuccessListener(taskSnapshot -> imageRef.getDownloadUrl()
-                        .addOnSuccessListener(downloadUri -> {
-                            String imageUrl = downloadUri.toString();
-                            savePostToFirestore(postId, authorId, caption, imageUrl, callback);
-                        })
-                        .addOnFailureListener(e -> savePostToFirestore(postId, authorId, caption, imageUri.toString(), callback)))
-                .addOnFailureListener(e -> savePostToFirestore(postId, authorId, caption, imageUri.toString(), callback));
+        // Drive and other cloud providers expose virtual content:// URIs. Copy
+        // them through ContentResolver first so Storage uploads a stable local file.
+        IO_EXECUTOR.execute(() -> {
+            File stagedImage;
+            String mimeType;
+            try {
+                mimeType = resolveImageMimeType(appContext, imageUri);
+                stagedImage = copyImageToCache(appContext, imageUri, postId, mimeType);
+            } catch (Exception error) {
+                String detail = error.getMessage() == null ? "không đọc được dữ liệu ảnh." : error.getMessage();
+                MAIN_HANDLER.post(() -> callback.onError(new Exception(
+                        "Không đọc được ảnh đã chọn (Google Drive/thư viện): " + detail, error)));
+                return;
+            }
+
+            String bucket = appContext.getString(com.example.myapplication.R.string.google_storage_bucket);
+            String extension = extensionForMimeType(mimeType);
+            StorageReference imageRef = FirebaseStorage.getInstance("gs://" + bucket)
+                    .getReference().child("posts/" + authorId + "/" + postId + extension);
+            StorageMetadata metadata = new StorageMetadata.Builder()
+                    .setContentType(mimeType == null || !mimeType.startsWith("image/") ? "image/jpeg" : mimeType)
+                    .setCustomMetadata("postId", postId)
+                    .setCustomMetadata("authorId", authorId)
+                    .build();
+
+            imageRef.putFile(Uri.fromFile(stagedImage), metadata)
+                    .continueWithTask(task -> {
+                        if (!task.isSuccessful()) {
+                            Exception cause = task.getException();
+                            if (cause != null) throw cause;
+                            throw new IllegalStateException("Firebase Storage chưa hoàn tất tải ảnh.");
+                        }
+                        return imageRef.getDownloadUrl();
+                    })
+                    .addOnSuccessListener(downloadUri -> {
+                        stagedImage.delete();
+                        savePostToFirestore(postId, authorId, caption, downloadUri.toString(), callback);
+                    })
+                    .addOnFailureListener(error -> {
+                        stagedImage.delete();
+                        callback.onError(new Exception(storageErrorMessage(error), error));
+                    });
+        });
+    }
+
+    private File copyImageToCache(Context context, Uri imageUri, String postId, String mimeType) throws Exception {
+        File cacheDirectory = new File(context.getCacheDir(), "post_uploads");
+        if (!cacheDirectory.exists() && !cacheDirectory.mkdirs()) {
+            throw new java.io.IOException("Không thể tạo vùng đệm tạm để tải ảnh.");
+        }
+        File stagedImage = new File(cacheDirectory, postId + "_" + UUID.randomUUID() + extensionForMimeType(mimeType));
+        try (InputStream input = context.getContentResolver().openInputStream(imageUri);
+             OutputStream output = new FileOutputStream(stagedImage)) {
+            if (input == null) throw new java.io.IOException("Nguồn ảnh không mở được. Hãy tải ảnh từ Drive xuống máy rồi chọn lại.");
+            byte[] buffer = new byte[64 * 1024];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            output.flush();
+        } catch (Exception error) {
+            // Remove a partial file before returning the provider/read error.
+            //noinspection ResultOfMethodCallIgnored
+            stagedImage.delete();
+            throw error;
+        }
+        if (!stagedImage.isFile() || stagedImage.length() == 0) {
+            //noinspection ResultOfMethodCallIgnored
+            stagedImage.delete();
+            throw new java.io.IOException("Ảnh tải từ Drive bị rỗng. Hãy tải ảnh xuống máy trước rồi chọn lại.");
+        }
+        return stagedImage;
+    }
+
+    private String extensionForMimeType(String mimeType) {
+        String subtype = mimeType == null || mimeType.lastIndexOf('/') < 0
+                ? "" : mimeType.substring(mimeType.lastIndexOf('/') + 1).toLowerCase(java.util.Locale.ROOT);
+        if ("png".equals(subtype)) return ".png";
+        if ("webp".equals(subtype)) return ".webp";
+        if ("gif".equals(subtype)) return ".gif";
+        if ("heic".equals(subtype) || "heif".equals(subtype)) return "." + subtype;
+        return ".jpg";
+    }
+
+    private String resolveImageMimeType(Context context, Uri imageUri) {
+        String mimeType = context.getContentResolver().getType(imageUri);
+        if (mimeType != null && mimeType.startsWith("image/")) return mimeType;
+        String displayName = null;
+        try (Cursor cursor = context.getContentResolver().query(
+                imageUri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (column >= 0) displayName = cursor.getString(column);
+            }
+        } catch (Exception ignored) { }
+        if (displayName != null) {
+            String name = displayName.toLowerCase(java.util.Locale.ROOT);
+            if (name.endsWith(".png")) return "image/png";
+            if (name.endsWith(".webp")) return "image/webp";
+            if (name.endsWith(".gif")) return "image/gif";
+            if (name.endsWith(".heic")) return "image/heic";
+            if (name.endsWith(".heif")) return "image/heif";
+        }
+        return "image/jpeg";
+    }
+
+    private String storageErrorMessage(Exception error) {
+        if (error instanceof StorageException) {
+            int code = ((StorageException) error).getErrorCode();
+            if (code == StorageException.ERROR_OBJECT_NOT_FOUND) {
+                return "Firebase báo không tìm thấy ảnh vừa tải lên. Hãy kiểm tra Storage của project và bucket project-dlog-0111.firebasestorage.app.";
+            }
+            if (code == StorageException.ERROR_BUCKET_NOT_FOUND) {
+                return "Firebase Storage chưa có bucket project-dlog-0111.firebasestorage.app. Hãy tạo/bật Storage trong Firebase Console.";
+            }
+            if (code == StorageException.ERROR_NOT_AUTHORIZED || code == StorageException.ERROR_NOT_AUTHENTICATED) {
+                return "Firebase Storage từ chối tải ảnh. Kiểm tra người dùng đã đăng nhập và Storage Rules cho phép tải ảnh.";
+            }
+        }
+        String message = error == null ? null : error.getMessage();
+        return "Không thể tải ảnh lên Firebase Storage" + (message == null ? "." : ": " + message);
     }
 
     private void savePostToFirestore(String postId, String authorId, String caption, String imageUrl, Callback<Post> callback) {
@@ -425,7 +545,7 @@ public class PostService {
             return;
         }
 
-        Executors.newSingleThreadExecutor().execute(() -> {
+        IO_EXECUTOR.execute(() -> {
             try {
                 Bitmap bitmap;
                 if (imageUrl.startsWith("content://") || imageUrl.startsWith("file://")) {

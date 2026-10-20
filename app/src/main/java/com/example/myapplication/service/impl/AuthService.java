@@ -7,6 +7,7 @@ import com.example.myapplication.model.User;
 import com.example.myapplication.service.IAuthService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class AuthService implements IAuthService {
@@ -16,7 +17,7 @@ public class AuthService implements IAuthService {
     private final FirebaseFirestore db;
     private static final String PREF_NAME = "dlog_auth_prefs";
     private static final String KEY_CURRENT_USER_ID = "current_user_id";
-    private String fallbackUserId = "user_minh_anh";
+    private String fallbackUserId;
     private Context context;
 
     public AuthService() {
@@ -120,14 +121,79 @@ public class AuthService implements IAuthService {
                 });
     }
 
+    /** Signs into Firebase with a Google ID token and creates the DLog profile on first sign-in. */
+    public void signInWithGoogle(String idToken, AuthCallback callback) {
+        if (idToken == null || idToken.trim().isEmpty()) {
+            if (callback != null) callback.onError(new IllegalArgumentException("Google ID token is empty."));
+            return;
+        }
+        auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))
+                .addOnSuccessListener(result -> {
+                    FirebaseUser firebaseUser = result.getUser();
+                    if (firebaseUser == null) {
+                        if (callback != null) callback.onError(new IllegalStateException("Không lấy được tài khoản Google."));
+                        return;
+                    }
+                    String uid = firebaseUser.getUid();
+                    setCurrentUserId(uid);
+                    db.collection("users").document(uid).get()
+                            .addOnSuccessListener(snapshot -> {
+                                if (snapshot.exists() && snapshot.getData() != null) {
+                                    if (callback != null) callback.onSuccess(User.fromMap(snapshot.getData()));
+                                    return;
+                                }
+                                String displayName = firebaseUser.getDisplayName();
+                                String email = firebaseUser.getEmail();
+                                String username = displayName;
+                                if (username == null || username.trim().isEmpty()) {
+                                    username = email == null ? "dlog_user" : email.split("@")[0];
+                                }
+                                User user = new User(uid, username, username, email,
+                                        firebaseUser.getPhotoUrl() == null ? "" : firebaseUser.getPhotoUrl().toString(),
+                                        "");
+                                db.collection("users").document(uid).set(user.toMap())
+                                        .addOnSuccessListener(unused -> {
+                                            if (callback != null) callback.onSuccess(user);
+                                        })
+                                        .addOnFailureListener(error -> {
+                                            if (callback != null) callback.onError(error);
+                                        });
+                            })
+                            .addOnFailureListener(error -> {
+                                if (callback != null) callback.onError(error);
+                            });
+                })
+                .addOnFailureListener(error -> {
+                    if (callback != null) callback.onError(error);
+                });
+    }
+
     @Override
     public void logout() {
         auth.signOut();
+        fallbackUserId = null;
+        if (context != null) {
+            context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .remove(KEY_CURRENT_USER_ID)
+                    .apply();
+        }
     }
 
     @Override
     public boolean isLoggedIn() {
-        return auth.getCurrentUser() != null || fallbackUserId != null;
+        return auth.getCurrentUser() != null;
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String email, PasswordResetCallback callback) {
+        auth.sendPasswordResetEmail(email)
+                .addOnSuccessListener(unused -> {
+                    if (callback != null) callback.onSuccess();
+                })
+                .addOnFailureListener(error -> {
+                    if (callback != null) callback.onError(error);
+                });
     }
 
     @Override

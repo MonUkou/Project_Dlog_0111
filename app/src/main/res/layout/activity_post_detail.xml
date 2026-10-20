@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FFFFFF">
+    android:background="@color/white">
 
     <!-- Thanh Header: <   Bài viết   Sửa -->
     <RelativeLayout
@@ -20,7 +20,7 @@
             android:gravity="center_vertical"
             android:paddingEnd="16dp"
             android:text="‹"
-            android:textColor="#111111"
+            android:textColor="@color/dlog_navy"
             android:textSize="26sp" />
 
         <TextView
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="Bài viết"
-            android:textColor="#111111"
+            android:textColor="@color/dlog_navy"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -47,7 +47,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#EEEEEE" />
+        android:background="@color/dlog_feed_divider" />
 
     <!-- Vùng nội dung cuộn được khi xoay màn hình -->
     <androidx.core.widget.NestedScrollView
@@ -70,11 +70,13 @@
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="10dp">
 
-                <View
+                <ImageView
                     android:id="@+id/viewAuthorAvatar"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:background="#D9D9D9" />
+                    android:background="@drawable/bg_circle_avatar"
+                    android:contentDescription="Ảnh đại diện tác giả"
+                    android:scaleType="centerCrop" />
 
                 <TextView
                     android:id="@+id/tvPostAuthor"
@@ -82,7 +84,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:text="minh.anh"
-                    android:textColor="#111111"
+                    android:textColor="@color/dlog_navy"
                     android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -106,7 +108,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:text="Ảnh"
-                    android:textColor="#888888"
+                    android:textColor="@color/dlog_muted_blue"
                     android:textSize="14sp" />
             </FrameLayout>
 
@@ -127,7 +129,7 @@
                     android:paddingVertical="4dp"
                     android:paddingEnd="16dp"
                     android:text="Thích"
-                    android:textColor="#111111"
+                    android:textColor="@color/dlog_navy"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -137,9 +139,22 @@
                     android:layout_height="wrap_content"
                     android:paddingVertical="4dp"
                     android:text="Bình luận"
-                    android:textColor="#111111"
+                    android:textColor="@color/dlog_navy"
                     android:textSize="14sp"
                     android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnSharePost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:drawableStart="@drawable/ic_share_24"
+                    android:drawablePadding="5dp"
+                    android:drawableTint="@color/dlog_muted_blue"
+                    android:gravity="center_vertical"
+                    android:text="Chia sẻ"
+                    android:textColor="@color/dlog_navy"
+                    android:textSize="13sp" />
 
                 <View
                     android:layout_width="0dp"
@@ -152,7 +167,7 @@
                     android:layout_height="wrap_content"
                     android:paddingVertical="4dp"
                     android:text="Lưu"
-                    android:textColor="#111111"
+                    android:textColor="@color/dlog_navy"
                     android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -164,7 +179,7 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="14dp"
                 android:text="0 lượt thích"
-                android:textColor="#111111"
+                android:textColor="@color/dlog_navy"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -187,7 +202,7 @@
                 android:layout_marginTop="6dp"
                 android:paddingHorizontal="14dp"
                 android:text="0 bình luận"
-                android:textColor="#757575"
+                android:textColor="@color/dlog_muted_blue"
                 android:textSize="13sp" />
 
             <!-- Vòng xoay Loading khi đang tải bình luận -->
@@ -208,7 +223,7 @@
                 android:gravity="center"
                 android:paddingHorizontal="14dp"
                 android:text="Chưa có bình luận nào."
-                android:textColor="#888888"
+                android:textColor="@color/dlog_muted_blue"
                 android:textSize="13sp"
                 android:visibility="gone" />
 
@@ -228,13 +243,13 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#EEEEEE" />
+        android:background="@color/dlog_feed_divider" />
 
     <!-- Thanh nhập bình luận ở đáy màn hình: [Viết bình luận] [Gửi] -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#FFFFFF"
+        android:background="@color/white"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="12dp"
@@ -257,10 +272,10 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
-            android:backgroundTint="#111111"
+            android:backgroundTint="@color/dlog_navy"
             android:text="Gửi"
             android:textAllCaps="false"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/white"
             android:textSize="14sp" />
     </LinearLayout>
 

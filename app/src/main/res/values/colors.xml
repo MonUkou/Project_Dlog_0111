@@ -2,4 +2,19 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="dlog_blue">#24569B</color>
+    <color name="dlog_blue_dark">#17365F</color>
+    <color name="dlog_blue_light">#4E8BD1</color>
+    <color name="dlog_ink">#172B4D</color>
+    <color name="dlog_muted">#6D83A5</color>
+    <color name="dlog_page">#FFFFFFFF</color>
+    <color name="dlog_surface">#FFFFFFFF</color>
+    <color name="dlog_border">#DCE7F5</color>
+    <color name="dlog_button">#24569B</color>
+    <color name="dlog_error">#C62828</color>
+    <color name="dlog_navy">#102D57</color>
+    <color name="dlog_muted_blue">#6D87A9</color>
+    <color name="dlog_feed_background">#F1F6FD</color>
+    <color name="dlog_feed_divider">#E2EBF7</color>
+    <color name="dlog_feed_image_placeholder">#EAF2FC</color>
 </resources>

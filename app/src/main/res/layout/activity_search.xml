@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="@color/white">
 
     <!-- Header / Search input -->
     <LinearLayout
@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:padding="10dp"
-        android:background="#FFFFFF"
+        android:background="@color/white"
         android:elevation="2dp"
         android:gravity="center_vertical">
 
@@ -22,8 +22,8 @@
             android:hint="Tìm kiếm người dùng..."
             android:inputType="text"
             android:paddingHorizontal="14dp"
-            android:textColor="#000000"
-            android:textColorHint="#888888"
+            android:textColor="@color/dlog_navy"
+            android:textColorHint="@color/dlog_muted_blue"
             android:textSize="15sp" />
     </LinearLayout>
 
@@ -32,14 +32,14 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_below="@id/headerSearch"
-        android:background="#E0E0E0" />
+        android:background="@color/dlog_feed_divider" />
 
     <!-- Bottom Navigation -->
     <include
         android:id="@+id/bottomNavView"
         layout="@layout/inc_bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:layout_alignParentBottom="true" />
 
     <!-- Search Results List -->
@@ -67,7 +67,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="Nhập từ khóa để tìm kiếm"
-            android:textColor="#888888"
+            android:textColor="@color/dlog_muted_blue"
             android:textSize="15sp" />
     </FrameLayout>
 

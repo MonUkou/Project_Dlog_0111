@@ -1,5 +1,6 @@
 package com.example.myapplication;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.myapplication.model.Comment;
 import com.example.myapplication.service.impl.InteractionService;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -39,6 +42,9 @@ public class PostDetailActivity extends AppCompatActivity {
 
     private TextView tvBack, tvPostAuthor, tvPostCaption, tvLikesCount, tvCommentsCount, tvEmptyComments;
     private TextView btnLike, btnFocusComment;
+    private TextView btnSharePost;
+    private ImageView ivDetailAuthorAvatar, ivDetailPostImage;
+    private TextView tvImagePlaceholder;
     private Button btnSendComment;
     private EditText edtComment;
     private ProgressBar progressBarComments;
@@ -48,7 +54,7 @@ public class PostDetailActivity extends AppCompatActivity {
     private CommentAdapter commentAdapter;
 
     private String postId;
-    private String currentAuthor = "minh.anh";
+    private String currentAuthor = "";
     private String currentCaption = "";
     private boolean isLiked = false;
     private long currentLikesCount = 0;
@@ -63,7 +69,12 @@ public class PostDetailActivity extends AppCompatActivity {
 
         postId = getIntent().getStringExtra(EXTRA_POST_ID);
         if (postId == null || postId.trim().isEmpty()) {
-            postId = "post_demo_1";
+            postId = getIntent().getStringExtra("postId");
+        }
+        if (postId == null || postId.trim().isEmpty()) {
+            Toast.makeText(this, "Không tìm thấy mã bài viết.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
         }
 
         initViews();
@@ -94,12 +105,16 @@ public class PostDetailActivity extends AppCompatActivity {
         tvEmptyComments = findViewById(R.id.tvEmptyComments);
         btnLike = findViewById(R.id.btnLike);
         btnFocusComment = findViewById(R.id.btnFocusComment);
+        btnSharePost = findViewById(R.id.btnSharePost);
+        ivDetailAuthorAvatar = findViewById(R.id.viewAuthorAvatar);
+        ivDetailPostImage = findViewById(R.id.ivPostImage);
+        tvImagePlaceholder = findViewById(R.id.tvImagePlaceholder);
         btnSendComment = findViewById(R.id.btnSendComment);
         edtComment = findViewById(R.id.edtComment);
         progressBarComments = findViewById(R.id.progressBarComments);
         rvComments = findViewById(R.id.rvComments);
 
-        commentAdapter = new CommentAdapter(this::showDeleteCommentDialog);
+        commentAdapter = new CommentAdapter(this, this::showDeleteCommentDialog);
         rvComments.setLayoutManager(new LinearLayoutManager(this));
         rvComments.setAdapter(commentAdapter);
 
@@ -107,21 +122,34 @@ public class PostDetailActivity extends AppCompatActivity {
         btnLike.setOnClickListener(v -> handleLikeClick());
         btnFocusComment.setOnClickListener(v -> edtComment.requestFocus());
         btnSendComment.setOnClickListener(v -> handleSendComment());
+        btnSharePost.setOnClickListener(v -> sharePost());
     }
 
     private void loadPostDetails() {
         FirebaseFirestore.getInstance().collection("posts").document(postId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
+                        String authorName = doc.getString("authorUsername");
+                        String authorAvatarUrl = doc.getString("authorAvatarUrl");
                         String authorId = doc.getString("authorId");
+                        String imageUrl = doc.getString("imageUrl");
                         String caption = doc.getString("caption");
                         Long likes = doc.getLong("likesCount");
                         Long comments = doc.getLong("commentsCount");
 
-                        currentAuthor = (authorId != null && !authorId.isEmpty()) ? authorId : "minh.anh";
+                        currentAuthor = (authorName != null && !authorName.isEmpty())
+                                ? authorName : (authorId != null ? authorId : "Người dùng DLog");
                         currentCaption = (caption != null) ? caption : "";
                         currentLikesCount = (likes != null) ? likes : 0;
                         currentCommentsCount = (comments != null) ? comments : 0;
+
+                        if (authorAvatarUrl != null && !authorAvatarUrl.trim().isEmpty()) {
+                            Glide.with(this).load(authorAvatarUrl).circleCrop().into(ivDetailAuthorAvatar);
+                        }
+                        if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+                            tvImagePlaceholder.setVisibility(View.GONE);
+                            Glide.with(this).load(imageUrl).centerCrop().into(ivDetailPostImage);
+                        }
 
                         updatePostInfoUI();
                         updateCounterViews();
@@ -239,6 +267,27 @@ public class PostDetailActivity extends AppCompatActivity {
         });
     }
 
+    private void sharePost() {
+        FirebaseFirestore.getInstance().collection("posts").document(postId).get()
+                .addOnSuccessListener(document -> {
+                    if (!document.exists()) {
+                        Toast.makeText(this, "Bài viết không còn tồn tại.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String caption = document.getString("caption");
+                    String imageUrl = document.getString("imageUrl");
+                    String shareText = (caption == null || caption.trim().isEmpty()
+                            ? "Xem bài viết này trên DLog" : caption.trim())
+                            + (imageUrl == null || imageUrl.trim().isEmpty() ? "" : "\n" + imageUrl);
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("text/plain");
+                    send.putExtra(Intent.EXTRA_TEXT, shareText);
+                    startActivity(Intent.createChooser(send, "Chia sẻ bài viết"));
+                })
+                .addOnFailureListener(error -> Toast.makeText(this,
+                        "Không thể tải bài viết để chia sẻ.", Toast.LENGTH_SHORT).show());
+    }
+
     private void showDeleteCommentDialog(Comment comment) {
         new AlertDialog.Builder(this)
                 .setTitle("Xóa bình luận")
@@ -311,9 +360,11 @@ public class PostDetailActivity extends AppCompatActivity {
         }
 
         private List<Comment> comments = new ArrayList<>();
+        private final android.content.Context context;
         private final OnCommentClickListener listener;
 
-        CommentAdapter(OnCommentClickListener listener) {
+        CommentAdapter(android.content.Context context, OnCommentClickListener listener) {
+            this.context = context;
             this.listener = listener;
         }
 
@@ -325,21 +376,38 @@ public class PostDetailActivity extends AppCompatActivity {
         @NonNull
         @Override
         public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            TextView tv = new TextView(parent.getContext());
-            tv.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            ));
-            tv.setPadding(0, 8, 0, 8);
-            tv.setTextColor(Color.parseColor("#212121"));
-            tv.setTextSize(14f);
-            return new CommentViewHolder(tv);
+            android.widget.LinearLayout row = new android.widget.LinearLayout(parent.getContext());
+            row.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(0, dp(parent, 7), 0, dp(parent, 7));
+            ImageView avatar = new ImageView(parent.getContext());
+            avatar.setLayoutParams(new android.widget.LinearLayout.LayoutParams(dp(parent, 36), dp(parent, 36)));
+            avatar.setBackgroundResource(R.drawable.bg_circle_avatar);
+            avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            TextView text = new TextView(parent.getContext());
+            android.widget.LinearLayout.LayoutParams textParams = new android.widget.LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            textParams.setMarginStart(dp(parent, 9));
+            text.setLayoutParams(textParams);
+            text.setTextColor(Color.parseColor("#172B4D"));
+            text.setTextSize(14f);
+            row.addView(avatar);
+            row.addView(text);
+            return new CommentViewHolder(row, avatar, text);
         }
 
         @Override
         public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
             Comment c = comments.get(position);
-            holder.tvCommentLine.setText(formatBoldPrefix(c.getAuthorId(), c.getContent()));
+            String name = c.getUsername() != null && !c.getUsername().trim().isEmpty()
+                    ? c.getUsername() : c.getAuthorId();
+            holder.tvCommentLine.setText(formatBoldPrefix(name, c.getContent()));
+            if (c.getAvatarUrl() != null && !c.getAvatarUrl().trim().isEmpty()) {
+                Glide.with(context).load(c.getAvatarUrl()).circleCrop().into(holder.ivAvatar);
+            } else {
+                holder.ivAvatar.setImageResource(R.drawable.bg_circle_avatar);
+            }
             holder.itemView.setOnClickListener(v -> listener.onCommentClick(c));
         }
 
@@ -350,11 +418,17 @@ public class PostDetailActivity extends AppCompatActivity {
 
         static class CommentViewHolder extends RecyclerView.ViewHolder {
             TextView tvCommentLine;
+            ImageView ivAvatar;
 
-            CommentViewHolder(@NonNull TextView itemView) {
+            CommentViewHolder(@NonNull View itemView, ImageView avatar, TextView text) {
                 super(itemView);
-                this.tvCommentLine = itemView;
+                this.tvCommentLine = text;
+                this.ivAvatar = avatar;
             }
+        }
+
+        private static int dp(View view, int value) {
+            return (int) (value * view.getResources().getDisplayMetrics().density + 0.5f);
         }
     }
 }
