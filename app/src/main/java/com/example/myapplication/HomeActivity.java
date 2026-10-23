@@ -2,14 +2,19 @@ package com.example.myapplication;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -20,9 +25,13 @@ import com.example.myapplication.model.Post;
 import com.example.myapplication.model.User;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.PostService;
+import com.example.myapplication.service.impl.UserService;
 import com.example.myapplication.util.BottomNavHelper;
+import com.example.myapplication.util.FeedPageSelector;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.bumptech.glide.Glide;
+import com.google.android.material.appbar.AppBarLayout;
 
 import java.util.List;
 
@@ -32,19 +41,30 @@ public class HomeActivity extends AppCompatActivity {
     private RecyclerView rvFeed;
     private ProgressBar progressBarFeed;
     private TextView tvStateFeed;
+    private TextView tvOfflineFeed;
     private RecyclerView rvPeople;
     private ImageButton btnSearchHome;
     private ImageButton btnNotificationsHome;
+    private ImageButton btnMenuHome;
+    private ImageButton btnScrollToTop;
+    private DrawerLayout homeDrawer;
+    private AppBarLayout feedAppBar;
 
     private PostAdapter postAdapter;
     private PostService postService;
     private AuthService authService;
     private UserStripAdapter userStripAdapter;
+    private ListenerRegistration currentUserRegistration;
 
     private DocumentSnapshot lastVisibleDocument;
-    private boolean isLoadingMore = false;
+    private boolean isLoadingFeed = false;
     private boolean hasMorePosts = true;
     private static final int PAGE_SIZE = 10;
+    private int feedRequestGeneration = 0;
+    private final Handler feedHandler = new Handler(Looper.getMainLooper());
+    private final Runnable ownPostExpiry = new Runnable() {
+        @Override public void run() { loadFeedPosts(true); }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,7 +78,6 @@ public class HomeActivity extends AppCompatActivity {
         initViews();
         setupPeopleStrip();
         setupRecyclerView();
-        loadPeople();
         loadFeedPosts(true);
     }
 
@@ -67,17 +86,39 @@ public class HomeActivity extends AppCompatActivity {
         rvFeed = findViewById(R.id.rvFeed);
         progressBarFeed = findViewById(R.id.progressBarFeed);
         tvStateFeed = findViewById(R.id.tvStateFeed);
+        tvOfflineFeed = findViewById(R.id.tvOfflineFeed);
         rvPeople = findViewById(R.id.rvPeople);
         btnSearchHome = findViewById(R.id.btnSearchHome);
         btnNotificationsHome = findViewById(R.id.btnNotificationsHome);
+        btnMenuHome = findViewById(R.id.btnMenuHome);
+        btnScrollToTop = findViewById(R.id.btnScrollToTop);
+        homeDrawer = findViewById(R.id.homeDrawer);
+        feedAppBar = findViewById(R.id.feedAppBar);
 
-        swipeRefreshLayout.setOnRefreshListener(() -> loadFeedPosts(true));
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override public void onRefresh() {
+                loadPeople();
+                loadFeedPosts(true);
+            }
+        });
 
         btnSearchHome.setOnClickListener(v ->
                 startActivity(new Intent(HomeActivity.this, SearchActivity.class)));
 
         btnNotificationsHome.setOnClickListener(v ->
                 startActivity(new Intent(HomeActivity.this, NotificationActivity.class)));
+        btnMenuHome.setOnClickListener(v -> homeDrawer.openDrawer(GravityCompat.START));
+        findViewById(R.id.quickCreatePost).setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class)));
+        btnScrollToTop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                rvFeed.smoothScrollToPosition(0);
+                feedAppBar.setExpanded(true, true);
+                btnScrollToTop.setVisibility(View.GONE);
+            }
+        });
+        setupDrawerMenu();
     }
 
     private void setupPeopleStrip() {
@@ -86,21 +127,87 @@ public class HomeActivity extends AppCompatActivity {
         rvPeople.setAdapter(userStripAdapter);
     }
 
+    private void setupDrawerMenu() {
+        findViewById(R.id.rowMenuProfile).setOnClickListener(v -> openProfile(false));
+        findViewById(R.id.rowMenuSaved).setOnClickListener(v -> openProfile(true));
+        findViewById(R.id.rowMenuCreate).setOnClickListener(v ->
+                startActivity(new Intent(this, CreatePostActivity.class)));
+        findViewById(R.id.rowMenuNotifications).setOnClickListener(v ->
+                startActivity(new Intent(this, NotificationActivity.class)));
+        findViewById(R.id.rowMenuChats).setOnClickListener(v ->
+                startActivity(new Intent(this, ChatsActivity.class)));
+        findViewById(R.id.rowMenuSettings).setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class)));
+        findViewById(R.id.rowMenuAdmin).setOnClickListener(v ->
+                startActivity(new Intent(this, AdminActivity.class)));
+        findViewById(R.id.rowMenuHelp).setOnClickListener(v ->
+                Toast.makeText(this, "Trung tâm trợ giúp sẽ sớm có mặt.", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.rowMenuLogout).setOnClickListener(v -> {
+            authService.logout();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        });
+    }
+
+    private void openProfile(boolean showSaved) {
+        Intent intent = new Intent(this, ProfileActivity.class);
+        intent.putExtra("showSavedPosts", showSaved);
+        startActivity(intent);
+    }
+
+    private void loadDrawerUser() {
+        String userId = authService.getCurrentUserId();
+        if (userId == null) return;
+        ImageView avatar = findViewById(R.id.ivMenuAvatar);
+        TextView name = findViewById(R.id.tvMenuName);
+        TextView username = findViewById(R.id.tvMenuUsername);
+        if (currentUserRegistration != null) return;
+        currentUserRegistration = UserService.getInstance().observeUserProfile(userId, new UserService.Callback<User>() {
+            @Override public void onSuccess(User user) {
+                if (user == null) return;
+                findViewById(R.id.rowMenuAdmin).setVisibility(
+                        "admin".equalsIgnoreCase(user.getRole()) ? View.VISIBLE : View.GONE);
+                name.setText(user.getFullName() == null || user.getFullName().isEmpty()
+                        ? "Người dùng DLog" : user.getFullName());
+                username.setText("@" + (user.getUsername() == null ? "dlog_user" : user.getUsername()));
+                if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+                    Glide.with(HomeActivity.this).load(user.getAvatarUrl()).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(avatar);
+                    Glide.with(HomeActivity.this).load(user.getAvatarUrl()).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop()
+                            .into((ImageView) findViewById(R.id.ivQuickCreateAvatar));
+                } else {
+                    avatar.setImageResource(R.drawable.bg_circle_avatar);
+                    ((ImageView) findViewById(R.id.ivQuickCreateAvatar)).setImageResource(R.drawable.bg_circle_avatar);
+                }
+            }
+            @Override public void onError(Exception e) { }
+        });
+    }
+
     private void loadPeople() {
-        FirebaseFirestore.getInstance().collection("users").limit(30).get()
-                .addOnSuccessListener(snapshot -> {
-                    List<User> users = new java.util.ArrayList<>();
-                    for (DocumentSnapshot document : snapshot.getDocuments()) {
-                        if (document.getData() != null) {
-                            User user = User.fromMap(document.getData());
-                            if (user != null) {
-                                if (user.getId() == null) user.setId(document.getId());
-                                users.add(user);
-                            }
-                        }
-                    }
-                    userStripAdapter.setUsers(users);
-                });
+        String userId = authService.getCurrentUserId();
+        if (userId == null) {
+            userStripAdapter.setUsers(null);
+            showPeopleSection(false);
+            return;
+        }
+        UserService.getInstance().getFollowUsers(userId, true, new UserService.Callback<List<User>>() {
+            @Override public void onSuccess(List<User> users) {
+                if (isFinishing() || isDestroyed()) return;
+                userStripAdapter.setUsers(users);
+                showPeopleSection(userStripAdapter.getItemCount() > 0);
+            }
+
+            @Override public void onError(Exception error) {
+                if (isFinishing() || isDestroyed()) return;
+                showPeopleSection(userStripAdapter.getItemCount() > 0);
+            }
+        });
+    }
+
+    private void showPeopleSection(boolean visible) {
+        findViewById(R.id.peopleSection).setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     private void setupRecyclerView() {
@@ -119,7 +226,7 @@ public class HomeActivity extends AppCompatActivity {
             public void onPostDeleted(String postId) {
                 if (postAdapter.getItemCount() == 0) {
                     tvStateFeed.setVisibility(View.VISIBLE);
-                    tvStateFeed.setText("Chưa có bài viết nào");
+                    tvStateFeed.setText("Chưa có bài viết từ người khác. Bạn có thể xem bài của mình trong trang cá nhân.");
                 }
             }
         });
@@ -130,13 +237,15 @@ public class HomeActivity extends AppCompatActivity {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
-                if (dy <= 0 || isLoadingMore || !hasMorePosts) {
+                int firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
+                btnScrollToTop.setVisibility(firstVisibleItem >= 3 ? View.VISIBLE : View.GONE);
+
+                if (dy <= 0 || isLoadingFeed || !hasMorePosts) {
                     return;
                 }
 
                 int visibleItemCount = layoutManager.getChildCount();
                 int totalItemCount = layoutManager.getItemCount();
-                int firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
 
                 if (totalItemCount > 0
                         && visibleItemCount + firstVisibleItem >= totalItemCount - 2) {
@@ -148,28 +257,42 @@ public class HomeActivity extends AppCompatActivity {
 
     private void loadFeedPosts(boolean isRefresh) {
         if (isRefresh) {
+            List<Post> saved = new com.example.myapplication.service.impl.OfflinePages(this)
+                    .feed(authService.getCurrentUserId());
+            if (!saved.isEmpty()) {
+                postAdapter.setPosts(saved);
+                tvStateFeed.setVisibility(View.GONE);
+                tvOfflineFeed.setText("Đang kiểm tra dữ liệu mới…");
+                tvOfflineFeed.setVisibility(View.VISIBLE);
+            }
+        }
+        if (isRefresh) {
+            feedRequestGeneration++;
             lastVisibleDocument = null;
             hasMorePosts = true;
-            isLoadingMore = false;
+            isLoadingFeed = true;
 
             if (!swipeRefreshLayout.isRefreshing()) {
                 progressBarFeed.setVisibility(View.VISIBLE);
             }
             tvStateFeed.setVisibility(View.GONE);
         } else {
-            if (isLoadingMore || !hasMorePosts) {
+            if (isLoadingFeed || !hasMorePosts) {
                 return;
             }
-            isLoadingMore = true;
+            isLoadingFeed = true;
         }
 
-        postService.getFeedPosts(lastVisibleDocument, PAGE_SIZE,
+        final int requestGeneration = feedRequestGeneration;
+        postService.getFeedPosts(authService.getCurrentUserId(), lastVisibleDocument, PAGE_SIZE,
                 new PostService.Callback<PostService.FeedResult>() {
                     @Override
                     public void onSuccess(PostService.FeedResult result) {
+                        if (requestGeneration != feedRequestGeneration || isDestroyed()) return;
                         swipeRefreshLayout.setRefreshing(false);
                         progressBarFeed.setVisibility(View.GONE);
-                        isLoadingMore = false;
+                        isLoadingFeed = false;
+                        tvOfflineFeed.setVisibility(View.GONE);
 
                         if (result == null) {
                             if (isRefresh && postAdapter.getItemCount() == 0) {
@@ -185,26 +308,43 @@ public class HomeActivity extends AppCompatActivity {
 
                         if (isRefresh) {
                             postAdapter.setPosts(posts);
+                            scheduleOwnPostExpiry(posts);
+                            if (posts != null && !posts.isEmpty()) {
+                                new com.example.myapplication.service.impl.OfflinePages(HomeActivity.this)
+                                        .saveFeedPage(authService.getCurrentUserId(), posts, true);
+                            }
                             if (posts == null || posts.isEmpty()) {
                                 tvStateFeed.setVisibility(View.VISIBLE);
-                                tvStateFeed.setText("Chưa có bài viết nào");
+                                tvStateFeed.setText("Chưa có bài viết nào để hiển thị.");
                             } else {
                                 tvStateFeed.setVisibility(View.GONE);
                             }
                         } else {
                             postAdapter.addPosts(posts);
+                            if (posts != null && !posts.isEmpty()) {
+                                new com.example.myapplication.service.impl.OfflinePages(HomeActivity.this)
+                                        .saveFeedPage(authService.getCurrentUserId(), posts, false);
+                            }
                         }
                     }
 
                     @Override
                     public void onError(Exception e) {
+                        if (requestGeneration != feedRequestGeneration || isDestroyed()) return;
                         swipeRefreshLayout.setRefreshing(false);
                         progressBarFeed.setVisibility(View.GONE);
-                        isLoadingMore = false;
+                        isLoadingFeed = false;
 
                         if (isRefresh && postAdapter.getItemCount() == 0) {
                             tvStateFeed.setVisibility(View.VISIBLE);
                             tvStateFeed.setText("Không thể tải bảng tin. Vui lòng kiểm tra kết nối.");
+                        }
+                        if (postAdapter.getItemCount() > 0) {
+                            tvOfflineFeed.setText(isRefresh
+                                    ? "Ngoại tuyến · Đang xem dữ liệu đã lưu"
+                                    : "Ngoại tuyến · Đã hết nội dung lưu trên máy");
+                            tvOfflineFeed.setVisibility(View.VISIBLE);
+                            return;
                         }
 
                         Toast.makeText(HomeActivity.this,
@@ -214,10 +354,64 @@ public class HomeActivity extends AppCompatActivity {
                 });
     }
 
+    private void scheduleOwnPostExpiry(List<Post> posts) {
+        feedHandler.removeCallbacks(ownPostExpiry);
+        if (posts == null) return;
+        String viewerId = authService.getCurrentUserId();
+        long soonest = Long.MAX_VALUE;
+        long now = System.currentTimeMillis();
+        for (Post post : posts) {
+            if (post != null && viewerId != null && viewerId.equals(post.getAuthorId())) {
+                long expiry = post.getCreatedAt() + FeedPageSelector.OWN_POST_VISIBILITY_MS;
+                if (expiry > now && expiry < soonest) soonest = expiry;
+            }
+        }
+        if (soonest != Long.MAX_VALUE) feedHandler.postDelayed(ownPostExpiry, soonest - now + 100L);
+    }
+
+    @Override
+    protected void onDestroy() {
+        feedHandler.removeCallbacks(ownPostExpiry);
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onStop() {
+        if (currentUserRegistration != null) {
+            currentUserRegistration.remove();
+            currentUserRegistration = null;
+        }
+        super.onStop();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        loadDrawerUser();
+        loadPeople();
         // Keep this call here so the bottom navigation is re-selected after returning from another screen.
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.FEED);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent.getBooleanExtra("refresh_after_post", false)) {
+            intent.removeExtra("refresh_after_post");
+            loadFeedPosts(true);
+            rvFeed.scrollToPosition(0);
+            feedAppBar.setExpanded(true, false);
+            btnScrollToTop.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
+            homeDrawer.closeDrawer(GravityCompat.START);
+            return;
+        }
+        super.onBackPressed();
     }
 }
