@@ -1,20 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/homeDrawer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dlog_feed_background">
 
+<RelativeLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
     <LinearLayout
         android:id="@+id/headerHome"
         android:layout_width="match_parent"
-        android:layout_height="68dp"
+        android:layout_height="@dimen/home_header_height"
         android:layout_alignParentTop="true"
-        android:background="@color/white"
+        android:background="@color/dlog_surface"
         android:elevation="2dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
         android:paddingEnd="10dp">
+
+        <ImageButton
+            android:id="@+id/btnMenuHome"
+            android:layout_width="42dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="5dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Mở menu"
+            android:padding="10dp"
+            android:src="@drawable/ic_menu_24"
+            android:tint="@color/dlog_navy" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -35,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:text="Chia sẻ khoảnh khắc, kết nối đam mê"
                 android:textColor="@color/dlog_muted_blue"
-                android:textSize="11sp" />
+                android:textSize="12sp" />
         </LinearLayout>
 
         <ImageButton
@@ -70,87 +87,115 @@
         </FrameLayout>
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/peopleSection"
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:layout_below="@id/headerHome"
-        android:background="@color/white"
-        android:elevation="1dp"
-        android:orientation="vertical"
-        android:paddingTop="8dp"
-        android:paddingBottom="5dp">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="30dp"
-            android:gravity="center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Mọi người trên DLog"
-                android:textColor="@color/dlog_navy"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Gần đây"
-                android:textColor="@color/dlog_muted_blue"
-                android:textSize="11sp" />
-        </LinearLayout>
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvPeople"
-            android:layout_width="match_parent"
-            android:layout_height="74dp"
-            android:clipToPadding="false"
-            android:overScrollMode="never"
-            android:paddingStart="10dp"
-            android:paddingEnd="8dp" />
-    </LinearLayout>
-
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefreshLayout"
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/feedCoordinator"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/peopleSection"
+        android:layout_below="@id/headerHome"
         android:layout_above="@id/bottomNavView">
-        <FrameLayout
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/feedAppBar"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvFeed"
+            android:layout_height="wrap_content"
+            android:background="@color/dlog_surface"
+            android:elevation="1dp">
+
+            <LinearLayout
+                android:id="@+id/feedIntro"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingTop="4dp"
-                android:paddingBottom="12dp" />
-            <ProgressBar
-                android:id="@+id/progressBarFeed"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone" />
-            <TextView
-                android:id="@+id/tvStateFeed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:gravity="center"
-                android:padding="24dp"
-                android:text="Chưa có bài viết nào"
-                android:textColor="@color/dlog_muted_blue"
-                android:textSize="14sp"
-                android:visibility="gone" />
-        </FrameLayout>
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+                android:orientation="vertical"
+                app:layout_scrollFlags="scroll">
+
+                <LinearLayout
+                    android:id="@+id/quickCreatePost"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/home_quick_post_height"
+                    android:background="@color/dlog_surface"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+                    <ImageView android:id="@+id/ivQuickCreateAvatar" android:layout_width="34dp" android:layout_height="34dp" android:background="@drawable/bg_circle_avatar" android:contentDescription="Ảnh đại diện" android:scaleType="centerCrop" />
+                    <TextView android:layout_width="0dp" android:layout_height="38dp" android:layout_marginStart="10dp" android:layout_weight="1" android:background="@drawable/bg_auth_input" android:gravity="center_vertical" android:paddingStart="13dp" android:text="Bạn đang nghĩ gì?" android:textColor="@color/dlog_muted_blue" android:textSize="13sp" />
+                    <ImageView android:layout_width="38dp" android:layout_height="38dp" android:layout_marginStart="8dp" android:contentDescription="Tạo bài viết" android:padding="8dp" android:src="@drawable/ic_add_24" android:tint="@color/dlog_blue" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/peopleSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/home_people_height"
+                    android:background="@color/dlog_surface"
+                    android:orientation="vertical"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="5dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:gravity="center_vertical" android:paddingStart="16dp" android:paddingEnd="16dp">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Đang theo dõi" android:textColor="@color/dlog_navy" android:textSize="15sp" android:textStyle="bold" />
+                    </LinearLayout>
+                    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvPeople" android:layout_width="match_parent" android:layout_height="88dp" android:clipToPadding="false" android:overScrollMode="never" android:paddingStart="10dp" android:paddingEnd="8dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefreshLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvFeed" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingTop="4dp" android:paddingBottom="12dp" />
+                <ProgressBar android:id="@+id/progressBarFeed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+                <TextView android:id="@+id/tvStateFeed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:gravity="center" android:padding="24dp" android:text="Chưa có bài viết nào" android:textColor="@color/dlog_muted_blue" android:textSize="14sp" android:visibility="gone" />
+            </FrameLayout>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <ImageButton
+            android:id="@+id/btnScrollToTop"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_scroll_to_top"
+            android:contentDescription="Cuộn lên đầu bảng tin"
+            android:elevation="6dp"
+            android:padding="14dp"
+            android:src="@drawable/ic_arrow_up_24"
+            android:tint="@color/dlog_on_primary"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvOfflineFeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginStart="64dp"
+            android:layout_marginEnd="64dp"
+            android:layout_marginBottom="18dp"
+            android:background="@drawable/bg_admin_status"
+            android:drawableStart="@drawable/ic_cloud_off_24"
+            android:drawablePadding="8dp"
+            android:elevation="5dp"
+            android:gravity="center"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="9dp"
+            android:text="Đang xem dữ liệu đã lưu trên máy"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <include
         android:id="@+id/bottomNavView"
         layout="@layout/inc_bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="@dimen/bottom_nav_height"
         android:layout_alignParentBottom="true" />
 </RelativeLayout>
+
+    <include layout="@layout/inc_drawer_panel" />
+</androidx.drawerlayout.widget.DrawerLayout>
