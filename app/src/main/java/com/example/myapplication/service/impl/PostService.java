@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -12,6 +13,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import androidx.annotation.NonNull;
 
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.SavedPost;
@@ -20,9 +22,6 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.StorageMetadata;
-import com.google.firebase.storage.StorageException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,6 +31,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -77,62 +78,74 @@ public class PostService {
         return instance;
     }
 
-    // F15: Đăng bài viết
-    public void createPost(String authorId, String caption, Uri imageUri, Context context, Callback<Post> callback) {
-        if (authorId == null || authorId.trim().isEmpty()) {
-            callback.onError(new IllegalArgumentException("Tác giả không hợp lệ."));
-            return;
+    /** Stage provider/resource URIs before uploading profile images. */
+    public void uploadProfileImage(String uid, String kind, Uri uri, Context context, Callback<String> callback) {
+        if (uid == null || uid.isEmpty() || !("avatars".equals(kind) || "covers".equals(kind))) {
+            callback.onError(new IllegalArgumentException("Vui lòng đăng nhập lại.")); return;
         }
-        if (imageUri == null) {
-            callback.onError(new IllegalArgumentException("Vui lòng chọn hình ảnh."));
-            return;
-        }
-
-        Context appContext = context.getApplicationContext();
-        String postId = db.collection("posts").document().getId();
-
-        // Drive and other cloud providers expose virtual content:// URIs. Copy
-        // them through ContentResolver first so Storage uploads a stable local file.
-        IO_EXECUTOR.execute(() -> {
-            File stagedImage;
-            String mimeType;
+        final Context app = context.getApplicationContext();
+        IO_EXECUTOR.execute(new Runnable() {
+            @Override public void run() {
+            File file = null;
             try {
-                mimeType = resolveImageMimeType(appContext, imageUri);
-                stagedImage = copyImageToCache(appContext, imageUri, postId, mimeType);
-            } catch (Exception error) {
-                String detail = error.getMessage() == null ? "không đọc được dữ liệu ảnh." : error.getMessage();
-                MAIN_HANDLER.post(() -> callback.onError(new Exception(
-                        "Không đọc được ảnh đã chọn (Google Drive/thư viện): " + detail, error)));
-                return;
+                String mime = resolveImageMimeType(app, uri);
+                file = copyImageToCache(app, uri, UUID.randomUUID().toString(), mime);
+                final String url = CloudinaryUploader.upload(app, file, mime);
+                MAIN_HANDLER.post(new Runnable() {
+                    @Override public void run() { callback.onSuccess(url); }
+                });
+            } catch (final Exception error) {
+                MAIN_HANDLER.post(new Runnable() {
+                    @Override public void run() { callback.onError(error); }
+                });
+            } finally {
+                if (file != null) file.delete();
             }
+            }
+        });
+    }
 
-            String bucket = appContext.getString(com.example.myapplication.R.string.google_storage_bucket);
-            String extension = extensionForMimeType(mimeType);
-            StorageReference imageRef = FirebaseStorage.getInstance("gs://" + bucket)
-                    .getReference().child("posts/" + authorId + "/" + postId + extension);
-            StorageMetadata metadata = new StorageMetadata.Builder()
-                    .setContentType(mimeType == null || !mimeType.startsWith("image/") ? "image/jpeg" : mimeType)
-                    .setCustomMetadata("postId", postId)
-                    .setCustomMetadata("authorId", authorId)
-                    .build();
-
-            imageRef.putFile(Uri.fromFile(stagedImage), metadata)
-                    .continueWithTask(task -> {
-                        if (!task.isSuccessful()) {
-                            Exception cause = task.getException();
-                            if (cause != null) throw cause;
-                            throw new IllegalStateException("Firebase Storage chưa hoàn tất tải ảnh.");
+    // F15: Đăng bài viết với một hoặc nhiều ảnh.
+    public void createPost(final String authorId, final String caption, final List<Uri> imageUris,
+                           final List<String> hashtags, final Context context, final Callback<Post> callback) {
+        if (authorId == null || authorId.trim().isEmpty() || imageUris == null || imageUris.isEmpty()
+                || imageUris.size() > 10) {
+            callback.onError(new IllegalArgumentException("Chọn từ 1 đến 10 ảnh để đăng."));
+            return;
+        }
+        final String postId = db.collection("posts").document().getId();
+        final Context app = context.getApplicationContext();
+        final String colorTone = detectColorTone(app, imageUris.get(0));
+        IO_EXECUTOR.execute(new Runnable() {
+            @Override public void run() {
+                final List<String> urls = new ArrayList<>();
+                final List<Map<String, String>> metadata = new ArrayList<>();
+                try {
+                    for (int index = 0; index < imageUris.size(); index++) {
+                        Uri uri = imageUris.get(index);
+                        metadata.add(readExifWithoutLocation(app, uri));
+                        String mime = resolveImageMimeType(app, uri);
+                        try {
+                            File file = copyImageToCache(app, uri, postId, mime);
+                            try { urls.add(CloudinaryUploader.upload(app, file, mime)); }
+                            finally { file.delete(); }
+                        } catch (Exception imageError) {
+                            throw new java.io.IOException("Ảnh " + (index + 1) + "/" + imageUris.size()
+                                    + ": " + imageError.getMessage(), imageError);
                         }
-                        return imageRef.getDownloadUrl();
-                    })
-                    .addOnSuccessListener(downloadUri -> {
-                        stagedImage.delete();
-                        savePostToFirestore(postId, authorId, caption, downloadUri.toString(), callback);
-                    })
-                    .addOnFailureListener(error -> {
-                        stagedImage.delete();
-                        callback.onError(new Exception(storageErrorMessage(error), error));
+                    }
+                    MAIN_HANDLER.post(new Runnable() {
+                        @Override public void run() {
+                            savePostToFirestore(postId, authorId, caption, urls.get(0), urls,
+                                    hashtags, metadata, colorTone, callback);
+                        }
                     });
+                } catch (final Exception error) {
+                    MAIN_HANDLER.post(new Runnable() {
+                        @Override public void run() { callback.onError(error); }
+                    });
+                }
+            }
         });
     }
 
@@ -147,7 +160,12 @@ public class PostService {
             if (input == null) throw new java.io.IOException("Nguồn ảnh không mở được. Hãy tải ảnh từ Drive xuống máy rồi chọn lại.");
             byte[] buffer = new byte[64 * 1024];
             int count;
-            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            long total = 0;
+            while ((count = input.read(buffer)) != -1) {
+                total += count;
+                if (total > 20L * 1024 * 1024) throw new java.io.IOException("Ảnh vượt quá 20 MB. Vui lòng chọn ảnh nhỏ hơn.");
+                output.write(buffer, 0, count);
+            }
             output.flush();
         } catch (Exception error) {
             // Remove a partial file before returning the provider/read error.
@@ -160,7 +178,76 @@ public class PostService {
             stagedImage.delete();
             throw new java.io.IOException("Ảnh tải từ Drive bị rỗng. Hãy tải ảnh xuống máy trước rồi chọn lại.");
         }
+        optimizeImage(stagedImage, mimeType);
         return stagedImage;
+    }
+
+    /** Resizes large photos before upload and compresses locally to reduce bandwidth. */
+    private void optimizeImage(File source, String mimeType) throws Exception {
+        if (source == null || !source.isFile() || "image/gif".equals(mimeType)) return;
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(source.getAbsolutePath(), bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return;
+
+        int sample = 1;
+        while (bounds.outWidth / sample > 2560 || bounds.outHeight / sample > 2560) sample *= 2;
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = sample;
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        Bitmap decoded = BitmapFactory.decodeFile(source.getAbsolutePath(), options);
+        if (decoded == null) return;
+
+        Bitmap working = decoded;
+        int longest = Math.max(decoded.getWidth(), decoded.getHeight());
+        if (longest > 2048) {
+            float ratio = 2048f / longest;
+            working = Bitmap.createScaledBitmap(decoded,
+                    Math.max(1, Math.round(decoded.getWidth() * ratio)),
+                    Math.max(1, Math.round(decoded.getHeight() * ratio)), true);
+            if (working != decoded) decoded.recycle();
+        }
+
+        if ("image/jpeg".equals(mimeType)) {
+            try {
+                android.media.ExifInterface exif = new android.media.ExifInterface(source.getAbsolutePath());
+                int orientation = exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL);
+                float degrees = orientation == android.media.ExifInterface.ORIENTATION_ROTATE_90 ? 90f
+                        : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_180 ? 180f
+                        : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_270 ? 270f : 0f;
+                if (degrees != 0f) {
+                    Matrix matrix = new Matrix();
+                    matrix.postRotate(degrees);
+                    Bitmap rotated = Bitmap.createBitmap(working, 0, 0,
+                            working.getWidth(), working.getHeight(), matrix, true);
+                    if (rotated != working) working.recycle();
+                    working = rotated;
+                }
+            } catch (Exception ignored) { }
+        }
+
+        File optimized = new File(source.getParentFile(), source.getName() + ".optimized");
+        Bitmap.CompressFormat format = "image/png".equals(mimeType) ? Bitmap.CompressFormat.PNG
+                : (Build.VERSION.SDK_INT >= 30 && "image/webp".equals(mimeType)
+                ? Bitmap.CompressFormat.WEBP_LOSSY : Bitmap.CompressFormat.JPEG);
+        int quality = format == Bitmap.CompressFormat.PNG ? 100 : 84;
+        try (FileOutputStream output = new FileOutputStream(optimized)) {
+            if (!working.compress(format, quality, output)) {
+                throw new java.io.IOException("Không thể tối ưu ảnh trước khi tải lên.");
+            }
+        } finally {
+            working.recycle();
+        }
+        if (optimized.length() > 0 && (!source.delete() || !optimized.renameTo(source))) {
+            try (InputStream input = new java.io.FileInputStream(optimized);
+                 OutputStream output = new FileOutputStream(source)) {
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            }
+            optimized.delete();
+        }
     }
 
     private String extensionForMimeType(String mimeType) {
@@ -195,48 +282,91 @@ public class PostService {
         return "image/jpeg";
     }
 
-    private String storageErrorMessage(Exception error) {
-        if (error instanceof StorageException) {
-            int code = ((StorageException) error).getErrorCode();
-            if (code == StorageException.ERROR_OBJECT_NOT_FOUND) {
-                return "Firebase báo không tìm thấy ảnh vừa tải lên. Hãy kiểm tra Storage của project và bucket project-dlog-0111.firebasestorage.app.";
-            }
-            if (code == StorageException.ERROR_BUCKET_NOT_FOUND) {
-                return "Firebase Storage chưa có bucket project-dlog-0111.firebasestorage.app. Hãy tạo/bật Storage trong Firebase Console.";
-            }
-            if (code == StorageException.ERROR_NOT_AUTHORIZED || code == StorageException.ERROR_NOT_AUTHENTICATED) {
-                return "Firebase Storage từ chối tải ảnh. Kiểm tra người dùng đã đăng nhập và Storage Rules cho phép tải ảnh.";
-            }
-        }
-        String message = error == null ? null : error.getMessage();
-        return "Không thể tải ảnh lên Firebase Storage" + (message == null ? "." : ": " + message);
+    /** Extracts camera settings only; location is deliberately never uploaded. */
+    private Map<String, String> readExifWithoutLocation(Context context, Uri uri) {
+        Map<String, String> values = new HashMap<>();
+        try (InputStream input = context.getContentResolver().openInputStream(uri)) {
+            if (input == null) return values;
+            android.media.ExifInterface exif = new android.media.ExifInterface(input);
+            putExif(values, "Thiết bị", exif.getAttribute(android.media.ExifInterface.TAG_MODEL));
+            putExif(values, "Hãng", exif.getAttribute(android.media.ExifInterface.TAG_MAKE));
+            putExif(values, "ISO", exif.getAttribute(android.media.ExifInterface.TAG_ISO_SPEED_RATINGS));
+            putExif(values, "Khẩu độ", exif.getAttribute(android.media.ExifInterface.TAG_F_NUMBER));
+            putExif(values, "Tiêu cự", exif.getAttribute(android.media.ExifInterface.TAG_FOCAL_LENGTH));
+            putExif(values, "Thời gian chụp", exif.getAttribute(android.media.ExifInterface.TAG_DATETIME_ORIGINAL));
+        } catch (Exception ignored) { }
+        return values;
     }
 
-    private void savePostToFirestore(String postId, String authorId, String caption, String imageUrl, Callback<Post> callback) {
+    private void putExif(Map<String, String> values, String label, String value) {
+        if (value != null && !value.trim().isEmpty()) values.put(label, value.trim());
+    }
+
+    private String detectColorTone(Context context, Uri uri) {
+        try (InputStream input = context.getContentResolver().openInputStream(uri)) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = 16;
+            Bitmap bitmap = BitmapFactory.decodeStream(input, null, options);
+            if (bitmap == null) return "trung_tinh";
+            long red = 0, green = 0, blue = 0;
+            int stepX = Math.max(1, bitmap.getWidth() / 24);
+            int stepY = Math.max(1, bitmap.getHeight() / 24);
+            int count = 0;
+            for (int y = 0; y < bitmap.getHeight(); y += stepY) {
+                for (int x = 0; x < bitmap.getWidth(); x += stepX) {
+                    int color = bitmap.getPixel(x, y);
+                    red += android.graphics.Color.red(color);
+                    green += android.graphics.Color.green(color);
+                    blue += android.graphics.Color.blue(color);
+                    count++;
+                }
+            }
+            bitmap.recycle();
+            float[] hsv = new float[3];
+            android.graphics.Color.RGBToHSV((int) (red / count), (int) (green / count), (int) (blue / count), hsv);
+            if (hsv[1] < 0.16f) return "don_sac";
+            if (hsv[1] > 0.58f) return "ruc_ro";
+            if (hsv[0] < 75f || hsv[0] > 330f) return "am";
+            if (hsv[0] >= 150f && hsv[0] <= 270f) return "lanh";
+        } catch (Exception ignored) { }
+        return "trung_tinh";
+    }
+
+    private void savePostToFirestore(String postId, String authorId, String caption, String imageUrl,
+                                     List<String> imageUrls, List<String> hashtags,
+                                     List<Map<String, String>> photoMetadata, String colorTone, Callback<Post> callback) {
         Post post = new Post();
         post.setId(postId);
         post.setAuthorId(authorId);
         post.setCaption(caption != null ? caption.trim() : "");
         post.setImageUrl(imageUrl);
+        post.setImageUrls(imageUrls);
+        post.setHashtags(hashtags);
+        post.setPhotoMetadata(photoMetadata);
+        post.setColorTone(colorTone);
         post.setLikesCount(0);
         post.setCommentsCount(0);
 
         // Fetch author's username and avatar to cache in post if available
         db.collection("users").document(authorId).get()
-                .addOnSuccessListener(userDoc -> {
-                    if (userDoc.exists()) {
-                        String username = userDoc.getString("username");
-                        String avatarUrl = userDoc.getString("avatarUrl");
-                        if (username != null) post.setAuthorUsername(username);
-                        if (avatarUrl != null) post.setAuthorAvatarUrl(avatarUrl);
-                    } else {
-                        post.setAuthorUsername(authorId);
+                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot userDoc) {
+                        if (userDoc.exists()) {
+                            String username = userDoc.getString("username");
+                            String avatarUrl = userDoc.getString("avatarUrl");
+                            if (username != null) post.setAuthorUsername(username);
+                            if (avatarUrl != null) post.setAuthorAvatarUrl(avatarUrl);
+                        } else {
+                            post.setAuthorUsername(authorId);
+                        }
+                        savePostToFirestoreInternal(post, callback);
                     }
-                    savePostToFirestoreInternal(post, callback);
                 })
-                .addOnFailureListener(e -> {
-                    post.setAuthorUsername(authorId);
-                    savePostToFirestoreInternal(post, callback);
+                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception error) {
+                        post.setAuthorUsername(authorId);
+                        savePostToFirestoreInternal(post, callback);
+                    }
                 });
     }
 
@@ -246,14 +376,17 @@ public class PostService {
             return;
         }
 
-        db.collection("posts").document(post.getId())
-                .set(post.toMap())
-                .addOnSuccessListener(aVoid -> {
-                    db.collection("users").document(post.getAuthorId())
-                            .update("postsCount", FieldValue.increment(1));
-                    callback.onSuccess(post);
+        db.collection("posts").document(post.getId()).set(post.toMap())
+                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                    @Override public void onSuccess(Void unused) {
+                        db.collection("users").document(post.getAuthorId())
+                                .update("postsCount", FieldValue.increment(1));
+                        callback.onSuccess(post);
+                    }
                 })
-                .addOnFailureListener(callback::onError);
+                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception error) { callback.onError(error); }
+                });
     }
 
     // F16: Sửa bài viết (Chỉ tác giả)
@@ -335,7 +468,8 @@ public class PostService {
 
         db.collection("posts").document(postId).get()
                 .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists() && documentSnapshot.getData() != null) {
+                    if (documentSnapshot.exists() && documentSnapshot.getData() != null
+                            && !Boolean.TRUE.equals(documentSnapshot.getBoolean("hidden"))) {
                         Post post = Post.fromMap(documentSnapshot.getData());
                         callback.onSuccess(post);
                     } else {
@@ -345,39 +479,41 @@ public class PostService {
                 .addOnFailureListener(callback::onError);
     }
 
-    // F19: Xem bảng tin (Thứ tự thời gian, giới hạn kết quả & tải thêm)
+    // F19: Chronological feed excludes the viewer, including across page boundaries.
     public void getFeedPosts(DocumentSnapshot lastVisible, int limit, Callback<FeedResult> callback) {
-        Query query = db.collection("posts")
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .limit(limit);
+        getFeedPosts(AuthService.getInstance().getCurrentUserId(), lastVisible, limit, callback);
+    }
 
-        if (lastVisible != null) {
-            query = query.startAfter(lastVisible);
-        }
+    public void getFeedPosts(String viewerId, DocumentSnapshot lastVisible, int limit, Callback<FeedResult> callback) {
+        if (limit <= 0) { callback.onError(new IllegalArgumentException("Giới hạn bài viết không hợp lệ.")); return; }
+        collectFeedPage(viewerId, lastVisible, limit, new ArrayList<>(), callback);
+    }
 
-        query.get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Post> posts = new ArrayList<>();
-                    DocumentSnapshot newLastDoc = null;
-
-                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
-                        if (doc.getData() != null) {
-                            Post post = Post.fromMap(doc.getData());
-                            if (post != null) {
-                                posts.add(post);
-                            }
-                        }
-                    }
-
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        newLastDoc = queryDocumentSnapshots.getDocuments()
-                                .get(queryDocumentSnapshots.size() - 1);
-                    }
-
-                    boolean hasMore = queryDocumentSnapshots.size() >= limit;
-                    callback.onSuccess(new FeedResult(posts, newLastDoc, hasMore));
-                })
-                .addOnFailureListener(callback::onError);
+    private void collectFeedPage(String viewerId, DocumentSnapshot cursor, int limit,
+                                 List<Post> visible, Callback<FeedResult> callback) {
+        int batchSize = Math.max(20, Math.min(50, limit));
+        Query query = db.collection("posts").orderBy("createdAt", Query.Direction.DESCENDING).limit(batchSize);
+        if (cursor != null) query = query.startAfter(cursor);
+        query.get().addOnSuccessListener(snapshot -> {
+            List<DocumentSnapshot> documents = snapshot.getDocuments();
+            List<Post> raw = new ArrayList<>();
+            for (DocumentSnapshot doc : documents) {
+                Post post = doc.getData() == null ? null : Post.fromMap(doc.getData());
+                if (post != null) post.setId(doc.getId());
+                raw.add(post);
+            }
+            com.example.myapplication.util.FeedPageSelector.Selection selection =
+                    com.example.myapplication.util.FeedPageSelector.select(raw, viewerId, limit - visible.size());
+            visible.addAll(selection.posts);
+            DocumentSnapshot next = selection.lastConsumedIndex < 0 ? cursor : documents.get(selection.lastConsumedIndex);
+            boolean hasMore = selection.hasUnreadItems || documents.size() == batchSize;
+            if (visible.size() < limit && hasMore) {
+                // An entire raw page can belong to the viewer. Continue instead of showing a false empty feed.
+                collectFeedPage(viewerId, next, limit, visible, callback);
+            } else {
+                callback.onSuccess(new FeedResult(visible, next, hasMore));
+            }
+        }).addOnFailureListener(callback::onError);
     }
 
     // F20: Xem bài viết của một người dùng
@@ -396,7 +532,7 @@ public class PostService {
                     for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                         if (doc.getData() != null) {
                             Post post = Post.fromMap(doc.getData());
-                            if (post != null) {
+                            if (post != null && !post.isHidden()) {
                                 posts.add(post);
                             }
                         }
@@ -412,7 +548,7 @@ public class PostService {
                                 for (DocumentSnapshot doc : queryDocumentSnapshots2.getDocuments()) {
                                     if (doc.getData() != null) {
                                         Post post = Post.fromMap(doc.getData());
-                                        if (post != null) posts.add(post);
+                                        if (post != null && !post.isHidden()) posts.add(post);
                                     }
                                 }
                                 posts.sort((p1, p2) -> Long.compare(p2.getCreatedAt(), p1.getCreatedAt()));
@@ -424,6 +560,10 @@ public class PostService {
 
     // F21: Lưu bài viết (Ngăn lưu trùng)
     public void savePost(String userId, String postId, Callback<SavedPost> callback) {
+        savePost(userId, postId, "Chung", callback);
+    }
+
+    public void savePost(String userId, String postId, String collectionName, Callback<SavedPost> callback) {
         if (userId == null || postId == null) {
             callback.onError(new IllegalArgumentException("Tham số không hợp lệ."));
             return;
@@ -435,12 +575,18 @@ public class PostService {
                 .addOnSuccessListener(doc -> {
                     if (doc.exists() && doc.getData() != null) {
                         SavedPost existing = SavedPost.fromMap(doc.getData());
-                        callback.onSuccess(existing);
+                        existing.setCollectionName(collectionName);
+                        db.collection("saved_posts").document(docId).set(existing.toMap())
+                                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                                    @Override public void onSuccess(Void unused) { callback.onSuccess(existing); }
+                                })
+                                .addOnFailureListener(callback::onError);
                         return;
                     }
 
                     SavedPost savedPost = new SavedPost(userId, postId);
                     savedPost.setId(docId);
+                    savedPost.setCollectionName(collectionName);
 
                     if (!savedPost.validate()) {
                         callback.onError(new IllegalArgumentException("Dữ liệu lưu bài viết không hợp lệ."));
@@ -512,6 +658,7 @@ public class PostService {
     private void fetchPostsByIds(List<String> postIds, Callback<List<Post>> callback) {
         List<Post> posts = new ArrayList<>();
         final int total = postIds.size();
+        final int[] remaining = {total};
 
         for (String pid : postIds) {
             getPostDetail(pid, new Callback<Post>() {
@@ -519,7 +666,7 @@ public class PostService {
                 public void onSuccess(Post post) {
                     synchronized (posts) {
                         posts.add(post);
-                        if (posts.size() == total) {
+                        if (--remaining[0] == 0) {
                             posts.sort((p1, p2) -> Long.compare(p2.getCreatedAt(), p1.getCreatedAt()));
                             callback.onSuccess(posts);
                         }
@@ -529,7 +676,7 @@ public class PostService {
                 @Override
                 public void onError(Exception e) {
                     synchronized (posts) {
-                        if (posts.size() == total) {
+                        if (--remaining[0] == 0) {
                             callback.onSuccess(posts);
                         }
                     }
