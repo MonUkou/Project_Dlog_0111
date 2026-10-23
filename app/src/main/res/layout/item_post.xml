@@ -127,22 +127,6 @@
             android:textSize="12sp" />
 
         <TextView
-            android:id="@+id/btnShare"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1.15"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:drawableStart="@drawable/ic_share_24"
-            android:drawablePadding="4dp"
-            android:drawableTint="@color/dlog_muted_blue"
-            android:focusable="true"
-            android:gravity="center"
-            android:text="Chia sẻ"
-            android:textColor="@color/dlog_navy"
-            android:textSize="12sp" />
-
-        <TextView
             android:id="@+id/btnSave"
             android:layout_width="0dp"
             android:layout_height="40dp"

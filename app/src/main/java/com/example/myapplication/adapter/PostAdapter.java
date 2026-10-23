@@ -22,6 +22,7 @@ import com.example.myapplication.model.Post;
 import com.example.myapplication.model.SavedPost;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.InteractionService;
+import com.example.myapplication.service.impl.NotificationService;
 import com.example.myapplication.service.impl.PostService;
 
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         this.context = context;
         this.postService = PostService.getInstance();
         this.authService = AuthService.getInstance();
-        this.interactionService = new InteractionService(authService, null);
+        this.interactionService = new InteractionService(authService, new NotificationService());
     }
 
     public void setOnPostChangeListener(OnPostChangeListener listener) {
@@ -115,7 +116,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         interactionService.isLiked(post.getId(), new InteractionService.ServiceCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean isLiked) {
-                if (isLiked) {
+                if (Boolean.TRUE.equals(isLiked)) {
                     holder.btnLike.setText("Đã thích");
                     holder.btnLike.setTextColor(0xFFE53935);
                 } else {
@@ -132,7 +133,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         postService.isPostSaved(currentUserId, post.getId(), new PostService.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean isSaved) {
-                if (isSaved) {
+                if (Boolean.TRUE.equals(isSaved)) {
                     holder.btnSave.setText("Đã lưu");
                     holder.btnSave.setTextColor(0xFF2E7D32);
                 } else {
@@ -150,7 +151,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             boolean wasLiked = holder.btnLike.getText().toString().equals("Đã thích");
             holder.btnLike.setEnabled(false);
             if (wasLiked) {
-            interactionService.unlike(post.getId(), new InteractionService.ServiceCallback<Void>() {
+                interactionService.unlike(post.getId(), new InteractionService.ServiceCallback<Void>() {
                     @Override
                     public void onSuccess(Void result) {
                         post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
@@ -175,7 +176,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         holder.btnLike.setTextColor(0xFFE53935);
                         holder.tvLikesCount.setText(post.getLikesCount() + " lượt thích");
                         holder.btnLike.setEnabled(true);
-
                     }
 
                     @Override
@@ -229,7 +229,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         };
         holder.btnComment.setOnClickListener(openDetailListener);
         holder.ivPostImage.setOnClickListener(openDetailListener);
-        holder.btnShare.setOnClickListener(v -> sharePost(post));
 
         // Click author header -> open ProfileActivity
         View.OnClickListener openProfileListener = v -> {
@@ -239,9 +238,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         };
         holder.llAuthorHeader.setOnClickListener(openProfileListener);
 
-        // Long press post -> Option dialog (Save image to device F24, Edit/Delete if author)
+        // Click 3 dots or long press post -> Option dialog (Save image to device F24, Edit/Delete if author)
+        if (holder.tvPostOptions != null) {
+            holder.tvPostOptions.setOnClickListener(v -> {
+                int currentPos = holder.getAdapterPosition();
+                if (currentPos != RecyclerView.NO_POSITION) {
+                    showPostOptionsDialog(post, currentUserId, currentPos);
+                }
+            });
+        }
         holder.itemView.setOnLongClickListener(v -> {
-            showPostOptionsDialog(post, currentUserId, position);
+            int currentPos = holder.getAdapterPosition();
+            if (currentPos != RecyclerView.NO_POSITION) {
+                showPostOptionsDialog(post, currentUserId, currentPos);
+            }
             return true;
         });
     }
@@ -278,17 +288,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             }
         });
         builder.show();
-    }
-
-    private void sharePost(Post post) {
-        String caption = post.getCaption() == null ? "" : post.getCaption().trim();
-        String imageUrl = post.getImageUrl() == null ? "" : post.getImageUrl().trim();
-        String text = (caption.isEmpty() ? "Xem bài viết này trên DLog" : caption)
-                + (imageUrl.isEmpty() ? "" : "\n" + imageUrl);
-        Intent sendIntent = new Intent(Intent.ACTION_SEND);
-        sendIntent.setType("text/plain");
-        sendIntent.putExtra(Intent.EXTRA_TEXT, text);
-        context.startActivity(Intent.createChooser(sendIntent, "Chia sẻ bài viết"));
     }
 
     private void showEditPostDialog(Post post, int position) {
@@ -356,11 +355,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         View llAuthorHeader;
         ImageView ivAuthorAvatar;
         TextView tvAuthorUsername;
+        TextView tvPostOptions;
         ImageView ivPostImage;
         TextView tvImagePlaceholder;
         TextView btnLike;
         TextView btnComment;
-        TextView btnShare;
         TextView btnSave;
         TextView tvLikesCount;
         TextView tvCaption;
@@ -370,11 +369,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             llAuthorHeader = itemView.findViewById(R.id.llAuthorHeader);
             ivAuthorAvatar = itemView.findViewById(R.id.ivAuthorAvatar);
             tvAuthorUsername = itemView.findViewById(R.id.tvAuthorUsername);
+            tvPostOptions = itemView.findViewById(R.id.tvPostOptions);
             ivPostImage = itemView.findViewById(R.id.ivPostImage);
             tvImagePlaceholder = itemView.findViewById(R.id.tvImagePlaceholder);
             btnLike = itemView.findViewById(R.id.btnLike);
             btnComment = itemView.findViewById(R.id.btnComment);
-            btnShare = itemView.findViewById(R.id.btnShare);
             btnSave = itemView.findViewById(R.id.btnSave);
             tvLikesCount = itemView.findViewById(R.id.tvLikesCount);
             tvCaption = itemView.findViewById(R.id.tvCaption);

@@ -143,19 +143,6 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/btnSharePost"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:drawableStart="@drawable/ic_share_24"
-                    android:drawablePadding="5dp"
-                    android:drawableTint="@color/dlog_muted_blue"
-                    android:gravity="center_vertical"
-                    android:text="Chia sẻ"
-                    android:textColor="@color/dlog_navy"
-                    android:textSize="13sp" />
-
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"

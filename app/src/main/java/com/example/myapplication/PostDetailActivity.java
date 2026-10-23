@@ -1,6 +1,5 @@
 package com.example.myapplication;
 
-import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -42,7 +41,6 @@ public class PostDetailActivity extends AppCompatActivity {
 
     private TextView tvBack, tvPostAuthor, tvPostCaption, tvLikesCount, tvCommentsCount, tvEmptyComments;
     private TextView btnLike, btnFocusComment;
-    private TextView btnSharePost;
     private ImageView ivDetailAuthorAvatar, ivDetailPostImage;
     private TextView tvImagePlaceholder;
     private Button btnSendComment;
@@ -105,7 +103,6 @@ public class PostDetailActivity extends AppCompatActivity {
         tvEmptyComments = findViewById(R.id.tvEmptyComments);
         btnLike = findViewById(R.id.btnLike);
         btnFocusComment = findViewById(R.id.btnFocusComment);
-        btnSharePost = findViewById(R.id.btnSharePost);
         ivDetailAuthorAvatar = findViewById(R.id.viewAuthorAvatar);
         ivDetailPostImage = findViewById(R.id.ivPostImage);
         tvImagePlaceholder = findViewById(R.id.tvImagePlaceholder);
@@ -122,7 +119,6 @@ public class PostDetailActivity extends AppCompatActivity {
         btnLike.setOnClickListener(v -> handleLikeClick());
         btnFocusComment.setOnClickListener(v -> edtComment.requestFocus());
         btnSendComment.setOnClickListener(v -> handleSendComment());
-        btnSharePost.setOnClickListener(v -> sharePost());
     }
 
     private void loadPostDetails() {
@@ -265,27 +261,6 @@ public class PostDetailActivity extends AppCompatActivity {
                 Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private void sharePost() {
-        FirebaseFirestore.getInstance().collection("posts").document(postId).get()
-                .addOnSuccessListener(document -> {
-                    if (!document.exists()) {
-                        Toast.makeText(this, "Bài viết không còn tồn tại.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    String caption = document.getString("caption");
-                    String imageUrl = document.getString("imageUrl");
-                    String shareText = (caption == null || caption.trim().isEmpty()
-                            ? "Xem bài viết này trên DLog" : caption.trim())
-                            + (imageUrl == null || imageUrl.trim().isEmpty() ? "" : "\n" + imageUrl);
-                    Intent send = new Intent(Intent.ACTION_SEND);
-                    send.setType("text/plain");
-                    send.putExtra(Intent.EXTRA_TEXT, shareText);
-                    startActivity(Intent.createChooser(send, "Chia sẻ bài viết"));
-                })
-                .addOnFailureListener(error -> Toast.makeText(this,
-                        "Không thể tải bài viết để chia sẻ.", Toast.LENGTH_SHORT).show());
     }
 
     private void showDeleteCommentDialog(Comment comment) {
