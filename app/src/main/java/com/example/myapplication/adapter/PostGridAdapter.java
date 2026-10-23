@@ -58,10 +58,13 @@ public class PostGridAdapter extends RecyclerView.Adapter<PostGridAdapter.GridVi
             holder.tvGridPlaceholder.setVisibility(View.VISIBLE);
         }
 
-        holder.itemView.setOnClickListener(v -> {
-            Intent intent = new Intent(context, PostDetailActivity.class);
-            intent.putExtra("postId", post.getId());
-            context.startActivity(intent);
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(context, PostDetailActivity.class);
+                intent.putExtra("postId", post.getId());
+                context.startActivity(intent);
+            }
         });
     }
 
