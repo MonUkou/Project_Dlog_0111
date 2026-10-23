@@ -24,6 +24,15 @@ public class InteractionService {
     private AuthService authService;
     private NotificationService notificationService;
 
+    private static InteractionService instance;
+
+    public static synchronized InteractionService getInstance() {
+        if (instance == null) {
+            instance = new InteractionService();
+        }
+        return instance;
+    }
+
     public InteractionService() {
         this.dbRef = FirebaseFirestore.getInstance();
         this.authService = new AuthService();
@@ -41,6 +50,54 @@ public class InteractionService {
         void onError(String message);
     }
 
+    public interface Callback<T> {
+        void onSuccess(T result);
+        void onError(Exception e);
+    }
+
+    public void isPostLiked(String userId, String postId, Callback<Boolean> callback) {
+        isLiked(postId, new ServiceCallback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean result) {
+                if (callback != null) callback.onSuccess(result);
+            }
+
+            @Override
+            public void onError(String message) {
+                if (callback != null) callback.onError(new Exception(message));
+            }
+        });
+    }
+
+    public void likePost(String userId, String postId, Callback<Like> callback) {
+        like(postId, new ServiceCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                Like likeObj = new Like(postId, userId != null ? userId : getCurrentUid());
+                if (callback != null) callback.onSuccess(likeObj);
+            }
+
+            @Override
+            public void onError(String message) {
+                if (callback != null) callback.onError(new Exception(message));
+            }
+        });
+    }
+
+    public void unlikePost(String userId, String postId, Callback<Void> callback) {
+        unlike(postId, new ServiceCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                if (callback != null) callback.onSuccess(null);
+            }
+
+            @Override
+            public void onError(String message) {
+                if (callback != null) callback.onError(new Exception(message));
+            }
+        });
+    }
+
     private String getCurrentUid() {
         if (authService != null) {
             if (!authService.isLoggedIn()) {
@@ -49,6 +106,14 @@ public class InteractionService {
             return authService.getCurrentUserId();
         }
         return null;
+    }
+
+    private void findLike(String postId, String userId,
+                          java.util.function.Consumer<DocumentSnapshot> success,
+                          java.util.function.Consumer<Exception> failure) {
+        dbRef.collection(COLLECTION_LIKES).whereEqualTo("postId", postId).whereEqualTo("userId", userId)
+            .limit(1).get().addOnSuccessListener(result -> success.accept(result.isEmpty() ? null : result.getDocuments().get(0)))
+            .addOnFailureListener(error -> failure.accept(error));
     }
 
     // =========================================================================
@@ -75,7 +140,9 @@ public class InteractionService {
             return;
         }
 
-        DocumentReference likeRef = dbRef.collection(COLLECTION_LIKES).document(likeObj.getId());
+        findLike(postId, currentUid, existing -> {
+        DocumentReference likeRef = existing == null ? dbRef.collection(COLLECTION_LIKES).document() : existing.getReference();
+        likeObj.setId(likeRef.getId());
         DocumentReference postRef = dbRef.collection(COLLECTION_POSTS).document(postId);
 
         dbRef.runTransaction(transaction -> {
@@ -106,6 +173,7 @@ public class InteractionService {
         }).addOnFailureListener(e -> {
             if (callback != null) callback.onError("Không thể thích bài viết: " + e.getMessage());
         });
+        }, error -> { if (callback != null) callback.onError("Không kiểm tra được lượt thích: " + error.getMessage()); });
     }
 
     // =========================================================================
@@ -126,8 +194,9 @@ public class InteractionService {
             return;
         }
 
-        String likeId = Like.generateLikeId(postId, currentUid);
-        DocumentReference likeRef = dbRef.collection(COLLECTION_LIKES).document(likeId);
+        findLike(postId, currentUid, existing -> {
+        if (existing == null) { if (callback != null) callback.onSuccess(null); return; }
+        DocumentReference likeRef = existing.getReference();
         DocumentReference postRef = dbRef.collection(COLLECTION_POSTS).document(postId);
 
         dbRef.runTransaction(transaction -> {
@@ -150,6 +219,7 @@ public class InteractionService {
         }).addOnFailureListener(e -> {
             if (callback != null) callback.onError("Không thể bỏ thích: " + e.getMessage());
         });
+        }, error -> { if (callback != null) callback.onError("Không kiểm tra được lượt thích: " + error.getMessage()); });
     }
 
     // =========================================================================
@@ -167,14 +237,9 @@ public class InteractionService {
             return;
         }
 
-        String likeId = Like.generateLikeId(postId, currentUid);
-        dbRef.collection(COLLECTION_LIKES).document(likeId).get()
-                .addOnSuccessListener(doc -> {
-                    if (callback != null) callback.onSuccess(doc.exists());
-                })
-                .addOnFailureListener(e -> {
-                    if (callback != null) callback.onError("Lỗi kiểm tra trạng thái thích: " + e.getMessage());
-                });
+        findLike(postId, currentUid, document -> {
+            if (callback != null) callback.onSuccess(document != null);
+        }, error -> { if (callback != null) callback.onError("Lỗi kiểm tra trạng thái thích: " + error.getMessage()); });
     }
 
     // =========================================================================
@@ -206,30 +271,39 @@ public class InteractionService {
         }
 
         DocumentReference postRef = dbRef.collection(COLLECTION_POSTS).document(postId);
+        dbRef.collection("users").document(currentUid).get()
+                .addOnSuccessListener(userSnapshot -> {
+                    String username = userSnapshot.getString("username");
+                    String avatarUrl = userSnapshot.getString("avatarUrl");
+                    comment.setUsername(username != null && !username.trim().isEmpty() ? username : currentUid);
+                    comment.setAvatarUrl(avatarUrl);
 
-        dbRef.runTransaction(transaction -> {
-            DocumentSnapshot postSnap = transaction.get(postRef);
-            if (!postSnap.exists()) {
-                throw new FirebaseFirestoreException("Bài viết không tồn tại.",
-                        FirebaseFirestoreException.Code.NOT_FOUND);
-            }
+                    dbRef.runTransaction(transaction -> {
+                        DocumentSnapshot postSnap = transaction.get(postRef);
+                        if (!postSnap.exists()) {
+                            throw new FirebaseFirestoreException("Bài viết không tồn tại.",
+                                    FirebaseFirestoreException.Code.NOT_FOUND);
+                        }
 
-            String postAuthorId = postSnap.getString("authorId");
-            Long commentsCount = postSnap.getLong("commentsCount");
-            long updatedComments = (commentsCount != null ? commentsCount : 0L) + 1L;
+                        String postAuthorId = postSnap.getString("authorId");
+                        Long commentsCount = postSnap.getLong("commentsCount");
+                        long updatedComments = (commentsCount != null ? commentsCount : 0L) + 1L;
 
-            transaction.set(commentRef, comment.toMap());
-            transaction.update(postRef, "commentsCount", updatedComments);
-
-            return postAuthorId;
-        }).addOnSuccessListener(postAuthorId -> {
-            if (postAuthorId != null && !postAuthorId.equals(currentUid) && notificationService != null) {
-                notificationService.createNotification(postAuthorId, currentUid, "COMMENT", postId);
-            }
-            if (callback != null) callback.onSuccess(comment);
-        }).addOnFailureListener(e -> {
-            if (callback != null) callback.onError("Không thể gửi bình luận: " + e.getMessage());
-        });
+                        transaction.set(commentRef, comment.toMap());
+                        transaction.update(postRef, "commentsCount", updatedComments);
+                        return postAuthorId;
+                    }).addOnSuccessListener(postAuthorId -> {
+                        if (postAuthorId != null && !postAuthorId.equals(currentUid) && notificationService != null) {
+                            notificationService.createNotification(postAuthorId, currentUid, "COMMENT", postId);
+                        }
+                        if (callback != null) callback.onSuccess(comment);
+                    }).addOnFailureListener(e -> {
+                        if (callback != null) callback.onError("Không thể gửi bình luận: " + e.getMessage());
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    if (callback != null) callback.onError("Không thể tải hồ sơ để bình luận: " + e.getMessage());
+                });
     }
 
     // =========================================================================
@@ -251,6 +325,7 @@ public class InteractionService {
                 .addOnSuccessListener(querySnapshot -> {
                     List<Comment> comments = new ArrayList<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        if (Boolean.TRUE.equals(doc.getBoolean("hidden"))) continue;
                         Comment c = doc.toObject(Comment.class);
                         if (c != null) {
                             c.setId(doc.getId());
