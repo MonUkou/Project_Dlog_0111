@@ -2,6 +2,7 @@ package com.example.myapplication.adapter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +13,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
+import androidx.core.widget.TextViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -112,16 +115,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         holder.tvCaption.setText(captionText);
 
         // Check if current user liked post
+        setLikeUI(holder, false);
         interactionService.isLiked(post.getId(), new InteractionService.ServiceCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean isLiked) {
-                if (isLiked) {
-                    holder.btnLike.setText("Đã thích");
-                    holder.btnLike.setTextColor(0xFFE53935);
-                } else {
-                    holder.btnLike.setText("Thích");
-                    holder.btnLike.setTextColor(0xFF000000);
-                }
+                setLikeUI(holder, isLiked);
             }
 
             @Override
@@ -150,12 +148,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             boolean wasLiked = holder.btnLike.getText().toString().equals("Đã thích");
             holder.btnLike.setEnabled(false);
             if (wasLiked) {
-            interactionService.unlike(post.getId(), new InteractionService.ServiceCallback<Void>() {
+                interactionService.unlike(post.getId(), new InteractionService.ServiceCallback<Void>() {
                     @Override
                     public void onSuccess(Void result) {
                         post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
-                        holder.btnLike.setText("Thích");
-                        holder.btnLike.setTextColor(0xFF000000);
+                        setLikeUI(holder, false);
                         holder.tvLikesCount.setText(post.getLikesCount() + " lượt thích");
                         holder.btnLike.setEnabled(true);
                     }
@@ -171,11 +168,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                     @Override
                     public void onSuccess(Void result) {
                         post.setLikesCount(post.getLikesCount() + 1);
-                        holder.btnLike.setText("Đã thích");
-                        holder.btnLike.setTextColor(0xFFE53935);
+                        setLikeUI(holder, true);
                         holder.tvLikesCount.setText(post.getLikesCount() + " lượt thích");
                         holder.btnLike.setEnabled(true);
-
                     }
 
                     @Override
@@ -241,7 +236,10 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
         // Long press post -> Option dialog (Save image to device F24, Edit/Delete if author)
         holder.itemView.setOnLongClickListener(v -> {
-            showPostOptionsDialog(post, currentUserId, position);
+            int pos = holder.getBindingAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) {
+                showPostOptionsDialog(post, currentUserId, pos);
+            }
             return true;
         });
     }
@@ -345,6 +343,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
+    }
+
+    private void setLikeUI(PostViewHolder holder, boolean isLiked) {
+        if (isLiked) {
+            holder.btnLike.setText("Đã thích");
+            holder.btnLike.setTextColor(0xFFE53935);
+            holder.btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_filled, 0, 0, 0);
+            TextViewCompat.setCompoundDrawableTintList(holder.btnLike, ColorStateList.valueOf(0xFFE53935));
+        } else {
+            holder.btnLike.setText("Thích");
+            holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_navy));
+            holder.btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_24, 0, 0, 0);
+            TextViewCompat.setCompoundDrawableTintList(holder.btnLike, ColorStateList.valueOf(ContextCompat.getColor(context, R.color.dlog_muted_blue)));
+        }
     }
 
     @Override
