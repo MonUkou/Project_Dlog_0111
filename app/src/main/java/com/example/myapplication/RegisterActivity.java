@@ -31,7 +31,7 @@ public class RegisterActivity extends AppCompatActivity {
     private TextView tvGoLogin;
     private TextView btnBackRegister;
     private CheckBox cbAcceptTerms;
-    private Button btnGoogleRegister;
+    private View btnGoogleRegister;
 
     private AuthService authService;
     private boolean requestInProgress = false;
@@ -64,34 +64,67 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnRegister.setOnClickListener(v -> handleRegister());
-        tvGoLogin.setOnClickListener(v -> finish());
-        btnBackRegister.setOnClickListener(v -> finish());
-        btnGoogleRegister.setOnClickListener(v -> GoogleSignInHelper.launch(this,
-                new GoogleSignInHelper.Callback() {
-                    @Override public void onToken(String idToken) {
+        btnRegister.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handleRegister();
+            }
+        });
+
+        tvGoLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+
+        btnBackRegister.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+
+        btnGoogleRegister.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (requestInProgress) return;
+
+                GoogleSignInHelper.launch(RegisterActivity.this, new GoogleSignInHelper.Callback() {
+                    @Override
+                    public void onToken(String idToken) {
                         setLoading(true);
                         authService.signInWithGoogle(idToken, new IAuthService.AuthCallback() {
-                            @Override public void onSuccess(User user) {
+                            @Override
+                            public void onSuccess(User user) {
                                 setLoading(false);
                                 Toast.makeText(RegisterActivity.this,
                                         R.string.register_success, Toast.LENGTH_SHORT).show();
                                 navigateHome();
                             }
-                            @Override public void onError(Exception error) {
+
+                            @Override
+                            public void onError(Exception error) {
                                 setLoading(false);
-                                Toast.makeText(RegisterActivity.this,
-                                        error == null || error.getMessage() == null
-                                                ? getString(R.string.register_failed) : error.getMessage(),
-                                        Toast.LENGTH_LONG).show();
+                                String message = (error == null || error.getMessage() == null)
+                                        ? getString(R.string.register_failed)
+                                        : error.getMessage();
+                                Toast.makeText(RegisterActivity.this, message, Toast.LENGTH_LONG).show();
                             }
                         });
                     }
-                    @Override public void onError(Exception error) {
-                        Toast.makeText(RegisterActivity.this, "Không thể đăng ký Google: "
-                                + error.getMessage(), Toast.LENGTH_LONG).show();
+
+                    @Override
+                    public void onError(Exception error) {
+                        String message = (error == null || error.getMessage() == null)
+                                ? getString(R.string.register_failed)
+                                : error.getMessage();
+                        Toast.makeText(RegisterActivity.this,
+                                "Không thể đăng ký Google: " + message, Toast.LENGTH_LONG).show();
                     }
-                }));
+                });
+            }
+        });
     }
 
     private void handleRegister() {
