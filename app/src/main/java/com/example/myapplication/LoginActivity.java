@@ -27,7 +27,7 @@ public class LoginActivity extends AppCompatActivity {
     private ProgressBar progressBarLogin;
     private TextView tvGoToRegister;
     private TextView tvForgotPassword;
-    private Button btnGoogleLogin;
+    private View btnGoogleLogin;
 
     private AuthService authService;
     private boolean requestInProgress = false;
@@ -57,35 +57,67 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnLoginSubmit.setOnClickListener(v -> handleLogin());
-        tvGoToRegister.setOnClickListener(v ->
-                startActivity(new Intent(LoginActivity.this, RegisterActivity.class)));
-        tvForgotPassword.setOnClickListener(v ->
-                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class)));
-        btnGoogleLogin.setOnClickListener(v -> GoogleSignInHelper.launch(this,
-                new GoogleSignInHelper.Callback() {
-                    @Override public void onToken(String idToken) {
+        btnLoginSubmit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handleLogin();
+            }
+        });
+
+        tvGoToRegister.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+            }
+        });
+
+        tvForgotPassword.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
+            }
+        });
+
+        btnGoogleLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (requestInProgress) return;
+
+                GoogleSignInHelper.launch(LoginActivity.this, new GoogleSignInHelper.Callback() {
+                    @Override
+                    public void onToken(String idToken) {
                         setLoading(true);
                         authService.signInWithGoogle(idToken, new IAuthService.AuthCallback() {
-                            @Override public void onSuccess(User user) {
-                                setLoading(false);
-                                Toast.makeText(LoginActivity.this, R.string.login_success, Toast.LENGTH_SHORT).show();
-                                navigateHome();
-                            }
-                            @Override public void onError(Exception error) {
+                            @Override
+                            public void onSuccess(User user) {
                                 setLoading(false);
                                 Toast.makeText(LoginActivity.this,
-                                        error == null || error.getMessage() == null
-                                                ? getString(R.string.login_failed) : error.getMessage(),
-                                        Toast.LENGTH_LONG).show();
+                                        R.string.login_success, Toast.LENGTH_SHORT).show();
+                                navigateHome();
+                            }
+
+                            @Override
+                            public void onError(Exception error) {
+                                setLoading(false);
+                                String message = (error == null || error.getMessage() == null)
+                                        ? getString(R.string.login_failed)
+                                        : error.getMessage();
+                                Toast.makeText(LoginActivity.this, message, Toast.LENGTH_LONG).show();
                             }
                         });
                     }
-                    @Override public void onError(Exception error) {
-                        Toast.makeText(LoginActivity.this, "Không thể đăng nhập Google: "
-                                + error.getMessage(), Toast.LENGTH_LONG).show();
+
+                    @Override
+                    public void onError(Exception error) {
+                        String message = (error == null || error.getMessage() == null)
+                                ? getString(R.string.login_failed)
+                                : error.getMessage();
+                        Toast.makeText(LoginActivity.this,
+                                "Không thể đăng nhập Google: " + message, Toast.LENGTH_LONG).show();
                     }
-                }));
+                });
+            }
+        });
     }
 
     private void handleLogin() {
