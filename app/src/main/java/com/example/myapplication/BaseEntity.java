@@ -32,8 +32,16 @@ public abstract class BaseEntity {
         return createdAt;
     }
 
+    public void setCreatedAt(long createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public long getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public void touch() {
