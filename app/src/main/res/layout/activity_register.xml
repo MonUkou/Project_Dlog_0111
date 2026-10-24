@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="@color/dlog_surface"
     android:fillViewport="true">
     <LinearLayout
         android:layout_width="match_parent"
@@ -161,21 +161,32 @@
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingHorizontal="10dp" android:text="Hoặc đăng ký với" android:textColor="@color/dlog_muted_blue" android:textSize="12sp" />
             <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/dlog_feed_divider" />
         </LinearLayout>
-        <Button
+        <LinearLayout
             android:id="@+id/btnGoogleRegister"
             android:layout_width="match_parent"
-            android:layout_height="46dp"
+            android:layout_height="48dp"
             android:background="@drawable/bg_social_button"
-            android:drawableStart="@drawable/ic_google_g"
-            android:drawablePadding="12dp"
+            android:clickable="true"
+            android:contentDescription="Tiếp tục với Google"
+            android:focusable="true"
             android:gravity="center"
             android:paddingStart="18dp"
             android:paddingEnd="18dp"
-            android:text="Tiếp tục với Google"
-            android:textAllCaps="false"
-            android:textColor="@color/dlog_navy"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_google_g" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="Tiếp tục với Google"
+                android:textColor="@color/dlog_ink"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
         <TextView
             android:id="@+id/tvGoLogin"
             android:layout_width="match_parent"

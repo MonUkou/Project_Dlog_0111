@@ -59,6 +59,7 @@ public class RegisterActivity extends AppCompatActivity {
         btnBackRegister = findViewById(R.id.btnBackRegister);
         cbAcceptTerms = findViewById(R.id.cbAcceptTerms);
         btnGoogleRegister = findViewById(R.id.btnGoogleRegister);
+
         PasswordVisibilityToggle.bind(etRegisterPassword);
         PasswordVisibilityToggle.bind(etConfirmPassword);
     }
@@ -88,47 +89,65 @@ public class RegisterActivity extends AppCompatActivity {
         btnGoogleRegister.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (requestInProgress) return;
+                if (requestInProgress) {
+                    return;
+                }
 
-                GoogleSignInHelper.launch(RegisterActivity.this, new GoogleSignInHelper.Callback() {
-                    @Override
-                    public void onToken(String idToken) {
-                        setLoading(true);
-                        authService.signInWithGoogle(idToken, new IAuthService.AuthCallback() {
+                GoogleSignInHelper.launch(RegisterActivity.this,
+                        new GoogleSignInHelper.Callback() {
                             @Override
-                            public void onSuccess(User user) {
-                                setLoading(false);
-                                Toast.makeText(RegisterActivity.this,
-                                        R.string.register_success, Toast.LENGTH_SHORT).show();
-                                navigateHome();
+                            public void onToken(String idToken) {
+                                setLoading(true);
+                                authService.signInWithGoogle(idToken,
+                                        new IAuthService.AuthCallback() {
+                                            @Override
+                                            public void onSuccess(User user) {
+                                                setLoading(false);
+                                                Toast.makeText(
+                                                        RegisterActivity.this,
+                                                        R.string.register_success,
+                                                        Toast.LENGTH_SHORT
+                                                ).show();
+                                                navigateHome();
+                                            }
+
+                                            @Override
+                                            public void onError(Exception error) {
+                                                setLoading(false);
+                                                String message =
+                                                        (error == null || error.getMessage() == null)
+                                                                ? getString(R.string.register_failed)
+                                                                : error.getMessage();
+                                                Toast.makeText(
+                                                        RegisterActivity.this,
+                                                        message,
+                                                        Toast.LENGTH_LONG
+                                                ).show();
+                                            }
+                                        });
                             }
 
                             @Override
                             public void onError(Exception error) {
-                                setLoading(false);
-                                String message = (error == null || error.getMessage() == null)
-                                        ? getString(R.string.register_failed)
-                                        : error.getMessage();
-                                Toast.makeText(RegisterActivity.this, message, Toast.LENGTH_LONG).show();
+                                String message =
+                                        (error == null || error.getMessage() == null)
+                                                ? getString(R.string.register_failed)
+                                                : error.getMessage();
+                                Toast.makeText(
+                                        RegisterActivity.this,
+                                        "Không thể đăng ký Google: " + message,
+                                        Toast.LENGTH_LONG
+                                ).show();
                             }
                         });
-                    }
-
-                    @Override
-                    public void onError(Exception error) {
-                        String message = (error == null || error.getMessage() == null)
-                                ? getString(R.string.register_failed)
-                                : error.getMessage();
-                        Toast.makeText(RegisterActivity.this,
-                                "Không thể đăng ký Google: " + message, Toast.LENGTH_LONG).show();
-                    }
-                });
             }
         });
     }
 
     private void handleRegister() {
-        if (requestInProgress) return;
+        if (requestInProgress) {
+            return;
+        }
 
         String displayName = etRegisterName.getText().toString().trim();
         String email = etRegisterEmail.getText().toString().trim();
@@ -140,53 +159,72 @@ public class RegisterActivity extends AppCompatActivity {
             etRegisterName.requestFocus();
             return;
         }
+
         if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             etRegisterEmail.setError(getString(R.string.email_invalid));
             etRegisterEmail.requestFocus();
             return;
         }
+
         if (password.length() < 6) {
             etRegisterPassword.setError(getString(R.string.password_min_error));
             etRegisterPassword.requestFocus();
             return;
         }
+
         if (!password.equals(confirmPassword)) {
             etConfirmPassword.setError(getString(R.string.password_match_error));
             etConfirmPassword.requestFocus();
             return;
         }
+
         if (!cbAcceptTerms.isChecked()) {
-            Toast.makeText(this, "Vui lòng đồng ý với điều khoản để tiếp tục.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(
+                    this,
+                    "Vui lòng đồng ý với điều khoản để tiếp tục.",
+                    Toast.LENGTH_SHORT
+            ).show();
             cbAcceptTerms.requestFocus();
             return;
         }
 
         setLoading(true);
-        authService.register(email, password, displayName, new IAuthService.AuthCallback() {
-            @Override
-            public void onSuccess(User user) {
-                setLoading(false);
-                Toast.makeText(RegisterActivity.this,
-                        R.string.register_success, Toast.LENGTH_SHORT).show();
-                navigateHome();
-            }
+        authService.register(email, password, displayName,
+                new IAuthService.AuthCallback() {
+                    @Override
+                    public void onSuccess(User user) {
+                        setLoading(false);
+                        Toast.makeText(
+                                RegisterActivity.this,
+                                R.string.register_success,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        navigateHome();
+                    }
 
-            @Override
-            public void onError(Exception e) {
-                setLoading(false);
-                String message = (e == null || e.getMessage() == null)
-                        ? getString(R.string.register_failed)
-                        : e.getMessage();
-                Toast.makeText(RegisterActivity.this, message, Toast.LENGTH_LONG).show();
-            }
-        });
+                    @Override
+                    public void onError(Exception e) {
+                        setLoading(false);
+                        String message =
+                                (e == null || e.getMessage() == null)
+                                        ? getString(R.string.register_failed)
+                                        : e.getMessage();
+                        Toast.makeText(
+                                RegisterActivity.this,
+                                message,
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+                });
     }
 
     private void setLoading(boolean loading) {
         requestInProgress = loading;
         progressRegister.setVisibility(loading ? View.VISIBLE : View.GONE);
         btnRegister.setEnabled(!loading);
-        btnRegister.setText(loading ? R.string.register_loading : R.string.register_action);
+        btnRegister.setText(
+                loading ? R.string.register_loading : R.string.register_action
+        );
         tvGoLogin.setEnabled(!loading);
         btnBackRegister.setEnabled(!loading);
         cbAcceptTerms.setEnabled(!loading);
@@ -195,7 +233,9 @@ public class RegisterActivity extends AppCompatActivity {
 
     private void navigateHome() {
         Intent intent = new Intent(this, HomeActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK
+        );
         startActivity(intent);
         finish();
     }
