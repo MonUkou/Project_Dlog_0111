@@ -7,6 +7,7 @@ public class SavedPost extends BaseEntity {
 
     private String userId;
     private String postId;
+    private String collectionName = "Chung";
 
     public SavedPost() {
         super();
@@ -40,6 +41,11 @@ public class SavedPost extends BaseEntity {
         this.postId = postId;
     }
 
+    public String getCollectionName() { return collectionName; }
+    public void setCollectionName(String value) {
+        collectionName = value == null || value.trim().isEmpty() ? "Chung" : value.trim();
+    }
+
     @Override
     public boolean validate() {
         return userId != null && !userId.trim().isEmpty()
@@ -51,6 +57,7 @@ public class SavedPost extends BaseEntity {
         Map<String, Object> map = baseMap();
         map.put("userId", userId);
         map.put("postId", postId);
+        map.put("collectionName", collectionName);
         return map;
     }
 
@@ -60,6 +67,7 @@ public class SavedPost extends BaseEntity {
         if (map.containsKey("id") && map.get("id") != null) savedPost.setId((String) map.get("id"));
         if (map.containsKey("userId") && map.get("userId") != null) savedPost.setUserId((String) map.get("userId"));
         if (map.containsKey("postId") && map.get("postId") != null) savedPost.setPostId((String) map.get("postId"));
+        if (map.containsKey("collectionName") && map.get("collectionName") != null) savedPost.setCollectionName((String) map.get("collectionName"));
         return savedPost;
     }
 }
