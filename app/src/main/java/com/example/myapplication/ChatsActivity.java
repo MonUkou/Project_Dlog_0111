@@ -41,7 +41,9 @@ public class ChatsActivity extends AppCompatActivity {
     private String currentUserId;
     private String currentQuery = "";
     private List<ChatService.Conversation> conversationCache = new ArrayList<>();
-    private final Runnable clearSearch = () -> showThreads();
+    private final Runnable clearSearch = new Runnable() {
+        @Override public void run() { showThreads(); }
+    };
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,7 +58,9 @@ public class ChatsActivity extends AppCompatActivity {
         peopleList = findViewById(R.id.rvChatPeople);
         empty = findViewById(R.id.tvChatsEmpty);
         progress = findViewById(R.id.progressChats);
-        findViewById(R.id.btnBackChats).setOnClickListener(v -> finish());
+        findViewById(R.id.btnBackChats).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { finish(); }
+        });
         adapter = new ChatRowAdapter(this, new ChatRowAdapter.Listener() {
             @Override public void onThread(ChatService.Conversation conversation) {
                 openConversation(conversation.id, conversation.otherUserId, conversation.otherName, conversation.otherAvatar);
@@ -67,13 +71,12 @@ public class ChatsActivity extends AppCompatActivity {
         peopleList.setLayoutManager(new LinearLayoutManager(this));
         threadsList.setAdapter(adapter);
         peopleList.setAdapter(adapter);
-        findViewById(R.id.btnBackChats).setOnClickListener(v -> finish());
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { onSearchChanged(s.toString()); }
             @Override public void afterTextChanged(Editable s) {}
         });
-        BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.MENU);
+        BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.INBOX);
     }
 
     @Override protected void onStart() {
@@ -105,7 +108,9 @@ public class ChatsActivity extends AppCompatActivity {
         empty.setVisibility(View.GONE);
         progress.setVisibility(View.VISIBLE);
         String query = currentQuery;
-        searchHandler.postDelayed(() -> UserService.getInstance().searchUsers(query,
+        searchHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                UserService.getInstance().searchUsers(query,
                 new UserService.Callback<List<User>>() {
                     @Override public void onSuccess(List<User> users) {
                         if (isFinishing() || !query.equals(currentQuery)) return;
@@ -124,7 +129,9 @@ public class ChatsActivity extends AppCompatActivity {
                         empty.setVisibility(View.VISIBLE);
                         empty.setText("Không thể tìm người dùng. Kiểm tra quyền Firestore.");
                     }
-                }), 250);
+                });
+            }
+        }, 250);
     }
 
     private void showThreads() {
