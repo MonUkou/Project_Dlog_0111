@@ -74,11 +74,13 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             holder.vUnreadDot.setVisibility(View.VISIBLE);
         }
 
-        holder.itemView.setOnClickListener(v -> {
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
             if (notification.getPostId() != null && !notification.getPostId().isEmpty()) {
                 Intent intent = new Intent(context, PostDetailActivity.class);
                 intent.putExtra("postId", notification.getPostId());
                 context.startActivity(intent);
+            }
             }
         });
     }
