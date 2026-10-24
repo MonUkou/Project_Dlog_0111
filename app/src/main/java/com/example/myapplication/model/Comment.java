@@ -10,6 +10,7 @@ public class Comment extends BaseEntity {
     private String username;
     private String avatarUrl;
     private String content;
+    private boolean hidden;
 
     public Comment() {
         super();
@@ -52,6 +53,9 @@ public class Comment extends BaseEntity {
         return content;
     }
 
+    public boolean isHidden() { return hidden; }
+    public void setHidden(boolean hidden) { this.hidden = hidden; }
+
     public void setContent(String content) {
         this.content = content != null ? content.trim() : null;
         touch();
@@ -76,6 +80,7 @@ public class Comment extends BaseEntity {
         map.put("username", username);
         map.put("avatarUrl", avatarUrl);
         map.put("content", content);
+        map.put("hidden", hidden);
         return map;
     }
 }

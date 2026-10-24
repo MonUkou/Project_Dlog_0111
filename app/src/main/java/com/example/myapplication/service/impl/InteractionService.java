@@ -108,6 +108,14 @@ public class InteractionService {
         return null;
     }
 
+    private void findLike(String postId, String userId,
+                          java.util.function.Consumer<DocumentSnapshot> success,
+                          java.util.function.Consumer<Exception> failure) {
+        dbRef.collection(COLLECTION_LIKES).whereEqualTo("postId", postId).whereEqualTo("userId", userId)
+            .limit(1).get().addOnSuccessListener(result -> success.accept(result.isEmpty() ? null : result.getDocuments().get(0)))
+            .addOnFailureListener(error -> failure.accept(error));
+    }
+
     // =========================================================================
     // F25: THÍCH BÀI VIẾT - like(postId): void
     // =========================================================================
@@ -132,7 +140,9 @@ public class InteractionService {
             return;
         }
 
-        DocumentReference likeRef = dbRef.collection(COLLECTION_LIKES).document(likeObj.getId());
+        findLike(postId, currentUid, existing -> {
+        DocumentReference likeRef = existing == null ? dbRef.collection(COLLECTION_LIKES).document() : existing.getReference();
+        likeObj.setId(likeRef.getId());
         DocumentReference postRef = dbRef.collection(COLLECTION_POSTS).document(postId);
 
         dbRef.runTransaction(transaction -> {
@@ -163,6 +173,7 @@ public class InteractionService {
         }).addOnFailureListener(e -> {
             if (callback != null) callback.onError("Không thể thích bài viết: " + e.getMessage());
         });
+        }, error -> { if (callback != null) callback.onError("Không kiểm tra được lượt thích: " + error.getMessage()); });
     }
 
     // =========================================================================
@@ -183,8 +194,9 @@ public class InteractionService {
             return;
         }
 
-        String likeId = Like.generateLikeId(postId, currentUid);
-        DocumentReference likeRef = dbRef.collection(COLLECTION_LIKES).document(likeId);
+        findLike(postId, currentUid, existing -> {
+        if (existing == null) { if (callback != null) callback.onSuccess(null); return; }
+        DocumentReference likeRef = existing.getReference();
         DocumentReference postRef = dbRef.collection(COLLECTION_POSTS).document(postId);
 
         dbRef.runTransaction(transaction -> {
@@ -207,6 +219,7 @@ public class InteractionService {
         }).addOnFailureListener(e -> {
             if (callback != null) callback.onError("Không thể bỏ thích: " + e.getMessage());
         });
+        }, error -> { if (callback != null) callback.onError("Không kiểm tra được lượt thích: " + error.getMessage()); });
     }
 
     // =========================================================================
@@ -224,14 +237,9 @@ public class InteractionService {
             return;
         }
 
-        String likeId = Like.generateLikeId(postId, currentUid);
-        dbRef.collection(COLLECTION_LIKES).document(likeId).get()
-                .addOnSuccessListener(doc -> {
-                    if (callback != null) callback.onSuccess(doc.exists());
-                })
-                .addOnFailureListener(e -> {
-                    if (callback != null) callback.onError("Lỗi kiểm tra trạng thái thích: " + e.getMessage());
-                });
+        findLike(postId, currentUid, document -> {
+            if (callback != null) callback.onSuccess(document != null);
+        }, error -> { if (callback != null) callback.onError("Lỗi kiểm tra trạng thái thích: " + error.getMessage()); });
     }
 
     // =========================================================================
@@ -317,6 +325,7 @@ public class InteractionService {
                 .addOnSuccessListener(querySnapshot -> {
                     List<Comment> comments = new ArrayList<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        if (Boolean.TRUE.equals(doc.getBoolean("hidden"))) continue;
                         Comment c = doc.toObject(Comment.class);
                         if (c != null) {
                             c.setId(doc.getId());

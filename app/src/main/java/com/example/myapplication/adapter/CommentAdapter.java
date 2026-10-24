@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.model.Comment;
+import com.example.myapplication.util.UiMotion;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
     private final Context context;
     private final List<Comment> comments = new ArrayList<>();
+    private int lastAnimatedPosition = -1;
 
     public CommentAdapter(Context context) {
         this.context = context;
@@ -32,6 +34,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
 
     public void setComments(List<Comment> newComments) {
         this.comments.clear();
+        lastAnimatedPosition = -1;
         if (newComments != null) {
             this.comments.addAll(newComments);
         }
@@ -69,11 +72,23 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         if (comment.getAvatarUrl() != null && !comment.getAvatarUrl().isEmpty()) {
             Glide.with(context)
                     .load(comment.getAvatarUrl())
-                    .circleCrop()
+                    .placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop()
                     .into(holder.ivCommentAvatar);
         } else {
             holder.ivCommentAvatar.setImageResource(R.drawable.bg_circle_avatar);
         }
+        if (position > lastAnimatedPosition) {
+            UiMotion.reveal(holder.itemView, position);
+            lastAnimatedPosition = position;
+        }
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull CommentViewHolder holder) {
+        holder.itemView.animate().cancel();
+        holder.itemView.setAlpha(1f);
+        holder.itemView.setTranslationY(0f);
+        super.onViewRecycled(holder);
     }
 
     @Override

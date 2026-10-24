@@ -1,7 +1,6 @@
 package com.example.myapplication;
 
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -10,7 +9,7 @@ import android.text.SpannableStringBuilder;
 import android.text.style.StyleSpan;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.Button;S
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -20,13 +19,15 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.widget.TextViewCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.myapplication.model.Comment;
+import com.example.myapplication.model.Post;
 import com.example.myapplication.service.impl.InteractionService;
+import com.example.myapplication.service.impl.OfflinePages;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -46,11 +47,15 @@ public class PostDetailActivity extends AppCompatActivity {
     private TextView btnLike, btnFocusComment;
     private TextView btnSharePost;
     private ImageView ivDetailAuthorAvatar, ivDetailPostImage;
+    private final List<String> photoUrls = new ArrayList<>();
+    private int photoIndex = 0;
     private TextView tvImagePlaceholder;
     private Button btnSendComment;
     private EditText edtComment;
     private ProgressBar progressBarComments;
     private RecyclerView rvComments;
+    private TextView tvOfflineDetail;
+    private Post cachedPost;
 
     private InteractionService interactionService;
     private CommentAdapter commentAdapter;
@@ -81,6 +86,9 @@ public class PostDetailActivity extends AppCompatActivity {
 
         initViews();
 
+        cachedPost = new OfflinePages(this).post(postId);
+        if (cachedPost != null) applyPost(cachedPost);
+
         if (savedInstanceState != null) {
             edtComment.setText(savedInstanceState.getString(STATE_COMMENT_DRAFT, ""));
             isLiked = savedInstanceState.getBoolean(STATE_IS_LIKED, false);
@@ -110,11 +118,42 @@ public class PostDetailActivity extends AppCompatActivity {
         btnSharePost = findViewById(R.id.btnSharePost);
         ivDetailAuthorAvatar = findViewById(R.id.viewAuthorAvatar);
         ivDetailPostImage = findViewById(R.id.ivPostImage);
+        ivDetailPostImage.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                Post viewerPost = cachedPost;
+                if (viewerPost == null) {
+                    viewerPost = new Post();
+                    viewerPost.setImageUrls(new ArrayList<String>(photoUrls));
+                    if (!photoUrls.isEmpty()) viewerPost.setImageUrl(photoUrls.get(0));
+                }
+                PhotoViewerActivity.open(PostDetailActivity.this, viewerPost, photoIndex);
+            }
+        });
+        findViewById(R.id.btnDownloadPhoto).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                if (photoUrls.isEmpty()) return;
+                com.example.myapplication.service.impl.PostService.getInstance().saveImageToDevice(
+                        PostDetailActivity.this, photoUrls.get(photoIndex),
+                        new com.example.myapplication.service.impl.PostService.Callback<String>() {
+                            @Override public void onSuccess(String message) {
+                                runOnUiThread(new Runnable() { @Override public void run() {
+                                    Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_LONG).show();
+                                }});
+                            }
+                            @Override public void onError(Exception error) {
+                                runOnUiThread(new Runnable() { @Override public void run() {
+                                    Toast.makeText(PostDetailActivity.this, "Không thể tải ảnh: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                                }});
+                            }
+                        });
+            }
+        });
         tvImagePlaceholder = findViewById(R.id.tvImagePlaceholder);
         btnSendComment = findViewById(R.id.btnSendComment);
         edtComment = findViewById(R.id.edtComment);
         progressBarComments = findViewById(R.id.progressBarComments);
         rvComments = findViewById(R.id.rvComments);
+        tvOfflineDetail = findViewById(R.id.tvOfflineDetail);
 
         commentAdapter = new CommentAdapter(this, this::showDeleteCommentDialog);
         rvComments.setLayoutManager(new LinearLayoutManager(this));
@@ -130,7 +169,13 @@ public class PostDetailActivity extends AppCompatActivity {
     private void loadPostDetails() {
         FirebaseFirestore.getInstance().collection("posts").document(postId).get()
                 .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
+                    if (doc.exists() && !Boolean.TRUE.equals(doc.getBoolean("hidden"))) {
+                        Post freshPost = Post.fromMap(doc.getData());
+                        if (freshPost != null) {
+                            freshPost.setId(doc.getId());
+                            new OfflinePages(PostDetailActivity.this).savePost(freshPost);
+                            cachedPost = freshPost;
+                        }
                         String authorName = doc.getString("authorUsername");
                         String authorAvatarUrl = doc.getString("authorAvatarUrl");
                         String authorId = doc.getString("authorId");
@@ -138,28 +183,103 @@ public class PostDetailActivity extends AppCompatActivity {
                         String caption = doc.getString("caption");
                         Long likes = doc.getLong("likesCount");
                         Long comments = doc.getLong("commentsCount");
+                        Long createdAt = doc.getLong("createdAt");
+                        if (createdAt != null) {
+                            ((TextView) findViewById(R.id.tvPostTime)).setText(
+                                    new java.text.SimpleDateFormat("HH:mm · dd/MM/yyyy", new java.util.Locale("vi", "VN"))
+                                            .format(new java.util.Date(createdAt)));
+                        }
 
                         currentAuthor = (authorName != null && !authorName.isEmpty())
                                 ? authorName : (authorId != null ? authorId : "Người dùng DLog");
                         currentCaption = (caption != null) ? caption : "";
+                        Object tagValue = doc.get("hashtags");
+                        if (tagValue instanceof List) {
+                            List<String> tags = new ArrayList<>();
+                            for (Object item : (List<?>) tagValue) {
+                                if (item instanceof String) tags.add((String) item);
+                            }
+                            currentCaption = com.example.myapplication.util.PostDisplayText.captionWithTags(
+                                    currentCaption, tags);
+                        }
                         currentLikesCount = (likes != null) ? likes : 0;
                         currentCommentsCount = (comments != null) ? comments : 0;
 
                         if (authorAvatarUrl != null && !authorAvatarUrl.trim().isEmpty()) {
-                            Glide.with(this).load(authorAvatarUrl).circleCrop().into(ivDetailAuthorAvatar);
+                            Glide.with(this).load(authorAvatarUrl).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(ivDetailAuthorAvatar);
                         }
                         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
-                            tvImagePlaceholder.setVisibility(View.GONE);
-                            Glide.with(this).load(imageUrl).centerCrop().into(ivDetailPostImage);
+                            photoUrls.clear();
+                            Object images = doc.get("imageUrls");
+                            if (images instanceof List) {
+                                for (Object item : (List<?>) images) if (item instanceof String) photoUrls.add((String) item);
+                            }
+                            if (photoUrls.isEmpty()) photoUrls.add(imageUrl);
+                            photoIndex = 0;
+                            showCurrentPhoto();
                         }
 
                         updatePostInfoUI();
                         updateCounterViews();
+                    } else {
+                        Toast.makeText(this, "Bài viết đã được ẩn hoặc không còn tồn tại.", Toast.LENGTH_SHORT).show();
+                        finish();
                     }
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Lỗi tải bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception error) {
+                        if (cachedPost != null) {
+                            showOfflineState();
+                        } else {
+                            Toast.makeText(PostDetailActivity.this,
+                                    "Không có dữ liệu bài viết đã lưu trên máy.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
+    private void applyPost(Post post) {
+        currentAuthor = post.getAuthorUsername() == null || post.getAuthorUsername().isEmpty()
+                ? post.getAuthorId() : post.getAuthorUsername();
+        currentCaption = com.example.myapplication.util.PostDisplayText.captionWithTags(
+                post.getCaption(), post.getHashtags());
+        currentLikesCount = post.getLikesCount();
+        currentCommentsCount = post.getCommentsCount();
+        ((TextView) findViewById(R.id.tvPostTime)).setText(
+                new java.text.SimpleDateFormat("HH:mm · dd/MM/yyyy", new java.util.Locale("vi", "VN"))
+                        .format(new java.util.Date(post.getCreatedAt())));
+        if (post.getAuthorAvatarUrl() != null && !post.getAuthorAvatarUrl().isEmpty()) {
+            Glide.with(this).load(post.getAuthorAvatarUrl()).placeholder(R.drawable.bg_circle_avatar)
+                    .error(R.drawable.bg_circle_avatar).circleCrop().into(ivDetailAuthorAvatar);
+        }
+        photoUrls.clear();
+        if (post.getImageUrls() != null) photoUrls.addAll(post.getImageUrls());
+        if (photoUrls.isEmpty() && post.getImageUrl() != null) photoUrls.add(post.getImageUrl());
+        photoIndex = 0;
+        if (!photoUrls.isEmpty()) showCurrentPhoto();
+        updatePostInfoUI();
+        updateCounterViews();
+    }
+
+    private void showOfflineState() {
+        tvOfflineDetail.setVisibility(View.VISIBLE);
+        progressBarComments.setVisibility(View.GONE);
+        tvEmptyComments.setText("Bình luận chưa được lưu ngoại tuyến. Hãy kết nối mạng để xem.");
+        tvEmptyComments.setVisibility(View.VISIBLE);
+        rvComments.setVisibility(View.GONE);
+        edtComment.setEnabled(false);
+        btnSendComment.setEnabled(false);
+        btnFocusComment.setEnabled(false);
+    }
+
+    private void showCurrentPhoto() {
+        if (photoUrls.isEmpty()) return;
+        tvImagePlaceholder.setVisibility(View.GONE);
+        Glide.with(this).load(photoUrls.get(photoIndex)).centerCrop().into(ivDetailPostImage);
+        TextView position = findViewById(R.id.tvPhotoPosition);
+        position.setVisibility(photoUrls.size() > 1 ? View.VISIBLE : View.GONE);
+        position.setText((photoIndex + 1) + "/" + photoUrls.size());
+        ivDetailPostImage.setContentDescription("Ảnh " + (photoIndex + 1) + " trong " + photoUrls.size() + " ảnh. Nhấn để xem ảnh kế tiếp.");
     }
 
     private void checkLikeStatus() {
@@ -223,6 +343,7 @@ public class PostDetailActivity extends AppCompatActivity {
         interactionService.getComments(postId, new InteractionService.ServiceCallback<List<Comment>>() {
             @Override
             public void onSuccess(List<Comment> result) {
+                tvOfflineDetail.setVisibility(View.GONE);
                 progressBarComments.setVisibility(View.GONE);
                 commentAdapter.setComments(result);
                 currentCommentsCount = result.size();
@@ -240,7 +361,7 @@ public class PostDetailActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 progressBarComments.setVisibility(View.GONE);
-                Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
+                showOfflineState();
             }
         });
     }
@@ -272,7 +393,7 @@ public class PostDetailActivity extends AppCompatActivity {
     private void sharePost() {
         FirebaseFirestore.getInstance().collection("posts").document(postId).get()
                 .addOnSuccessListener(document -> {
-                    if (!document.exists()) {
+                    if (!document.exists() || Boolean.TRUE.equals(document.getBoolean("hidden"))) {
                         Toast.makeText(this, "Bài viết không còn tồn tại.", Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -314,26 +435,27 @@ public class PostDetailActivity extends AppCompatActivity {
 
     private void updatePostInfoUI() {
         tvPostAuthor.setText(currentAuthor);
-        tvPostCaption.setText(formatBoldPrefix(currentAuthor, currentCaption));
+        tvPostCaption.setText(currentCaption);
+        tvPostCaption.setVisibility(currentCaption.trim().isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     private void updateLikeButtonUI() {
         if (isLiked) {
-            btnLike.setText("Đã thích");
-            btnLike.setTextColor(Color.parseColor("#E53935"));
-            btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_filled, 0, 0, 0);
-            TextViewCompat.setCompoundDrawableTintList(btnLike, ColorStateList.valueOf(Color.parseColor("#E53935")));
+            btnLike.setSelected(true);
+            btnLike.setContentDescription("Bỏ thích bài viết, " + currentLikesCount);
+            btnLike.setTextColor(ContextCompat.getColor(this, R.color.dlog_error));
         } else {
-            btnLike.setText("Thích");
-            btnLike.setTextColor(Color.parseColor("#102D57"));
-            btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_24, 0, 0, 0);
-            TextViewCompat.setCompoundDrawableTintList(btnLike, ColorStateList.valueOf(Color.parseColor("#6D87A9")));
+            btnLike.setSelected(false);
+            btnLike.setContentDescription("Thích bài viết, " + currentLikesCount);
+            btnLike.setTextColor(ContextCompat.getColor(this, R.color.dlog_ink));
         }
     }
 
     private void updateCounterViews() {
-        tvLikesCount.setText(currentLikesCount + " lượt thích");
-        tvCommentsCount.setText(currentCommentsCount + " bình luận");
+        btnLike.setText(String.valueOf(currentLikesCount));
+        btnLike.setContentDescription((isLiked ? "Bỏ thích" : "Thích") + " bài viết, " + currentLikesCount);
+        btnFocusComment.setText(String.valueOf(currentCommentsCount));
+        btnFocusComment.setContentDescription("Bình luận, " + currentCommentsCount);
     }
 
     private static SpannableStringBuilder formatBoldPrefix(String author, String text) {
@@ -396,7 +518,7 @@ public class PostDetailActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             textParams.setMarginStart(dp(parent, 9));
             text.setLayoutParams(textParams);
-            text.setTextColor(Color.parseColor("#172B4D"));
+            text.setTextColor(ContextCompat.getColor(context, R.color.dlog_ink));
             text.setTextSize(14f);
             row.addView(avatar);
             row.addView(text);
@@ -410,7 +532,7 @@ public class PostDetailActivity extends AppCompatActivity {
                     ? c.getUsername() : c.getAuthorId();
             holder.tvCommentLine.setText(formatBoldPrefix(name, c.getContent()));
             if (c.getAvatarUrl() != null && !c.getAvatarUrl().trim().isEmpty()) {
-                Glide.with(context).load(c.getAvatarUrl()).circleCrop().into(holder.ivAvatar);
+                Glide.with(context).load(c.getAvatarUrl()).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(holder.ivAvatar);
             } else {
                 holder.ivAvatar.setImageResource(R.drawable.bg_circle_avatar);
             }
