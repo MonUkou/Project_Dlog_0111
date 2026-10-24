@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/dlog_page" android:orientation="vertical">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="52dp" android:gravity="center_vertical" android:paddingHorizontal="8dp">
+        <TextView android:id="@+id/btnCancelEditor" android:layout_width="64dp" android:layout_height="48dp" android:gravity="center" android:text="Hủy" android:textColor="@color/dlog_navy" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="Chỉnh ảnh" android:textColor="@color/dlog_navy" android:textSize="17sp" android:textStyle="bold" />
+        <TextView android:id="@+id/btnSaveEditor" android:layout_width="64dp" android:layout_height="48dp" android:gravity="center" android:text="Xong" android:textColor="@color/dlog_blue" android:textStyle="bold" />
+    </LinearLayout>
+  
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="#FF101010">
+        <ImageView android:id="@+id/ivEditorPreview" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="Xem trước ảnh đang chỉnh" android:scaleType="fitCenter" />
+        <ProgressBar android:id="@+id/progressEditor" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+    </FrameLayout>
+  
+    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="64dp" android:scrollbars="none">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:orientation="horizontal" android:paddingHorizontal="8dp">
+            <Button android:id="@+id/btnRotateEditor" style="@style/DLogEditorTool" android:text="Xoay 90°" />
+            <Button android:id="@+id/btnCropEditor" style="@style/DLogEditorTool" android:text="Cắt: Gốc" />
+            <Button android:id="@+id/btnFilterEditor" style="@style/DLogEditorTool" android:text="Màu: Gốc" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+</LinearLayout>
