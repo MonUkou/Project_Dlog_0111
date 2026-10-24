@@ -1,21 +1,22 @@
 package com.example.myapplication.util;
 
 import android.app.Activity;
+import android.content.res.ColorStateList;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.widget.TextView;
 
 import com.example.myapplication.CreatePostActivity;
 import com.example.myapplication.HomeActivity;
+import com.example.myapplication.MenuActivity;
 import com.example.myapplication.NotificationActivity;
-import com.example.myapplication.ProfileActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.SearchActivity;
 
 public class BottomNavHelper {
 
     public enum Tab {
-        FEED, SEARCH, CREATE, NOTIFICATION, PROFILE
+        FEED, SEARCH, CREATE, NOTIFICATION, PROFILE, MENU
     }
 
     public static void setupBottomNav(Activity activity, Tab activeTab) {
@@ -29,43 +30,29 @@ public class BottomNavHelper {
             return;
         }
 
-        // Reset styles
-        navFeed.setTextColor(0xFF666666);
-        navFeed.setTypeface(null, Typeface.NORMAL);
-
-        navSearch.setTextColor(0xFF666666);
-        navSearch.setTypeface(null, Typeface.NORMAL);
-
-        navCreate.setTextColor(0xFF666666);
-        navCreate.setTypeface(null, Typeface.NORMAL);
-
-        navNotification.setTextColor(0xFF666666);
-        navNotification.setTypeface(null, Typeface.NORMAL);
-
-        navProfile.setTextColor(0xFF666666);
-        navProfile.setTypeface(null, Typeface.NORMAL);
+        setTabStyle(navFeed, false);
+        setTabStyle(navSearch, false);
+        setTabStyle(navCreate, false);
+        setTabStyle(navNotification, false);
+        setTabStyle(navProfile, false);
 
         // Highlight active tab
         switch (activeTab) {
             case FEED:
-                navFeed.setTextColor(0xFF000000);
-                navFeed.setTypeface(null, Typeface.BOLD);
+                setTabStyle(navFeed, true);
                 break;
             case SEARCH:
-                navSearch.setTextColor(0xFF000000);
-                navSearch.setTypeface(null, Typeface.BOLD);
+                setTabStyle(navSearch, true);
                 break;
             case CREATE:
-                navCreate.setTextColor(0xFF000000);
-                navCreate.setTypeface(null, Typeface.BOLD);
+                setTabStyle(navCreate, true);
                 break;
             case NOTIFICATION:
-                navNotification.setTextColor(0xFF000000);
-                navNotification.setTypeface(null, Typeface.BOLD);
+                setTabStyle(navNotification, true);
                 break;
             case PROFILE:
-                navProfile.setTextColor(0xFF000000);
-                navProfile.setTypeface(null, Typeface.BOLD);
+            case MENU:
+                setTabStyle(navProfile, true);
                 break;
         }
 
@@ -99,11 +86,21 @@ public class BottomNavHelper {
         });
 
         navProfile.setOnClickListener(v -> {
-            if (activeTab != Tab.PROFILE) {
-                Intent intent = new Intent(activity, ProfileActivity.class);
+            if (!(activity instanceof MenuActivity)) {
+                Intent intent = new Intent(activity, MenuActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 activity.startActivity(intent);
             }
         });
+    }
+
+    private static void setTabStyle(TextView tab, boolean active) {
+        int color = active ? 0xFF0756B5 : 0xFF667A98;
+        tab.setTextColor(color);
+        tab.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
+        // The raised create action uses a white plus over its own blue circle.
+        if (tab.getId() != R.id.navCreate) {
+            tab.setCompoundDrawableTintList(ColorStateList.valueOf(color));
+        }
     }
 }
