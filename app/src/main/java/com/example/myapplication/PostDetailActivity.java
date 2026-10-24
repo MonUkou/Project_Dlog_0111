@@ -1,6 +1,7 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.TextViewCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -319,9 +321,13 @@ public class PostDetailActivity extends AppCompatActivity {
         if (isLiked) {
             btnLike.setText("Đã thích");
             btnLike.setTextColor(Color.parseColor("#E53935"));
+            btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_filled, 0, 0, 0);
+            TextViewCompat.setCompoundDrawableTintList(btnLike, ColorStateList.valueOf(Color.parseColor("#E53935")));
         } else {
             btnLike.setText("Thích");
-            btnLike.setTextColor(Color.parseColor("#111111"));
+            btnLike.setTextColor(Color.parseColor("#102D57"));
+            btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_24, 0, 0, 0);
+            TextViewCompat.setCompoundDrawableTintList(btnLike, ColorStateList.valueOf(Color.parseColor("#6D87A9")));
         }
     }
 

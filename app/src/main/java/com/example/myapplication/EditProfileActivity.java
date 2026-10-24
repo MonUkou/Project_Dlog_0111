@@ -10,6 +10,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,8 +20,11 @@ import com.bumptech.glide.Glide;
 import com.example.myapplication.model.User;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.UserService;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 public class EditProfileActivity extends AppCompatActivity {
 
@@ -40,10 +45,13 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private final ActivityResultLauncher<String> avatarPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
-            uri -> {
-                if (uri != null) {
-                    newAvatarUri = uri;
-                    Glide.with(this).load(uri).circleCrop().into(ivEditAvatar);
+            new ActivityResultCallback<Uri>() {
+                @Override
+                public void onActivityResult(Uri uri) {
+                    if (uri != null) {
+                        newAvatarUri = uri;
+                        Glide.with(EditProfileActivity.this).load(uri).circleCrop().into(ivEditAvatar);
+                    }
                 }
             });
 
@@ -69,9 +77,15 @@ public class EditProfileActivity extends AppCompatActivity {
         etEditBio = findViewById(R.id.etEditBio);
         progressBarEditProfile = findViewById(R.id.progressBarEditProfile);
 
-        btnBackEditProfile.setOnClickListener(v -> finish());
-        btnChangeAvatar.setOnClickListener(v -> openGalleryForAvatar());
-        btnSaveProfile.setOnClickListener(v -> handleSaveProfile());
+        btnBackEditProfile.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { finish(); }
+        });
+        btnChangeAvatar.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openGalleryForAvatar(); }
+        });
+        btnSaveProfile.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { handleSaveProfile(); }
+        });
     }
 
     private void openGalleryForAvatar() {
@@ -131,13 +145,31 @@ public class EditProfileActivity extends AppCompatActivity {
                     .child("avatars/" + currentUserModel.getId() + "_" + System.currentTimeMillis() + ".jpg");
 
             avatarRef.putFile(newAvatarUri)
-                    .addOnSuccessListener(taskSnapshot -> avatarRef.getDownloadUrl()
-                            .addOnSuccessListener(downloadUri -> {
-                                currentUserModel.setAvatarUrl(downloadUri.toString());
-                                saveUserToFirestore();
-                            })
-                            .addOnFailureListener(this::showAvatarUploadError))
-                    .addOnFailureListener(this::showAvatarUploadError);
+                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            avatarRef.getDownloadUrl()
+                                    .addOnSuccessListener(new OnSuccessListener<Uri>() {
+                                        @Override
+                                        public void onSuccess(Uri downloadUri) {
+                                            currentUserModel.setAvatarUrl(downloadUri.toString());
+                                            saveUserToFirestore();
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            showAvatarUploadError(e);
+                                        }
+                                    });
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            showAvatarUploadError(e);
+                        }
+                    });
         } else {
             saveUserToFirestore();
         }

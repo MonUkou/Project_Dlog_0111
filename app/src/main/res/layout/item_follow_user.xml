@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="80dp" android:paddingHorizontal="18dp" android:paddingVertical="12dp" android:gravity="center_vertical" android:background="?attr/selectableItemBackground" android:focusable="true" android:clickable="true">
+ <ImageView android:id="@+id/ivFollowUserAvatar" android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/bg_circle_avatar" android:contentDescription="Ảnh đại diện" />
+ <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_weight="1" android:orientation="vertical">
+  <TextView android:id="@+id/tvFollowUserName" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/dlog_ink" android:textSize="16sp" android:textStyle="bold" />
+  <TextView android:id="@+id/tvFollowUserBio" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:maxLines="2" android:ellipsize="end" android:textColor="@color/dlog_muted" android:textSize="14sp" />
+ </LinearLayout>
+</LinearLayout>

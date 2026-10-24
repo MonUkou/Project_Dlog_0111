@@ -147,6 +147,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         holder.btnSave.setSelected(false);
 
         // Check if current user liked post
+        setLikeUI(holder, false);
         interactionService.isLiked(post.getId(), new InteractionService.ServiceCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean isLiked) {
@@ -222,7 +223,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_error));
                         holder.btnLike.setText(String.valueOf(post.getLikesCount()));
                         holder.btnLike.setEnabled(true);
-
                     }
 
                     @Override
@@ -516,6 +516,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
+    }
+
+    private void setLikeUI(PostViewHolder holder, boolean isLiked) {
+        if (isLiked) {
+            holder.btnLike.setText("Đã thích");
+            holder.btnLike.setTextColor(0xFFE53935);
+            holder.btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_filled, 0, 0, 0);
+            TextViewCompat.setCompoundDrawableTintList(holder.btnLike, ColorStateList.valueOf(0xFFE53935));
+        } else {
+            holder.btnLike.setText("Thích");
+            holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_navy));
+            holder.btnLike.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_heart_24, 0, 0, 0);
+            TextViewCompat.setCompoundDrawableTintList(holder.btnLike, ColorStateList.valueOf(ContextCompat.getColor(context, R.color.dlog_muted_blue)));
+        }
     }
 
     @Override
