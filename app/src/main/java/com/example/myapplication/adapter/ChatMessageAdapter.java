@@ -1,13 +1,14 @@
 package com.example.myapplication.adapter;
 
 import android.content.Context;
-import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
@@ -48,8 +49,8 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         row.addView(bubble, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView time = new TextView(context);
-        time.setTextSize(10);
-        time.setTextColor(0xFF7184A1);
+        time.setTextSize(12);
+        time.setTextColor(ContextCompat.getColor(context, R.color.dlog_muted));
         LinearLayout.LayoutParams timeParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         timeParams.topMargin = dp(2);
         row.addView(time, timeParams);
@@ -63,12 +64,13 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         bubbleParams.gravity = mine ? Gravity.END : Gravity.START;
         holder.bubble.setLayoutParams(bubbleParams);
         holder.bubble.setBackgroundResource(mine ? R.drawable.bg_chat_bubble_mine : R.drawable.bg_chat_bubble_theirs);
-        holder.bubble.setTextColor(mine ? 0xFFFFFFFF : 0xFF102B50);
+        holder.bubble.setTextColor(ContextCompat.getColor(context,
+                mine ? R.color.dlog_on_primary : R.color.dlog_ink));
         holder.bubble.setText(message.text);
         LinearLayout.LayoutParams timeParams = (LinearLayout.LayoutParams) holder.time.getLayoutParams();
         timeParams.gravity = mine ? Gravity.END : Gravity.START;
         holder.time.setLayoutParams(timeParams);
-        holder.time.setTypeface(null, Typeface.NORMAL);
+        holder.time.setTypeface(ResourcesCompat.getFont(context, R.font.inter_regular));
         holder.time.setText(message.createdAt <= 0 ? "" : DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(message.createdAt)));
     }
 
