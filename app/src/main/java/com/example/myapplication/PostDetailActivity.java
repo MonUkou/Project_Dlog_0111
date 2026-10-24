@@ -9,7 +9,7 @@ import android.text.SpannableStringBuilder;
 import android.text.style.StyleSpan;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;S
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -155,20 +155,36 @@ public class PostDetailActivity extends AppCompatActivity {
         rvComments = findViewById(R.id.rvComments);
         tvOfflineDetail = findViewById(R.id.tvOfflineDetail);
 
-        commentAdapter = new CommentAdapter(this, this::showDeleteCommentDialog);
+        commentAdapter = new CommentAdapter(this, new CommentAdapter.OnCommentClickListener() {
+            @Override
+            public void onCommentClick(Comment comment) {
+                showDeleteCommentDialog(comment);
+            }
+        });
         rvComments.setLayoutManager(new LinearLayoutManager(this));
         rvComments.setAdapter(commentAdapter);
 
-        tvBack.setOnClickListener(v -> finish());
-        btnLike.setOnClickListener(v -> handleLikeClick());
-        btnFocusComment.setOnClickListener(v -> edtComment.requestFocus());
-        btnSendComment.setOnClickListener(v -> handleSendComment());
-        btnSharePost.setOnClickListener(v -> sharePost());
+        tvBack.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { finish(); }
+        });
+        btnLike.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { handleLikeClick(); }
+        });
+        btnFocusComment.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { edtComment.requestFocus(); }
+        });
+        btnSendComment.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { handleSendComment(); }
+        });
+        btnSharePost.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { sharePost(); }
+        });
     }
 
     private void loadPostDetails() {
         FirebaseFirestore.getInstance().collection("posts").document(postId).get()
-                .addOnSuccessListener(doc -> {
+                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.DocumentSnapshot>() {
+                    @Override public void onSuccess(com.google.firebase.firestore.DocumentSnapshot doc) {
                     if (doc.exists() && !Boolean.TRUE.equals(doc.getBoolean("hidden"))) {
                         Post freshPost = Post.fromMap(doc.getData());
                         if (freshPost != null) {
@@ -206,7 +222,7 @@ public class PostDetailActivity extends AppCompatActivity {
                         currentCommentsCount = (comments != null) ? comments : 0;
 
                         if (authorAvatarUrl != null && !authorAvatarUrl.trim().isEmpty()) {
-                            Glide.with(this).load(authorAvatarUrl).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(ivDetailAuthorAvatar);
+                            Glide.with(PostDetailActivity.this).load(authorAvatarUrl).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(ivDetailAuthorAvatar);
                         }
                         if (imageUrl != null && !imageUrl.trim().isEmpty()) {
                             photoUrls.clear();
@@ -222,8 +238,9 @@ public class PostDetailActivity extends AppCompatActivity {
                         updatePostInfoUI();
                         updateCounterViews();
                     } else {
-                        Toast.makeText(this, "Bài viết đã được ẩn hoặc không còn tồn tại.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(PostDetailActivity.this, "Bài viết đã được ẩn hoặc không còn tồn tại.", Toast.LENGTH_SHORT).show();
                         finish();
+                    }
                     }
                 })
                 .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
@@ -392,9 +409,10 @@ public class PostDetailActivity extends AppCompatActivity {
 
     private void sharePost() {
         FirebaseFirestore.getInstance().collection("posts").document(postId).get()
-                .addOnSuccessListener(document -> {
+                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.DocumentSnapshot>() {
+                    @Override public void onSuccess(com.google.firebase.firestore.DocumentSnapshot document) {
                     if (!document.exists() || Boolean.TRUE.equals(document.getBoolean("hidden"))) {
-                        Toast.makeText(this, "Bài viết không còn tồn tại.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(PostDetailActivity.this, "Bài viết không còn tồn tại.", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     String caption = document.getString("caption");
@@ -406,16 +424,22 @@ public class PostDetailActivity extends AppCompatActivity {
                     send.setType("text/plain");
                     send.putExtra(Intent.EXTRA_TEXT, shareText);
                     startActivity(Intent.createChooser(send, "Chia sẻ bài viết"));
+                    }
                 })
-                .addOnFailureListener(error -> Toast.makeText(this,
-                        "Không thể tải bài viết để chia sẻ.", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception error) {
+                        Toast.makeText(PostDetailActivity.this,
+                                "Không thể tải bài viết để chia sẻ.", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void showDeleteCommentDialog(Comment comment) {
         new AlertDialog.Builder(this)
                 .setTitle("Xóa bình luận")
                 .setMessage("Bạn có chắc muốn xóa bình luận này không?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
+                .setPositiveButton("Xóa", new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
                     interactionService.deleteComment(comment.getId(), new InteractionService.ServiceCallback<Void>() {
                         @Override
                         public void onSuccess(Void result) {
@@ -428,6 +452,7 @@ public class PostDetailActivity extends AppCompatActivity {
                             Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_SHORT).show();
                         }
                     });
+                    }
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
@@ -536,7 +561,11 @@ public class PostDetailActivity extends AppCompatActivity {
             } else {
                 holder.ivAvatar.setImageResource(R.drawable.bg_circle_avatar);
             }
-            holder.itemView.setOnClickListener(v -> listener.onCommentClick(c));
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) {
+                    listener.onCommentClick(c);
+                }
+            });
         }
 
         @Override
