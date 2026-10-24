@@ -1,27 +1,83 @@
 <resources>
-    <style name="DLog.Text.Title" parent="android:style/TextAppearance.Material">
+    <style name="DLog.Display" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">32sp</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/dlog_ink</item>
-        <item name="android:textSize">@dimen/auth_text_title</item>
+    </style>
+    <style name="DLog.Headline" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">24sp</item><item name="android:textFontWeight">700</item>
+        <item name="android:textStyle">bold</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.TitleLarge" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">22sp</item><item name="android:textFontWeight">500</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.TitleMedium" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">20sp</item><item name="android:textFontWeight">500</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.TitleSmall" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">16sp</item><item name="android:textFontWeight">500</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.BodyLarge" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">16sp</item><item name="android:textFontWeight">400</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.Body" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">14sp</item><item name="android:textFontWeight">400</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.LabelLarge" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">14sp</item><item name="android:textFontWeight">500</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.LabelMedium" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">12sp</item><item name="android:textFontWeight">500</item><item name="android:textColor">@color/dlog_ink</item>
+    </style>
+    <style name="DLog.Caption" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item><item name="fontFamily">@font/inter</item>
+        <item name="android:textSize">12sp</item><item name="android:textFontWeight">400</item><item name="android:textColor">@color/dlog_muted</item>
+    </style>
+    <style name="DLog.Text.Title" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+        <item name="android:textColor">@color/dlog_ink</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textFontWeight">700</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="DLog.Text.Body" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:textColor">@color/dlog_muted</item>
-        <item name="android:textSize">@dimen/auth_text_body</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textFontWeight">400</item>
     </style>
 
     <style name="DLog.Text.Label" parent="android:style/TextAppearance.Material">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:textColor">@color/dlog_ink</item>
-        <item name="android:textSize">@dimen/auth_text_label</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textFontWeight">500</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="DLog.Button.Primary" parent="android:style/Widget.Material.Button">
         <item name="android:minHeight">@dimen/auth_button_height</item>
-        <item name="android:textColor">@color/dlog_surface</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/dlog_on_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textFontWeight">500</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:elevation">2dp</item>
     </style>
 
@@ -33,8 +89,10 @@
         <item name="android:focusable">true</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:paddingStart">12dp</item>
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColor">@color/dlog_on_drawer</item>
         <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
     </style>
 
     <style name="DLogDrawerRow">
@@ -52,7 +110,7 @@
     <style name="DLogDrawerIcon">
         <item name="android:layout_width">24dp</item>
         <item name="android:layout_height">24dp</item>
-        <item name="android:tint">#FFFFFF</item>
+        <item name="android:tint">@color/dlog_on_drawer</item>
         <item name="android:scaleType">fitCenter</item>
     </style>
 
@@ -61,9 +119,10 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
         <item name="android:layout_marginStart">14dp</item>
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColor">@color/dlog_on_drawer</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
     </style>
 
     <style name="DLogSettingsRow">
@@ -78,6 +137,8 @@
         <item name="android:paddingEnd">16dp</item>
         <item name="android:textColor">@color/dlog_navy</item>
         <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
     </style>
 
     <style name="DLogAdminTab">
@@ -89,8 +150,29 @@
         <item name="android:gravity">center</item>
         <item name="android:paddingStart">13dp</item>
         <item name="android:paddingEnd">13dp</item>
-        <item name="android:textColor">#D6E4F7</item>
+        <item name="android:textColor">@color/dlog_on_drawer_muted</item>
         <item name="android:textSize">13sp</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+    </style>
+
+    <style name="DLogLandscapeNavIcon">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:drawableTint">@color/dlog_nav_inactive</item>
+        <item name="android:text"></item>
+    </style>
+    <style name="DLogEditorTool" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginHorizontal">4dp</item>
+        <item name="android:minWidth">96dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/dlog_navy</item>
     </style>
 </resources>

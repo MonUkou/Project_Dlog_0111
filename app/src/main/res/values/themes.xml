@@ -7,11 +7,17 @@
         <item name="colorOnSecondary">@color/white</item>
         <item name="colorSurface">@color/dlog_surface</item>
         <item name="colorOnSurface">@color/dlog_ink</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:textColorPrimary">@color/dlog_ink</item>
+        <item name="android:textColorSecondary">@color/dlog_muted</item>
+        <item name="android:windowBackground">@color/dlog_page</item>
+        <item name="android:colorControlNormal">@color/dlog_ink</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:colorAccent">@color/dlog_blue</item>
         <item name="android:statusBarColor">@color/dlog_page</item>
         <item name="android:navigationBarColor">@color/dlog_page</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <style name="Theme.MyApplication" parent="Base.Theme.MyApplication" />
