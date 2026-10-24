@@ -2,8 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/bottomNavContainer"
     android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:background="#FFFFFF"
+    android:layout_height="@dimen/bottom_nav_height"
+    android:background="@color/dlog_surface"
     android:elevation="8dp"
     android:orientation="horizontal"
     android:paddingTop="3dp"
@@ -18,13 +18,13 @@
         android:clickable="true"
         android:drawableTop="@drawable/ic_home_24"
         android:drawablePadding="2dp"
-        android:drawableTint="#24569B"
+        android:drawableTint="@color/dlog_blue"
         android:focusable="true"
         android:gravity="center"
         android:paddingTop="3dp"
         android:text="Bảng tin"
-        android:textColor="#24569B"
-        android:textSize="11sp"
+        android:textColor="@color/dlog_blue"
+        android:textSize="12sp"
         android:textStyle="bold" />
 
     <TextView
@@ -36,48 +36,30 @@
         android:clickable="true"
         android:drawableTop="@drawable/ic_explore_24"
         android:drawablePadding="2dp"
-        android:drawableTint="#667A98"
+        android:drawableTint="@color/dlog_nav_inactive"
         android:focusable="true"
         android:gravity="center"
         android:paddingTop="3dp"
         android:text="Khám phá"
-        android:textColor="#667A98"
-        android:textSize="11sp" />
+        android:textColor="@color/dlog_nav_inactive"
+        android:textSize="12sp" />
 
     <TextView
-        android:id="@+id/navCreate"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:clickable="true"
-        android:background="@drawable/bg_nav_create"
-        android:drawableTop="@drawable/ic_add_white"
-        android:drawablePadding="0dp"
-        android:focusable="true"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:paddingTop="2dp"
-        android:text="Đăng"
-        android:textColor="#24569B"
-        android:textSize="10sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/navNotification"
+        android:id="@+id/navInbox"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
-        android:drawableTop="@drawable/ic_notifications_24"
+        android:drawableTop="@drawable/ic_chat_24"
         android:drawablePadding="2dp"
-        android:drawableTint="#667A98"
+        android:drawableTint="@color/dlog_nav_inactive"
         android:focusable="true"
         android:gravity="center"
         android:paddingTop="3dp"
-        android:text="Thông báo"
-        android:textColor="#667A98"
-        android:textSize="11sp" />
+        android:text="Hộp thư"
+        android:textColor="@color/dlog_nav_inactive"
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/navProfile"
@@ -86,13 +68,13 @@
         android:layout_weight="1"
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
-        android:drawableTop="@drawable/ic_menu_24"
+        android:drawableTop="@drawable/ic_person_outline"
         android:drawablePadding="2dp"
-        android:drawableTint="#667A98"
+        android:drawableTint="@color/dlog_nav_inactive"
         android:focusable="true"
         android:gravity="center"
         android:paddingTop="3dp"
-        android:text="Menu"
-        android:textColor="#667A98"
-        android:textSize="11sp" />
+        android:text="Hồ sơ"
+        android:textColor="@color/dlog_nav_inactive"
+        android:textSize="12sp" />
 </LinearLayout>
