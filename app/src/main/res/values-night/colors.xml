@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="dlog_blue">#8AB9FF</color>
+    <color name="dlog_blue_dark">#16345B</color>
+    <color name="dlog_blue_light">#9FC6FF</color>
+    <color name="dlog_ink">#F1F6FF</color>
+    <color name="dlog_muted">#C1D0E4</color>
+    <color name="dlog_page">#0C1829</color>
+    <color name="dlog_surface">#16263B</color>
+    <color name="dlog_border">#405670</color>
+    <color name="dlog_button">#285B9C</color>
+    <color name="dlog_error">#FF9292</color>
+    <color name="dlog_navy">#EEF5FF</color>
+    <color name="dlog_muted_blue">#C1D0E4</color>
+    <color name="dlog_feed_background">#0C1829</color>
+    <color name="dlog_feed_divider">#405670</color>
+    <color name="dlog_feed_image_placeholder">#263A54</color>
+    <color name="dlog_on_primary">#FFFFFFFF</color>
+    <color name="dlog_on_drawer">#FFFFFFFF</color>
+    <color name="dlog_on_drawer_muted">#D7E6F8</color>
+    <color name="dlog_admin_page">#0C1829</color>
+    <color name="dlog_nav_inactive">#BECDE1</color>
+    <color name="dlog_success">#67D8AB</color>
+    <color name="dlog_chart_interaction">#D5A9FF</color>
+    <color name="dlog_brand_caption_bg">#E616263B</color>
+    <color name="dlog_scrim">#B00B1728</color>
+    <color name="dlog_drawer">#102540</color>
+</resources>
