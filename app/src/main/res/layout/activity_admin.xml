@@ -1,100 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#EEF3FA"
+    android:background="@color/dlog_admin_page"
     android:orientation="vertical">
 
+    <!-- Top App Bar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="66dp"
+        android:layout_height="56dp"
         android:background="@drawable/bg_admin_header"
-        android:gravity="center_vertical"
         android:elevation="4dp"
+        android:gravity="center_vertical"
         android:paddingStart="12dp"
         android:paddingEnd="16dp">
+
         <TextView
             android:id="@+id/btnAdminBack"
             android:layout_width="38dp"
             android:layout_height="42dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:fontFamily="@font/inter"
             android:gravity="center"
             android:text="‹"
             android:textColor="@color/white"
             android:textSize="32sp" />
-        <TextView
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:background="@drawable/bg_admin_logo"
-            android:gravity="center"
-            android:text="D"
-            android:textColor="@color/white"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
             android:orientation="vertical">
+
             <TextView
                 android:id="@+id/tvAdminTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
                 android:text="DLog Admin"
                 android:textColor="@color/white"
                 android:textSize="17sp"
                 android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="QUẢN TRỊ HỆ THỐNG"
-                android:textColor="#C9D9EF"
-                android:textSize="9sp"
-                android:letterSpacing="0.12" />
         </LinearLayout>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:background="@drawable/bg_admin_status"
-            android:gravity="center"
-            android:paddingHorizontal="10dp"
-            android:text="ADMIN"
-            android:textColor="#D8FBEA"
-            android:textSize="10sp"
-            android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Navigation Tabs (Sử dụng hiệu ứng gạch chân tinh tế khi chọn) -->
     <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="58dp"
-        android:background="#102D57"
+        android:layout_height="50dp"
+        android:background="@color/dlog_drawer"
         android:elevation="2dp"
         android:overScrollMode="never"
         android:scrollbars="none">
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <TextView android:id="@+id/adminNavOverview" style="@style/DLogAdminTab" android:text="Tổng quan" />
-            <TextView android:id="@+id/adminNavUsers" style="@style/DLogAdminTab" android:text="Người dùng" />
-            <TextView android:id="@+id/adminNavPosts" style="@style/DLogAdminTab" android:text="Bài viết" />
-            <TextView android:id="@+id/adminNavComments" style="@style/DLogAdminTab" android:text="Bình luận" />
-            <TextView android:id="@+id/adminNavReports" style="@style/DLogAdminTab" android:text="Báo cáo" />
-            <TextView android:id="@+id/adminNavSettings" style="@style/DLogAdminTab" android:text="Cài đặt" />
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp">
+
+            <TextView
+                android:id="@+id/adminNavOverview"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:text="Tổng quan"
+                android:textColor="@color/dlog_on_drawer_muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/adminNavUsers"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:text="Người dùng"
+                android:textColor="@color/dlog_on_drawer_muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/adminNavPosts"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:text="Bài viết"
+                android:textColor="@color/dlog_on_drawer_muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/adminNavComments"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:text="Bình luận"
+                android:textColor="@color/dlog_on_drawer_muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/adminNavReports"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:text="Báo cáo"
+                android:textColor="@color/dlog_on_drawer_muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/adminNavSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:paddingHorizontal="16dp"
+                android:text="Cài đặt"
+                android:textColor="@color/dlog_on_drawer_muted"
+                android:textSize="14sp" />
         </LinearLayout>
     </HorizontalScrollView>
 
+    <!-- Scrollable Content Container (Nơi chứa các view được thêm động từ AdminActivity) -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true"
         android:clipToPadding="false"
+        android:fillViewport="true"
         android:paddingStart="16dp"
-        android:paddingTop="18dp"
+        android:paddingTop="16dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="26dp">
+        android:paddingBottom="32dp">
+
         <LinearLayout
             android:id="@+id/adminContent"
             android:layout_width="match_parent"

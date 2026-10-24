@@ -2,11 +2,16 @@ package com.example.myapplication.service.impl;
 
 import com.example.myapplication.model.Notification;
 import com.example.myapplication.service.INotificationService;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class NotificationService implements INotificationService {
@@ -65,7 +70,8 @@ public class NotificationService implements INotificationService {
                 .whereEqualTo("receiverId", userId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot querySnapshot) {
                     List<Notification> list = new ArrayList<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         if (doc.getData() != null) {
@@ -74,12 +80,15 @@ public class NotificationService implements INotificationService {
                         }
                     }
                     callback.onSuccess(list);
+                    }
                 })
-                .addOnFailureListener(e -> {
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(Exception e) {
                     db.collection("notifications")
                             .whereEqualTo("receiverId", userId)
                             .get()
-                            .addOnSuccessListener(querySnapshot2 -> {
+                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                @Override public void onSuccess(QuerySnapshot querySnapshot2) {
                                 List<Notification> list = new ArrayList<>();
                                 for (DocumentSnapshot doc : querySnapshot2.getDocuments()) {
                                     if (doc.getData() != null) {
@@ -87,10 +96,16 @@ public class NotificationService implements INotificationService {
                                         if (n != null) list.add(n);
                                     }
                                 }
-                                list.sort((n1, n2) -> Long.compare(n2.getCreatedAt(), n1.getCreatedAt()));
+                                Collections.sort(list, new Comparator<Notification>() {
+                                    @Override public int compare(Notification first, Notification second) {
+                                        return Long.compare(second.getCreatedAt(), first.getCreatedAt());
+                                    }
+                                });
                                 callback.onSuccess(list);
+                                }
                             })
                             .addOnFailureListener(callback::onError);
+                    }
                 });
     }
 
@@ -127,7 +142,13 @@ public class NotificationService implements INotificationService {
                 .whereEqualTo("receiverId", userId)
                 .whereEqualTo("read", false)
                 .get()
-                .addOnSuccessListener(qs -> callback.onSuccess(qs.size()))
-                .addOnFailureListener(e -> callback.onSuccess(0));
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot snapshot) {
+                        callback.onSuccess(snapshot.size());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(Exception error) { callback.onSuccess(0); }
+                });
     }
 }

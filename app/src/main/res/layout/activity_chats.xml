@@ -86,5 +86,5 @@
         android:id="@+id/bottomNavView"
         layout="@layout/inc_bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="64dp" />
+        android:layout_height="@dimen/bottom_nav_height" />
 </LinearLayout>

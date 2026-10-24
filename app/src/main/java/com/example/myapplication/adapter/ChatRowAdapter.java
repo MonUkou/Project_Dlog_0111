@@ -64,18 +64,22 @@ public class ChatRowAdapter extends RecyclerView.Adapter<ChatRowAdapter.RowHolde
             name = value(user.getFullName(), value(user.getUsername(), "Người dùng DLog"));
             subtitle = "@" + value(user.getUsername(), "dlog_user") + " · Nhấn để nhắn tin";
             avatar = user.getAvatarUrl();
-            holder.itemView.setOnClickListener(v -> listener.onUser(user));
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) { listener.onUser(user); }
+            });
         } else {
             ChatService.Conversation conversation = conversations.get(position);
             name = conversation.otherName;
             subtitle = conversation.lastMessage.isEmpty() ? "Bắt đầu trò chuyện" : conversation.lastMessage;
             avatar = conversation.otherAvatar;
-            holder.itemView.setOnClickListener(v -> listener.onThread(conversation));
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) { listener.onThread(conversation); }
+            });
         }
         holder.name.setText(name);
         holder.subtitle.setText(subtitle);
         if (avatar != null && !avatar.trim().isEmpty()) {
-            Glide.with(context).load(avatar).circleCrop().placeholder(R.drawable.bg_circle_avatar).into(holder.avatar);
+            Glide.with(context).load(avatar).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().placeholder(R.drawable.bg_circle_avatar).into(holder.avatar);
         } else {
             holder.avatar.setImageResource(R.drawable.bg_circle_avatar);
         }

@@ -3,10 +3,13 @@ package com.example.myapplication.util;
 import android.app.Activity;
 import android.content.res.ColorStateList;
 import android.content.Intent;
-import android.graphics.Typeface;
+import android.view.View;
 import android.widget.TextView;
 
-import com.example.myapplication.CreatePostActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
+
+import com.example.myapplication.ChatsActivity;
 import com.example.myapplication.HomeActivity;
 import com.example.myapplication.MenuActivity;
 import com.example.myapplication.NotificationActivity;
@@ -16,24 +19,22 @@ import com.example.myapplication.SearchActivity;
 public class BottomNavHelper {
 
     public enum Tab {
-        FEED, SEARCH, CREATE, NOTIFICATION, PROFILE, MENU
+        FEED, SEARCH, INBOX, PROFILE, MENU, NOTIFICATION
     }
 
     public static void setupBottomNav(Activity activity, Tab activeTab) {
         TextView navFeed = activity.findViewById(R.id.navFeed);
         TextView navSearch = activity.findViewById(R.id.navSearch);
-        TextView navCreate = activity.findViewById(R.id.navCreate);
-        TextView navNotification = activity.findViewById(R.id.navNotification);
+        TextView navInbox = activity.findViewById(R.id.navInbox);
         TextView navProfile = activity.findViewById(R.id.navProfile);
 
-        if (navFeed == null || navSearch == null || navCreate == null || navNotification == null || navProfile == null) {
+        if (navFeed == null || navSearch == null || navInbox == null || navProfile == null) {
             return;
         }
 
         setTabStyle(navFeed, false);
         setTabStyle(navSearch, false);
-        setTabStyle(navCreate, false);
-        setTabStyle(navNotification, false);
+        setTabStyle(navInbox, false);
         setTabStyle(navProfile, false);
 
         // Highlight active tab
@@ -44,11 +45,8 @@ public class BottomNavHelper {
             case SEARCH:
                 setTabStyle(navSearch, true);
                 break;
-            case CREATE:
-                setTabStyle(navCreate, true);
-                break;
-            case NOTIFICATION:
-                setTabStyle(navNotification, true);
+            case INBOX:
+                setTabStyle(navInbox, true);
                 break;
             case PROFILE:
             case MENU:
@@ -56,51 +54,53 @@ public class BottomNavHelper {
                 break;
         }
 
-        navFeed.setOnClickListener(v -> {
+        navFeed.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
             if (activeTab != Tab.FEED) {
                 Intent intent = new Intent(activity, HomeActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 activity.startActivity(intent);
             }
+            }
         });
 
-        navSearch.setOnClickListener(v -> {
+        navSearch.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
             if (activeTab != Tab.SEARCH) {
                 Intent intent = new Intent(activity, SearchActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 activity.startActivity(intent);
             }
-        });
-
-        navCreate.setOnClickListener(v -> {
-            Intent intent = new Intent(activity, CreatePostActivity.class);
-            activity.startActivity(intent);
-        });
-
-        navNotification.setOnClickListener(v -> {
-            if (activeTab != Tab.NOTIFICATION) {
-                Intent intent = new Intent(activity, NotificationActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                activity.startActivity(intent);
             }
         });
 
-        navProfile.setOnClickListener(v -> {
-            if (!(activity instanceof MenuActivity)) {
-                Intent intent = new Intent(activity, MenuActivity.class);
+        navInbox.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+            if (activeTab != Tab.INBOX) {
+                Intent intent = new Intent(activity, ChatsActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 activity.startActivity(intent);
+            }
+            }
+        });
+
+        navProfile.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+            if (activeTab != Tab.PROFILE) {
+                Intent intent = new Intent(activity, com.example.myapplication.ProfileActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                activity.startActivity(intent);
+            }
             }
         });
     }
 
     private static void setTabStyle(TextView tab, boolean active) {
-        int color = active ? 0xFF0756B5 : 0xFF667A98;
+        int color = ContextCompat.getColor(tab.getContext(),
+                active ? R.color.dlog_blue : R.color.dlog_nav_inactive);
         tab.setTextColor(color);
-        tab.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
-        // The raised create action uses a white plus over its own blue circle.
-        if (tab.getId() != R.id.navCreate) {
-            tab.setCompoundDrawableTintList(ColorStateList.valueOf(color));
-        }
+        tab.setTypeface(ResourcesCompat.getFont(tab.getContext(),
+                active ? R.font.inter_bold : R.font.inter_regular));
+        tab.setCompoundDrawableTintList(ColorStateList.valueOf(color));
     }
 }

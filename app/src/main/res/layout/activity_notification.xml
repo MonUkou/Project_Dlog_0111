@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F4F7FC"
+    android:background="@color/dlog_page"
     android:orientation="vertical">
 
     <LinearLayout
@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Thông báo"
-            android:textColor="#243B67"
+            android:textColor="@color/dlog_ink"
             android:textSize="27sp"
             android:textStyle="bold" />
 
@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Chưa đọc: 0"
-                android:textColor="#65718A"
+                android:textColor="@color/dlog_muted"
                 android:textSize="14sp" />
 
             <Button
@@ -50,7 +50,7 @@
                 android:paddingEnd="14dp"
                 android:text="Làm mới"
                 android:textAllCaps="false"
-                android:textColor="#243B67"
+                android:textColor="@color/dlog_ink"
                 android:textSize="14sp" />
         </LinearLayout>
 
@@ -75,7 +75,7 @@
                 android:gravity="center"
                 android:padding="24dp"
                 android:text="Bạn chưa có thông báo nào."
-                android:textColor="#65718A"
+                android:textColor="@color/dlog_muted"
                 android:textSize="15sp"
                 android:visibility="gone" />
 

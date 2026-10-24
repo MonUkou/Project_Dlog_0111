@@ -6,15 +6,25 @@
     <color name="dlog_blue_dark">#17365F</color>
     <color name="dlog_blue_light">#4E8BD1</color>
     <color name="dlog_ink">#172B4D</color>
-    <color name="dlog_muted">#6D83A5</color>
+    <color name="dlog_muted">#526784</color>
     <color name="dlog_page">#FFFFFFFF</color>
     <color name="dlog_surface">#FFFFFFFF</color>
     <color name="dlog_border">#DCE7F5</color>
     <color name="dlog_button">#24569B</color>
     <color name="dlog_error">#C62828</color>
     <color name="dlog_navy">#102D57</color>
-    <color name="dlog_muted_blue">#6D87A9</color>
+    <color name="dlog_muted_blue">#526784</color>
+    <color name="dlog_drawer">#102D57</color>
     <color name="dlog_feed_background">#F1F6FD</color>
     <color name="dlog_feed_divider">#E2EBF7</color>
     <color name="dlog_feed_image_placeholder">#EAF2FC</color>
+    <color name="dlog_on_primary">#FFFFFFFF</color>
+    <color name="dlog_on_drawer">#FFFFFFFF</color>
+    <color name="dlog_on_drawer_muted">#D7E6F8</color>
+    <color name="dlog_admin_page">#EEF3FA</color>
+    <color name="dlog_nav_inactive">#536784</color>
+    <color name="dlog_success">#087C55</color>
+    <color name="dlog_chart_interaction">#7545A7</color>
+    <color name="dlog_brand_caption_bg">#E6FFFFFF</color>
+    <color name="dlog_scrim">#990B2445</color>
 </resources>

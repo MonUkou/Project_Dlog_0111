@@ -1,16 +1,21 @@
 package com.example.myapplication.service.impl;
 
 import com.example.myapplication.model.User;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,17 +75,19 @@ public final class ChatService {
             callback.onError(new IllegalArgumentException("Tài khoản trò chuyện không hợp lệ."));
             return;
         }
-        String otherId = other.getId();
-        String conversationId = currentUserId.compareTo(otherId) < 0
+        final String otherId = other.getId();
+        final String conversationId = currentUserId.compareTo(otherId) < 0
                 ? currentUserId + "__" + otherId : otherId + "__" + currentUserId;
         db.collection("chats").document(conversationId).get()
-                .addOnSuccessListener(snapshot -> {
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot snapshot) {
                     if (snapshot.exists()) {
                         callback.onSuccess(conversationId);
                         return;
                     }
                     db.collection("users").document(currentUserId).get()
-                            .addOnSuccessListener(current -> {
+                            .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                @Override public void onSuccess(DocumentSnapshot current) {
                                 Map<String, Object> names = new HashMap<>();
                                 Map<String, Object> avatars = new HashMap<>();
                                 names.put(currentUserId, firstNonEmpty(current.getString("fullName"),
@@ -97,17 +104,24 @@ public final class ChatService {
                                 data.put("updatedAt", FieldValue.serverTimestamp());
                                 db.collection("chats").document(conversationId)
                                         .set(data, SetOptions.merge())
-                                        .addOnSuccessListener(unused -> callback.onSuccess(conversationId))
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override public void onSuccess(Void unused) {
+                                                callback.onSuccess(conversationId);
+                                            }
+                                        })
                                         .addOnFailureListener(callback::onError);
+                                }
                             })
                             .addOnFailureListener(callback::onError);
+                    }
                 })
                 .addOnFailureListener(callback::onError);
     }
 
     public ListenerRegistration listenConversations(String currentUserId, Callback<List<Conversation>> callback) {
         return db.collection("chats").whereArrayContains("participants", currentUserId)
-                .addSnapshotListener((snapshot, error) -> {
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override public void onEvent(QuerySnapshot snapshot, FirebaseFirestoreException error) {
                     if (error != null) { callback.onError(error); return; }
                     List<Conversation> items = new ArrayList<>();
                     if (snapshot != null) {
@@ -129,15 +143,21 @@ public final class ChatService {
                                     stringValue(doc.get("lastMessage")), timestampValue(doc.get("updatedAt"))));
                         }
                     }
-                    Collections.sort(items, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+                    Collections.sort(items, new Comparator<Conversation>() {
+                        @Override public int compare(Conversation left, Conversation right) {
+                            return Long.compare(right.updatedAt, left.updatedAt);
+                        }
+                    });
                     callback.onSuccess(items);
+                    }
                 });
     }
 
     public ListenerRegistration listenMessages(String conversationId, Callback<List<ChatMessage>> callback) {
         return db.collection("chats").document(conversationId).collection("messages")
                 .orderBy("createdAt", Query.Direction.ASCENDING).limitToLast(300)
-                .addSnapshotListener((snapshot, error) -> {
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override public void onEvent(QuerySnapshot snapshot, FirebaseFirestoreException error) {
                     if (error != null) { callback.onError(error); return; }
                     List<ChatMessage> messages = new ArrayList<>();
                     if (snapshot != null) {
@@ -147,6 +167,7 @@ public final class ChatService {
                         }
                     }
                     callback.onSuccess(messages);
+                    }
                 });
     }
 
@@ -172,7 +193,9 @@ public final class ChatService {
         batch.set(db.collection("chats").document(conversationId)
                 .collection("messages").document(), message);
         batch.set(db.collection("chats").document(conversationId), threadUpdate, SetOptions.merge());
-        batch.commit().addOnSuccessListener(unused -> callback.onSuccess(null))
+        batch.commit().addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override public void onSuccess(Void unused) { callback.onSuccess(null); }
+                })
                 .addOnFailureListener(callback::onError);
     }
 

@@ -3,11 +3,17 @@ package com.example.myapplication.service.impl;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import androidx.annotation.NonNull;
+
 import com.example.myapplication.model.User;
 import com.example.myapplication.service.IAuthService;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class AuthService implements IAuthService {
@@ -67,105 +73,169 @@ public class AuthService implements IAuthService {
         return user;
     }
 
-    @Override
-    public void register(String email, String password, String username, AuthCallback callback) {
-        auth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener(authResult -> {
-                    FirebaseUser firebaseUser = authResult.getUser();
-                    if (firebaseUser != null) {
-                        String uid = firebaseUser.getUid();
-                        User user = new User(uid, username, username, email, "", "Giới thiệu ngắn về bản thân.");
-                        db.collection("users").document(uid).set(user.toMap())
-                                .addOnSuccessListener(aVoid -> {
-                                    setCurrentUserId(uid);
-                                    if (callback != null) callback.onSuccess(user);
-                                })
-                                .addOnFailureListener(e -> {
-                                    if (callback != null) callback.onError(e);
-                                });
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    if (callback != null) callback.onError(e);
-                });
+    /** Listener lỗi dùng chung: chuyển lỗi về AuthCallback. */
+    private OnFailureListener errorListener(final AuthCallback callback) {
+        return new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                if (callback != null) callback.onError(e);
+            }
+        };
+    }
+
+    /** Tạo User tạm khi chưa đọc được hồ sơ Firestore. */
+    private User buildFallbackUser(String uid, String email) {
+        String username = (email != null && email.contains("@")) ? email.split("@")[0] : email;
+        return new User(uid, username, username, email, "", "");
     }
 
     @Override
-    public void login(String email, String password, AuthCallback callback) {
-        auth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener(authResult -> {
-                    FirebaseUser firebaseUser = authResult.getUser();
-                    if (firebaseUser != null) {
-                        String uid = firebaseUser.getUid();
-                        setCurrentUserId(uid);
-                        db.collection("users").document(uid).get()
-                                .addOnSuccessListener(documentSnapshot -> {
-                                    if (documentSnapshot.exists() && documentSnapshot.getData() != null) {
-                                        User user = User.fromMap(documentSnapshot.getData());
-                                        if (callback != null) callback.onSuccess(user);
-                                    } else {
-                                        String username = email.contains("@") ? email.split("@")[0] : email;
-                                        User user = new User(uid, username, username, email, "", "");
+    public void register(final String email, String password, final String username,
+                         final AuthCallback callback) {
+        auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                    @Override
+                    public void onSuccess(AuthResult authResult) {
+                        FirebaseUser firebaseUser = authResult.getUser();
+                        if (firebaseUser == null) {
+                            if (callback != null) {
+                                callback.onError(new IllegalStateException("Không tạo được tài khoản."));
+                            }
+                            return;
+                        }
+                        final String uid = firebaseUser.getUid();
+                        final User user = new User(uid, username, username, email, "",
+                                "Giới thiệu ngắn về bản thân.");
+                        db.collection("users").document(uid).set(user.toMap())
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void unused) {
+                                        setCurrentUserId(uid);
                                         if (callback != null) callback.onSuccess(user);
                                     }
                                 })
-                                .addOnFailureListener(e -> {
-                                    String username = email.contains("@") ? email.split("@")[0] : email;
-                                    User user = new User(uid, username, username, email, "", "");
-                                    if (callback != null) callback.onSuccess(user);
+                                .addOnFailureListener(errorListener(callback));
+                    }
+                })
+                .addOnFailureListener(errorListener(callback));
+    }
+
+    @Override
+    public void login(final String email, String password, final AuthCallback callback) {
+        auth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                    @Override
+                    public void onSuccess(AuthResult authResult) {
+                        FirebaseUser firebaseUser = authResult.getUser();
+                        if (firebaseUser == null) {
+                            if (callback != null) {
+                                callback.onError(new IllegalStateException("Không đăng nhập được."));
+                            }
+                            return;
+                        }
+                        final String uid = firebaseUser.getUid();
+                        setCurrentUserId(uid);
+
+                        db.collection("users").document(uid).get()
+                                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                    @Override
+                                    public void onSuccess(DocumentSnapshot snapshot) {
+                                        if (Boolean.TRUE.equals(snapshot.getBoolean("locked"))) {
+                                            auth.signOut();
+                                            setCurrentUserId(null);
+                                            if (callback != null) callback.onError(new IllegalStateException("Tài khoản đã bị khóa. Liên hệ quản trị viên."));
+                                            return;
+                                        }
+                                        if (snapshot.exists() && snapshot.getData() != null) {
+                                            User user = User.fromMap(snapshot.getData());
+                                            if (callback != null) callback.onSuccess(user);
+                                        } else {
+                                            if (callback != null) {
+                                                callback.onSuccess(buildFallbackUser(uid, email));
+                                            }
+                                        }
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        if (callback != null) {
+                                            callback.onSuccess(buildFallbackUser(uid, email));
+                                        }
+                                    }
                                 });
                     }
                 })
-                .addOnFailureListener(e -> {
-                    if (callback != null) callback.onError(e);
-                });
+                .addOnFailureListener(errorListener(callback));
     }
 
     /** Signs into Firebase with a Google ID token and creates the DLog profile on first sign-in. */
-    public void signInWithGoogle(String idToken, AuthCallback callback) {
+    public void signInWithGoogle(String idToken, final AuthCallback callback) {
         if (idToken == null || idToken.trim().isEmpty()) {
-            if (callback != null) callback.onError(new IllegalArgumentException("Google ID token is empty."));
+            if (callback != null) {
+                callback.onError(new IllegalArgumentException("Google ID token is empty."));
+            }
             return;
         }
+
         auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null))
-                .addOnSuccessListener(result -> {
-                    FirebaseUser firebaseUser = result.getUser();
-                    if (firebaseUser == null) {
-                        if (callback != null) callback.onError(new IllegalStateException("Không lấy được tài khoản Google."));
-                        return;
+                .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                    @Override
+                    public void onSuccess(AuthResult result) {
+                        final FirebaseUser firebaseUser = result.getUser();
+                        if (firebaseUser == null) {
+                            if (callback != null) {
+                                callback.onError(new IllegalStateException("Không lấy được tài khoản Google."));
+                            }
+                            return;
+                        }
+                        final String uid = firebaseUser.getUid();
+                        setCurrentUserId(uid);
+
+                        db.collection("users").document(uid).get()
+                                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                    @Override
+                                    public void onSuccess(DocumentSnapshot snapshot) {
+                                        if (Boolean.TRUE.equals(snapshot.getBoolean("locked"))) {
+                                            auth.signOut();
+                                            setCurrentUserId(null);
+                                            if (callback != null) callback.onError(new IllegalStateException("Tài khoản đã bị khóa. Liên hệ quản trị viên."));
+                                            return;
+                                        }
+                                        // Đã có hồ sơ, trả về luôn.
+                                        if (snapshot.exists() && snapshot.getData() != null) {
+                                            if (callback != null) {
+                                                callback.onSuccess(User.fromMap(snapshot.getData()));
+                                            }
+                                            return;
+                                        }
+
+                                        // Lần đầu đăng nhập Google, tạo hồ sơ mới.
+                                        String displayName = firebaseUser.getDisplayName();
+                                        String email = firebaseUser.getEmail();
+                                        String username = displayName;
+                                        if (username == null || username.trim().isEmpty()) {
+                                            username = (email == null) ? "dlog_user" : email.split("@")[0];
+                                        }
+                                        String photoUrl = firebaseUser.getPhotoUrl() == null
+                                                ? "" : firebaseUser.getPhotoUrl().toString();
+
+                                        final User user = new User(uid, username, username, email,
+                                                photoUrl, "");
+                                        db.collection("users").document(uid).set(user.toMap())
+                                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                    @Override
+                                                    public void onSuccess(Void unused) {
+                                                        if (callback != null) callback.onSuccess(user);
+                                                    }
+                                                })
+                                                .addOnFailureListener(errorListener(callback));
+                                    }
+                                })
+                                .addOnFailureListener(errorListener(callback));
                     }
-                    String uid = firebaseUser.getUid();
-                    setCurrentUserId(uid);
-                    db.collection("users").document(uid).get()
-                            .addOnSuccessListener(snapshot -> {
-                                if (snapshot.exists() && snapshot.getData() != null) {
-                                    if (callback != null) callback.onSuccess(User.fromMap(snapshot.getData()));
-                                    return;
-                                }
-                                String displayName = firebaseUser.getDisplayName();
-                                String email = firebaseUser.getEmail();
-                                String username = displayName;
-                                if (username == null || username.trim().isEmpty()) {
-                                    username = email == null ? "dlog_user" : email.split("@")[0];
-                                }
-                                User user = new User(uid, username, username, email,
-                                        firebaseUser.getPhotoUrl() == null ? "" : firebaseUser.getPhotoUrl().toString(),
-                                        "");
-                                db.collection("users").document(uid).set(user.toMap())
-                                        .addOnSuccessListener(unused -> {
-                                            if (callback != null) callback.onSuccess(user);
-                                        })
-                                        .addOnFailureListener(error -> {
-                                            if (callback != null) callback.onError(error);
-                                        });
-                            })
-                            .addOnFailureListener(error -> {
-                                if (callback != null) callback.onError(error);
-                            });
                 })
-                .addOnFailureListener(error -> {
-                    if (callback != null) callback.onError(error);
-                });
+                .addOnFailureListener(errorListener(callback));
     }
 
     @Override
@@ -186,13 +256,19 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    public void sendPasswordResetEmail(String email, PasswordResetCallback callback) {
+    public void sendPasswordResetEmail(String email, final PasswordResetCallback callback) {
         auth.sendPasswordResetEmail(email)
-                .addOnSuccessListener(unused -> {
-                    if (callback != null) callback.onSuccess();
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+                        if (callback != null) callback.onSuccess();
+                    }
                 })
-                .addOnFailureListener(error -> {
-                    if (callback != null) callback.onError(error);
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception error) {
+                        if (callback != null) callback.onError(error);
+                    }
                 });
     }
 

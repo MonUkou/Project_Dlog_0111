@@ -1,0 +1,4 @@
+<resources>
+    <dimen name="profile_nav_height">64dp</dimen>
+    <dimen name="profile_cover_height">184dp</dimen>
+</resources>

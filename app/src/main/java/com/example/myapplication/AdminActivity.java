@@ -10,24 +10,40 @@ import android.view.View;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import com.bumptech.glide.Glide;
+import com.example.myapplication.ui.WeeklyTrendView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.AggregateSource;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.AggregateQuerySnapshot;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.OnFailureListener;
+
+import java.util.Calendar;
+import java.util.Locale;
 
 
-/** Read-only admin dashboard backed by the existing Firestore collections. */
+/** Admin dashboard backed by the existing Firestore collections. */
 public class AdminActivity extends AppCompatActivity {
-    private static final int BLUE = Color.rgb(36, 86, 155);
-    private static final int NAVY = Color.rgb(23, 43, 77);
-    private static final int MUTED = Color.rgb(102, 122, 152);
-    private static final int GREEN = Color.rgb(14, 160, 106);
-    private static final int RED = Color.rgb(221, 67, 77);
+    private int BLUE;
+    private int NAVY;
+    private int MUTED;
+    private int GREEN;
+    private int RED;
+    private Typeface interRegular;
+    private Typeface interBold;
 
     private LinearLayout content;
     private TextView title;
@@ -38,10 +54,23 @@ public class AdminActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin);
+        BLUE = ContextCompat.getColor(this, R.color.dlog_blue);
+        NAVY = ContextCompat.getColor(this, R.color.dlog_ink);
+        MUTED = ContextCompat.getColor(this, R.color.dlog_muted);
+        GREEN = ContextCompat.getColor(this, R.color.dlog_success);
+        RED = ContextCompat.getColor(this, R.color.dlog_error);
+        interRegular = ResourcesCompat.getFont(this, R.font.inter_regular);
+        interBold = ResourcesCompat.getFont(this, R.font.inter_bold);
         content = findViewById(R.id.adminContent);
         title = findViewById(R.id.tvAdminTitle);
         db = FirebaseFirestore.getInstance();
-        findViewById(R.id.btnAdminBack).setOnClickListener(v -> finish());
+
+        findViewById(R.id.btnAdminBack).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
 
         com.example.myapplication.service.impl.AuthService auth =
                 com.example.myapplication.service.impl.AuthService.getInstance();
@@ -52,15 +81,23 @@ public class AdminActivity extends AppCompatActivity {
             return;
         }
         db.collection("users").document(uid).get()
-                .addOnSuccessListener(user -> {
-                    if (!"admin".equalsIgnoreCase(user.getString("role"))) {
-                        denyAccess();
-                        return;
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot user) {
+                        if (!"admin".equalsIgnoreCase(user.getString("role"))) {
+                            denyAccess();
+                            return;
+                        }
+                        bindNavigation();
+                        showOverview();
                     }
-                    bindNavigation();
-                    showOverview();
                 })
-                .addOnFailureListener(error -> denyAccess());
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        denyAccess();
+                    }
+                });
     }
 
     private void denyAccess() {
@@ -69,40 +106,75 @@ public class AdminActivity extends AppCompatActivity {
     }
 
     private void bindNavigation() {
-        TextView overview = findViewById(R.id.adminNavOverview);
-        TextView users = findViewById(R.id.adminNavUsers);
-        TextView posts = findViewById(R.id.adminNavPosts);
-        TextView comments = findViewById(R.id.adminNavComments);
-        TextView reports = findViewById(R.id.adminNavReports);
-        TextView settings = findViewById(R.id.adminNavSettings);
-        overview.setOnClickListener(v -> { setActiveTab(overview); showOverview(); });
-        users.setOnClickListener(v -> { setActiveTab(users); showCollection("users", "Quản lý người dùng"); });
-        posts.setOnClickListener(v -> { setActiveTab(posts); showCollection("posts", "Quản lý bài viết"); });
-        comments.setOnClickListener(v -> { setActiveTab(comments); showCollection("comments", "Quản lý bình luận"); });
-        reports.setOnClickListener(v -> { setActiveTab(reports); showCollection("reports", "Báo cáo & Thống kê"); });
-        settings.setOnClickListener(v -> { setActiveTab(settings); showSettings(); });
+        final TextView overview = findViewById(R.id.adminNavOverview);
+        final TextView users = findViewById(R.id.adminNavUsers);
+        final TextView posts = findViewById(R.id.adminNavPosts);
+        final TextView comments = findViewById(R.id.adminNavComments);
+        final TextView reports = findViewById(R.id.adminNavReports);
+        final TextView settings = findViewById(R.id.adminNavSettings);
+
+        overview.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setActiveTab(overview);
+                showOverview();
+            }
+        });
+        users.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setActiveTab(users);
+                showCollection("users", "Quản lý người dùng");
+            }
+        });
+        posts.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setActiveTab(posts);
+                showCollection("posts", "Quản lý bài viết");
+            }
+        });
+        comments.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setActiveTab(comments);
+                showCollection("comments", "Quản lý bình luận");
+            }
+        });
+        reports.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setActiveTab(reports);
+                showCollection("reports", "Báo cáo & Thống kê");
+            }
+        });
+        settings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setActiveTab(settings);
+                showSettings();
+            }
+        });
         setActiveTab(overview);
     }
 
     private void setActiveTab(TextView tab) {
         if (activeTab != null) {
             activeTab.setBackgroundColor(Color.TRANSPARENT);
-            activeTab.setTextColor(Color.rgb(214, 228, 247));
-            activeTab.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+            activeTab.setTextColor(ContextCompat.getColor(this, R.color.dlog_on_drawer_muted));
+            activeTab.setTypeface(interRegular);
         }
         activeTab = tab;
-        GradientDrawable selected = new GradientDrawable();
-        selected.setColor(Color.rgb(36, 86, 155));
-        selected.setCornerRadius(dp(12));
-        tab.setBackground(selected);
+
+        // Sử dụng hiệu ứng gạch chân dưới tab đang chọn
+        tab.setBackgroundResource(R.drawable.bg_tab_underline);
         tab.setTextColor(Color.WHITE);
-        tab.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        tab.setTypeface(interBold);
     }
 
     private void showOverview() {
         title.setText("Tổng quan");
         content.removeAllViews();
-        addHeading("Xin chào, Admin 👋", "Dữ liệu trực tiếp từ DLog");
 
         GridLayout metrics = new GridLayout(this);
         metrics.setColumnCount(2);
@@ -110,22 +182,37 @@ public class AdminActivity extends AppCompatActivity {
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         content.addView(metrics, gridParams);
-        addMetric(metrics, "Người dùng", "users", "👥", GREEN);
-        addMetric(metrics, "Bài viết", "posts", "▣", BLUE);
-        addMetric(metrics, "Bình luận", "comments", "◉", BLUE);
-        addMetric(metrics, "Báo cáo", "reports", "⚑", RED);
+        addMetric(metrics, "Người dùng", "users", R.drawable.ic_person_outline, GREEN);
+        addMetric(metrics, "Bài viết", "posts", R.drawable.ic_bookmark_24, BLUE);
+        addMetric(metrics, "Bình luận", "comments", R.drawable.ic_comment_24, BLUE);
+        addMetric(metrics, "Báo cáo", "reports", R.drawable.ic_info_outline_24, RED);
+
+        addWeeklyChart();
 
         addSectionTitle("Bài viết gần đây", "Từ Firestore");
         db.collection("posts").orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(5).get()
-                .addOnSuccessListener(snapshot -> {
-                    if (snapshot.isEmpty()) addEmpty("Chưa có bài viết nào.");
-                    else for (DocumentSnapshot document : snapshot.getDocuments()) addPostRow(document);
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot snapshot) {
+                        if (snapshot.isEmpty()) {
+                            addEmpty("Chưa có bài viết nào.");
+                        } else {
+                            for (DocumentSnapshot document : snapshot.getDocuments()) {
+                                addPostRow(document);
+                            }
+                        }
+                    }
                 })
-                .addOnFailureListener(error -> addEmpty("Không thể tải bài viết. Kiểm tra quyền đọc Firestore."));
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        addEmpty("Không thể tải bài viết. Kiểm tra quyền đọc Firestore.");
+                    }
+                });
     }
 
-    private void addMetric(GridLayout grid, String label, String collection, String symbol, int accent) {
+    private void addMetric(GridLayout grid, String label, String collection, int iconRes, int accent) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(15), dp(14), dp(15), dp(14));
@@ -138,12 +225,12 @@ public class AdminActivity extends AppCompatActivity {
         params.setMargins(dp(3), dp(3), dp(6), dp(8));
         grid.addView(card, params);
 
-        TextView icon = new TextView(this);
-        icon.setText(symbol);
-        icon.setTextColor(accent);
-        icon.setTextSize(20);
-        icon.setGravity(Gravity.CENTER);
-        icon.setBackgroundResource(R.drawable.bg_story_add);
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(accent));
+        icon.setPadding(dp(10), dp(10), dp(10), dp(10));
+        icon.setContentDescription(label);
+        icon.setBackgroundResource(R.drawable.bg_profile_stats);
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(42), dp(42));
         card.addView(icon, iconParams);
 
@@ -155,70 +242,96 @@ public class AdminActivity extends AppCompatActivity {
         labelParams.topMargin = dp(11);
         card.addView(labelView, labelParams);
 
-        TextView value = new TextView(this);
+        final TextView value = new TextView(this);
         value.setText("…");
         value.setTextColor(NAVY);
         value.setTextSize(22);
-        value.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        value.setTypeface(interBold);
         card.addView(value);
 
-        db.collection(collection).get()
-                .addOnSuccessListener(snapshot -> value.setText(String.valueOf(snapshot.size())))
-                .addOnFailureListener(error -> value.setText("—"));
-    }
-
-    private void showCollection(String collection, String label) {
-        title.setText(label);
-        content.removeAllViews();
-        addHeading(label, "Dữ liệu mới nhất từ Firestore");
-        TextView loading = createText("Đang tải dữ liệu…", 14, MUTED, false);
-        content.addView(loading);
-
-        db.collection(collection).limit(100).get()
-                .addOnSuccessListener(snapshot -> {
-                    content.removeView(loading);
-                    if (snapshot.isEmpty()) {
-                        addEmpty(collection.equals("comments")
-                                ? "Chưa có bình luận. Bình luận sẽ xuất hiện sau khi người dùng tương tác với bài viết."
-                                : "Chưa có dữ liệu trong mục này.");
-                        return;
-                    }
-                    for (DocumentSnapshot document : snapshot.getDocuments()) {
-                        switch (collection) {
-                            case "users": addUserRow(document); break;
-                            case "posts": addPostRow(document); break;
-                            case "comments": addCommentRow(document); break;
-                            default: addReportRow(document); break;
-                        }
+        db.collection(collection).count().get(AggregateSource.SERVER)
+                .addOnSuccessListener(new OnSuccessListener<AggregateQuerySnapshot>() {
+                    @Override
+                    public void onSuccess(AggregateQuerySnapshot snapshot) {
+                        value.setText(String.valueOf(snapshot.getCount()));
                     }
                 })
-                .addOnFailureListener(error -> {
-                    content.removeView(loading);
-                    addEmpty("Không thể tải dữ liệu. Hãy kiểm tra quyền đọc Firestore cho tài khoản quản trị.");
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        value.setText("—");
+                    }
                 });
     }
 
-    private void addUserRow(DocumentSnapshot doc) {
+    private void showCollection(final String collection, String label) {
+        title.setText(label);
+        content.removeAllViews();
+
+        final TextView loading = createText("Đang tải dữ liệu…", 14, MUTED, false);
+        content.addView(loading);
+
+        db.collection(collection).limit(100).get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot snapshot) {
+                        content.removeView(loading);
+                        if (snapshot.isEmpty()) {
+                            addEmpty(collection.equals("comments")
+                                    ? "Chưa có bình luận. Bình luận sẽ xuất hiện sau khi người dùng tương tác với bài viết."
+                                    : "Chưa có dữ liệu trong mục này.");
+                            return;
+                        }
+                        for (DocumentSnapshot document : snapshot.getDocuments()) {
+                            if (collection.equals("users")) {
+                                addUserRow(document);
+                            } else if (collection.equals("posts")) {
+                                addPostRow(document);
+                            } else if (collection.equals("comments")) {
+                                addCommentRow(document);
+                            } else {
+                                addReportRow(document);
+                            }
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        content.removeView(loading);
+                        addEmpty("Không thể tải dữ liệu. Hãy kiểm tra quyền đọc Firestore cho tài khoản quản trị.");
+                    }
+                });
+    }
+
+    private void addUserRow(final DocumentSnapshot doc) {
         LinearLayout row = createRow();
         ImageView avatar = createAvatar();
         String avatarUrl = doc.getString("avatarUrl");
         if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
-            Glide.with(this).load(avatarUrl).circleCrop().into(avatar);
+            Glide.with(this).load(avatarUrl).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(avatar);
         }
         row.addView(avatar);
         String name = firstValue(doc, "fullName", "username");
         String email = firstValue(doc, "email");
-        String role = "admin".equalsIgnoreCase(doc.getString("role")) ? "Quản trị viên" : "Thành viên";
+        boolean locked = Boolean.TRUE.equals(doc.getBoolean("locked"));
+        String role = locked ? "Đã khóa" : "admin".equalsIgnoreCase(doc.getString("role")) ? "Quản trị viên" : "Đang hoạt động";
         row.addView(createTextColumn(name, email, role, GREEN));
-        row.setOnClickListener(v -> {
-            Intent intent = new Intent(this, ProfileActivity.class);
-            intent.putExtra("userId", doc.getId());
-            startActivity(intent);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(AdminActivity.this, ProfileActivity.class);
+                intent.putExtra("userId", doc.getId());
+                startActivity(intent);
+            }
         });
+        if (!doc.getId().equals(com.example.myapplication.service.impl.AuthService.getInstance().getCurrentUserId())) {
+            row.addView(actionMenu(doc, "users", name, locked));
+        }
         content.addView(row);
     }
 
-    private void addPostRow(DocumentSnapshot doc) {
+    private void addPostRow(final DocumentSnapshot doc) {
         LinearLayout row = createRow();
         ImageView photo = new ImageView(this);
         LinearLayout.LayoutParams photoParams = new LinearLayout.LayoutParams(dp(78), dp(78));
@@ -227,29 +340,165 @@ public class AdminActivity extends AppCompatActivity {
         photo.setScaleType(ImageView.ScaleType.CENTER_CROP);
         photo.setBackgroundResource(R.drawable.bg_rounded_edittext);
         String imageUrl = doc.getString("imageUrl");
-        if (imageUrl != null && !imageUrl.trim().isEmpty()) Glide.with(this).load(imageUrl).centerCrop().into(photo);
+        if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+            Glide.with(this).load(imageUrl).centerCrop().into(photo);
+        }
         row.addView(photo);
         String author = firstValue(doc, "authorUsername", "authorId");
         String caption = firstValue(doc, "caption");
         long likes = numberValue(doc, "likesCount");
         long comments = numberValue(doc, "commentsCount");
-        row.addView(createTextColumn(caption, author, likes + " lượt thích · " + comments + " bình luận", BLUE));
-        row.setOnClickListener(v -> {
-            Intent intent = new Intent(this, PostDetailActivity.class);
-            intent.putExtra(PostDetailActivity.EXTRA_POST_ID, doc.getId());
-            startActivity(intent);
+        boolean hidden = Boolean.TRUE.equals(doc.getBoolean("hidden"));
+        row.addView(createTextColumn(caption, author,
+                hidden ? "Đã ẩn" : likes + " lượt thích · " + comments + " bình luận",
+                hidden ? MUTED : BLUE));
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(AdminActivity.this, PostDetailActivity.class);
+                intent.putExtra(PostDetailActivity.EXTRA_POST_ID, doc.getId());
+                startActivity(intent);
+            }
         });
+        row.addView(actionMenu(doc, "posts", caption, hidden));
         content.addView(row);
+    }
+
+    private TextView actionMenu(final DocumentSnapshot doc, final String collection,
+                                final String name, final boolean active) {
+        TextView button = createText("⋮", 24, NAVY, true);
+        button.setGravity(Gravity.CENTER);
+        button.setMinWidth(dp(48));
+        button.setMinHeight(dp(48));
+        button.setBackgroundResource(android.R.drawable.list_selector_background);
+        button.setContentDescription("Tùy chọn quản trị");
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PopupMenu menu = new PopupMenu(AdminActivity.this, view);
+                final boolean user = "users".equals(collection);
+                menu.getMenu().add(user ? (active ? "Mở khóa tài khoản" : "Khóa tài khoản")
+                        : (active ? "Hiện lại" : "Ẩn khỏi DLog"));
+                menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(android.view.MenuItem item) {
+                        if ("users".equals(collection)) {
+                            confirmLock(doc, name, !active);
+                        } else {
+                            confirmVisibility(doc, collection, name, !active);
+                        }
+                        return true;
+                    }
+                });
+                menu.show();
+            }
+        });
+        return button;
+    }
+
+    private void confirmLock(final DocumentSnapshot doc, String name, final boolean locked) {
+        final String verb = locked ? "Khóa" : "Mở khóa";
+        new AlertDialog.Builder(this).setTitle(verb + " tài khoản?")
+                .setMessage(verb + " “" + name + "” trên DLog?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton(verb, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        db.collection("users").document(doc.getId()).update("locked", locked)
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void unused) {
+                                        showCollection("users", "Quản lý người dùng");
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                                        Toast.makeText(AdminActivity.this, "Không thể cập nhật: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                    }
+                })
+                .show();
+    }
+
+    private void confirmVisibility(final DocumentSnapshot doc, final String collection,
+                                   String name, final boolean hidden) {
+        final String verb = hidden ? "Ẩn" : "Hiện lại";
+        new AlertDialog.Builder(this)
+                .setTitle(verb + ("comments".equals(collection) ? " bình luận?" : " bài viết?"))
+                .setMessage(verb + " “" + name + "” " + (hidden ? "khỏi DLog?" : "trên DLog?"))
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton(verb, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        updateVisibility(doc, collection, hidden)
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void unused) {
+                                        Toast.makeText(AdminActivity.this, hidden ? "Đã ẩn" : "Đã hiện lại", Toast.LENGTH_SHORT).show();
+                                        showCollection(collection, "comments".equals(collection)
+                                                ? "Quản lý bình luận" : "Quản lý bài viết");
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                                        Toast.makeText(AdminActivity.this, "Không thể cập nhật: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                    }
+                })
+                .show();
+    }
+
+    private com.google.android.gms.tasks.Task<Void> updateVisibility(
+            DocumentSnapshot doc, String collection, final boolean hidden) {
+        final DocumentReference target = db.collection(collection).document(doc.getId());
+        if (!"comments".equals(collection)) {
+            return target.update("hidden", hidden);
+        }
+        return db.runTransaction(new com.google.firebase.firestore.Transaction.Function<Void>() {
+            @Override
+            public Void apply(@androidx.annotation.NonNull com.google.firebase.firestore.Transaction transaction)
+                    throws com.google.firebase.firestore.FirebaseFirestoreException {
+                DocumentSnapshot current = transaction.get(target);
+                if (!current.exists()) {
+                    return null;
+                }
+                boolean wasHidden = Boolean.TRUE.equals(current.getBoolean("hidden"));
+                if (wasHidden == hidden) {
+                    return null;
+                }
+                String postId = current.getString("postId");
+                if (postId != null && !postId.isEmpty()) {
+                    DocumentReference post = db.collection("posts").document(postId);
+                    DocumentSnapshot postData = transaction.get(post);
+                    if (postData.exists()) {
+                        Long count = postData.getLong("commentsCount");
+                        long next = Math.max(0, (count == null ? 0 : count) + (hidden ? -1 : 1));
+                        transaction.update(post, "commentsCount", next);
+                    }
+                }
+                transaction.update(target, "hidden", hidden);
+                return null;
+            }
+        });
     }
 
     private void addCommentRow(DocumentSnapshot doc) {
         LinearLayout row = createRow();
         ImageView avatar = createAvatar();
         String avatarUrl = doc.getString("avatarUrl");
-        if (avatarUrl != null && !avatarUrl.trim().isEmpty()) Glide.with(this).load(avatarUrl).circleCrop().into(avatar);
+        if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
+            Glide.with(this).load(avatarUrl).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(avatar);
+        }
         row.addView(avatar);
+        boolean hidden = Boolean.TRUE.equals(doc.getBoolean("hidden"));
+        String contentText = firstValue(doc, "content");
         row.addView(createTextColumn(firstValue(doc, "username", "authorId"),
-                firstValue(doc, "content"), "Bài viết " + firstValue(doc, "postId"), BLUE));
+                contentText, hidden ? "Đã ẩn" : "Bình luận đang hiển thị", hidden ? MUTED : BLUE));
+        row.addView(actionMenu(doc, "comments", contentText, hidden));
         content.addView(row);
     }
 
@@ -298,7 +547,7 @@ public class AdminActivity extends AppCompatActivity {
     private void showSettings() {
         title.setText("Cài đặt hệ thống");
         content.removeAllViews();
-        addHeading("Cài đặt hệ thống", "DLog · Phiên bản 1.0.0");
+
         addSetting("Thông tin ứng dụng", "Phiên bản 1.0.0");
         addSetting("Quản lý nội dung", "Quyền truy cập do Firestore Rules kiểm soát");
         addSetting("Bình luận", "Dữ liệu được tải từ collection comments");
@@ -313,21 +562,7 @@ public class AdminActivity extends AppCompatActivity {
     }
 
     private void addHeading(String text, String subtitle) {
-        LinearLayout hero = new LinearLayout(this);
-        hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setPadding(dp(18), dp(17), dp(18), dp(17));
-        hero.setBackgroundResource(R.drawable.bg_admin_welcome);
-        hero.setElevation(dp(3));
-        LinearLayout.LayoutParams heroParams = new LinearLayout.LayoutParams(-1, -2);
-        heroParams.bottomMargin = dp(16);
-        content.addView(hero, heroParams);
-
-        TextView heading = createText(text, 20, Color.WHITE, true);
-        hero.addView(heading);
-        TextView sub = createText(subtitle, 12, Color.rgb(217, 231, 249), false);
-        LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(-1, -2);
-        subParams.topMargin = dp(5);
-        hero.addView(sub, subParams);
+        // Đã vô hiệu hóa để ẩn hoàn toàn khung tiêu đề khỏi các tab
     }
 
     private void addSectionTitle(String text, String trailing) {
@@ -338,6 +573,144 @@ public class AdminActivity extends AppCompatActivity {
         row.addView(left, new LinearLayout.LayoutParams(0, -2, 1));
         row.addView(createText(trailing, 11, MUTED, false));
         content.addView(row);
+    }
+
+    private void addWeeklyChart() {
+        addSectionTitle("Hoạt động 7 ngày", "Chạm vào biểu đồ để xem số liệu");
+        final LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(12), dp(14), dp(12), dp(10));
+        card.setBackgroundResource(R.drawable.bg_admin_card);
+        card.setElevation(dp(2));
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
+        cardParams.bottomMargin = dp(18);
+        content.addView(card, cardParams);
+
+        LinearLayout legend = new LinearLayout(this);
+        legend.setOrientation(LinearLayout.HORIZONTAL);
+        legend.addView(createText("● Người dùng  ", 12, BLUE, true));
+        legend.addView(createText("● Bài viết  ", 12, GREEN, true));
+        legend.addView(createText("● Tương tác", 12,
+                ContextCompat.getColor(this, R.color.dlog_chart_interaction), true));
+        card.addView(legend);
+
+        final WeeklyTrendView chart = new WeeklyTrendView(this);
+        card.addView(chart, new LinearLayout.LayoutParams(-1, dp(210)));
+
+        final TextView summary = createText("Đang tải thống kê…", 12, MUTED, false);
+        card.addView(summary);
+
+        Calendar start = Calendar.getInstance();
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+        start.add(Calendar.DAY_OF_YEAR, -6);
+        final long firstDay = start.getTimeInMillis();
+
+        final int[] weeklyUsers = new int[7];
+        final int[] weeklyPosts = new int[7];
+        final int[] weeklyInteractions = new int[7];
+
+        db.collection("users").whereGreaterThanOrEqualTo("createdAt", firstDay).get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot snapshot) {
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            int day = dayIndex(doc.getLong("createdAt"), firstDay);
+                            if (day >= 0) weeklyUsers[day]++;
+                        }
+                        if (card.getParent() != null) {
+                            chart.setData(weeklyUsers, weeklyPosts, weeklyInteractions);
+                            updateWeeklySummary(summary, weeklyUsers, weeklyPosts, weeklyInteractions);
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        summary.setText("Không thể tải số liệu người dùng.");
+                    }
+                });
+
+        db.collection("posts").whereGreaterThanOrEqualTo("createdAt", firstDay).get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot snapshot) {
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            int day = dayIndex(doc.getLong("createdAt"), firstDay);
+                            if (day >= 0) weeklyPosts[day]++;
+                        }
+                        if (card.getParent() != null) {
+                            chart.setData(weeklyUsers, weeklyPosts, weeklyInteractions);
+                            updateWeeklySummary(summary, weeklyUsers, weeklyPosts, weeklyInteractions);
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        summary.setText("Không thể tải số liệu bài viết.");
+                    }
+                });
+
+        loadWeeklyInteractions("likes", firstDay, weeklyUsers, weeklyPosts,
+                weeklyInteractions, chart, card, summary);
+        loadWeeklyInteractions("comments", firstDay, weeklyUsers, weeklyPosts,
+                weeklyInteractions, chart, card, summary);
+    }
+
+    private void loadWeeklyInteractions(String collection, final long firstDay, final int[] users,
+                                        final int[] posts, final int[] interactions, final WeeklyTrendView chart,
+                                        final LinearLayout card, final TextView summary) {
+        db.collection(collection).whereGreaterThanOrEqualTo("createdAt", firstDay).get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot snapshot) {
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            int day = dayIndex(doc.getLong("createdAt"), firstDay);
+                            if (day >= 0) interactions[day]++;
+                        }
+                        if (card.getParent() != null) {
+                            chart.setData(users, posts, interactions);
+                            updateWeeklySummary(summary, users, posts, interactions);
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        summary.setText("Không thể tải đủ số liệu tương tác. Chạm để thử lại sau.");
+                    }
+                });
+    }
+
+    private int dayIndex(Long timestamp, long firstDay) {
+        if (timestamp == null || timestamp < firstDay) return -1;
+        Calendar date = Calendar.getInstance();
+        date.setTimeInMillis(timestamp);
+        Calendar first = Calendar.getInstance();
+        first.setTimeInMillis(firstDay);
+        int days = date.get(Calendar.DAY_OF_YEAR) - first.get(Calendar.DAY_OF_YEAR);
+        if (date.get(Calendar.YEAR) != first.get(Calendar.YEAR)) {
+            days += first.getActualMaximum(Calendar.DAY_OF_YEAR);
+        }
+        return days >= 0 && days < 7 ? days : -1;
+    }
+
+    private void updateWeeklySummary(TextView summary, int[] users, int[] posts,
+                                     int[] interactions) {
+        int userTotal = 0;
+        int postTotal = 0;
+        int interactionTotal = 0;
+        for (int i = 0; i < 7; i++) {
+            userTotal += users[i];
+            postTotal += posts[i];
+            interactionTotal += interactions[i];
+        }
+        summary.setText(String.format(Locale.getDefault(),
+                "7 ngày qua: %d người dùng · %d bài viết · %d tương tác",
+                userTotal, postTotal, interactionTotal));
     }
 
     private void addEmpty(String message) {
@@ -353,7 +726,7 @@ public class AdminActivity extends AppCompatActivity {
         view.setText(text == null ? "—" : text);
         view.setTextColor(color);
         view.setTextSize(sizeSp);
-        if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        view.setTypeface(bold ? interBold : interRegular);
         return view;
     }
 

@@ -105,9 +105,13 @@ public class NotificationActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnRefreshNotifications.setOnClickListener(v -> loadNotifications());
-        tvEmptyNotifications.setOnClickListener(v -> {
-            if (!isLoading && currentUserId != null) loadNotifications();
+        btnRefreshNotifications.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { loadNotifications(); }
+        });
+        tvEmptyNotifications.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                if (!isLoading && currentUserId != null) loadNotifications();
+            }
         });
     }
 
