@@ -55,10 +55,12 @@ public class ChatConversationActivity extends AppCompatActivity {
                 otherName == null || otherName.trim().isEmpty() ? "Tin nhắn" : otherName);
         String avatar = getIntent().getStringExtra(EXTRA_OTHER_AVATAR);
         ImageView avatarView = findViewById(R.id.ivConversationAvatar);
-        if (avatar != null && !avatar.isEmpty()) Glide.with(this).load(avatar).circleCrop().placeholder(R.drawable.bg_circle_avatar).into(avatarView);
+        if (avatar != null && !avatar.isEmpty()) Glide.with(this).load(avatar).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().placeholder(R.drawable.bg_circle_avatar).into(avatarView);
         else avatarView.setImageResource(R.drawable.bg_circle_avatar);
 
-        findViewById(R.id.btnBackConversation).setOnClickListener(v -> finish());
+        findViewById(R.id.btnBackConversation).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { finish(); }
+        });
         input = findViewById(R.id.etChatMessage);
         send = findViewById(R.id.btnSendChatMessage);
         list = findViewById(R.id.rvChatMessages);
@@ -68,7 +70,9 @@ public class ChatConversationActivity extends AppCompatActivity {
         manager.setStackFromEnd(true);
         list.setLayoutManager(manager);
         list.setAdapter(adapter);
-        send.setOnClickListener(v -> sendMessage());
+        send.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { sendMessage(); }
+        });
 
         UserService.getInstance().getUserProfile(currentUserId, new UserService.Callback<User>() {
             @Override public void onSuccess(User user) {
