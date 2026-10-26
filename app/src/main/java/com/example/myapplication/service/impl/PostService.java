@@ -494,7 +494,9 @@ public class PostService {
         int batchSize = Math.max(20, Math.min(50, limit));
         Query query = db.collection("posts").orderBy("createdAt", Query.Direction.DESCENDING).limit(batchSize);
         if (cursor != null) query = query.startAfter(cursor);
-        query.get().addOnSuccessListener(snapshot -> {
+        query.get().addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.QuerySnapshot>() {
+        @Override
+        public void onSuccess(com.google.firebase.firestore.QuerySnapshot snapshot) {
             List<DocumentSnapshot> documents = snapshot.getDocuments();
             List<Post> raw = new ArrayList<>();
             for (DocumentSnapshot doc : documents) {
