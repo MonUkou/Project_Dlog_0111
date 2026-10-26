@@ -1,7 +1,6 @@
 package com.example.myapplication;
 
 import android.content.Intent;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -12,6 +11,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -26,12 +27,12 @@ import com.example.myapplication.service.impl.NotificationService;
 import com.example.myapplication.service.impl.PostService;
 import com.example.myapplication.service.impl.UserService;
 import com.example.myapplication.util.BottomNavHelper;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.List;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    private TextView tvProfileTitleUsername;
     private ImageView ivProfileAvatar;
     private TextView tvPostsCount;
     private TextView tvFollowersCount;
@@ -59,6 +60,7 @@ public class ProfileActivity extends AppCompatActivity {
     private boolean isSelfProfile;
     private boolean isShowingSavedPosts = false;
     private boolean isFollowingTarget = false;
+    private ListenerRegistration profileRegistration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,29 +78,41 @@ public class ProfileActivity extends AppCompatActivity {
             targetUserId = currentUserId;
         }
 
+        if (targetUserId == null || targetUserId.isEmpty()) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish(); return;
+        }
         isSelfProfile = targetUserId.equals(currentUserId);
 
         initViews();
         setupRecyclerView();
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.PROFILE);
 
+        loadUserProfile();
         if (getIntent().getBooleanExtra("showSavedPosts", false)) {
             switchTab(true);
+        } else {
+            loadUserPosts();
         }
-
-        loadUserProfile();
-        loadUserPosts();
     }
 
     private void initViews() {
-        tvProfileTitleUsername = findViewById(R.id.tvProfileTitleUsername);
         ivProfileAvatar = findViewById(R.id.ivProfileAvatar);
+        ivProfileAvatar.setImageResource(R.drawable.bg_circle_avatar);
         tvPostsCount = findViewById(R.id.tvPostsCount);
         tvFollowersCount = findViewById(R.id.tvFollowersCount);
         tvFollowingCount = findViewById(R.id.tvFollowingCount);
         tvFullName = findViewById(R.id.tvFullName);
         tvBio = findViewById(R.id.tvBio);
         btnProfileActionButton = findViewById(R.id.btnProfileActionButton);
+        btnProfileActionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.dlog_button)));
+        btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
+        findViewById(R.id.btnShowFollowers).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { openFollowList(false); }
+        });
+        findViewById(R.id.btnShowFollowing).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { openFollowList(true); }
+        });
 
         llProfileTabs = findViewById(R.id.llProfileTabs);
         tabUserPosts = findViewById(R.id.tabUserPosts);
@@ -109,43 +123,64 @@ public class ProfileActivity extends AppCompatActivity {
         tvStateProfile = findViewById(R.id.tvStateProfile);
 
         findViewById(R.id.btnProfileSettings).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
+            @Override public void onClick(View view) {
                 startActivity(new Intent(ProfileActivity.this, SettingsActivity.class));
             }
         });
 
         if (isSelfProfile) {
             findViewById(R.id.btnMessageProfile).setVisibility(View.GONE);
+            findViewById(R.id.btnChangeAvatarProfile).setVisibility(View.VISIBLE);
+            findViewById(R.id.btnChangeCoverProfile).setVisibility(View.VISIBLE);
+            findViewById(R.id.btnChangeAvatarProfile).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) { openImageEditor("avatar"); }
+            });
+            findViewById(R.id.btnChangeCoverProfile).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) { openImageEditor("cover"); }
+            });
             btnProfileActionButton.setText("Sửa hồ sơ");
-            btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_outline);
-            btnProfileActionButton.setTextColor(0xFF102D57);
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_profile_action);
+            btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
 
             llProfileTabs.setVisibility(View.VISIBLE);
             tabUserPosts.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) { switchTab(false); }
+                @Override public void onClick(View view) { switchTab(false); }
             });
             tabSavedPosts.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) { switchTab(true); }
+                @Override public void onClick(View view) { switchTab(true); }
             });
         } else {
+            findViewById(R.id.btnProfileSettings).setVisibility(View.GONE);
             llProfileTabs.setVisibility(View.GONE);
             findViewById(R.id.btnMessageProfile).setVisibility(View.VISIBLE);
             findViewById(R.id.btnMessageProfile).setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) { openPrivateChat(); }
+                @Override public void onClick(View view) { openPrivateChat(); }
             });
             checkFollowStatus();
         }
 
         btnProfileActionButton.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
+            @Override public void onClick(View view) {
                 if (isSelfProfile) {
-                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
-                    startActivity(intent);
+                    startActivity(new Intent(ProfileActivity.this, EditProfileActivity.class));
                 } else {
                     handleFollowToggle();
                 }
             }
         });
+    }
+
+    private void openFollowList(boolean following) {
+        Intent intent = new Intent(this, FollowListActivity.class);
+        intent.putExtra("userId", targetUserId);
+        intent.putExtra("following", following);
+        startActivity(intent);
+    }
+
+    private void openImageEditor(String kind) {
+        Intent intent = new Intent(this, EditProfileActivity.class);
+        intent.putExtra("pick_image_kind", kind);
+        startActivity(intent);
     }
 
     private void setupRecyclerView() {
@@ -159,31 +194,50 @@ public class ProfileActivity extends AppCompatActivity {
         isShowingSavedPosts = showSaved;
 
         if (showSaved) {
-            tabUserPosts.setTextColor(0xFF888888);
-            tabUserPosts.setTypeface(null, Typeface.NORMAL);
+            tabUserPosts.setTextColor(ContextCompat.getColor(this, R.color.dlog_muted));
+            tabUserPosts.setTypeface(ResourcesCompat.getFont(this, R.font.inter_regular));
 
-            tabSavedPosts.setTextColor(0xFF000000);
-            tabSavedPosts.setTypeface(null, Typeface.BOLD);
+            tabSavedPosts.setTextColor(ContextCompat.getColor(this, R.color.dlog_ink));
+            tabSavedPosts.setTypeface(ResourcesCompat.getFont(this, R.font.inter_bold));
 
             loadSavedPosts();
         } else {
-            tabSavedPosts.setTextColor(0xFF888888);
-            tabSavedPosts.setTypeface(null, Typeface.NORMAL);
+            tabSavedPosts.setTextColor(ContextCompat.getColor(this, R.color.dlog_muted));
+            tabSavedPosts.setTypeface(ResourcesCompat.getFont(this, R.font.inter_regular));
 
-            tabUserPosts.setTextColor(0xFF000000);
-            tabUserPosts.setTypeface(null, Typeface.BOLD);
+            tabUserPosts.setTextColor(ContextCompat.getColor(this, R.color.dlog_ink));
+            tabUserPosts.setTypeface(ResourcesCompat.getFont(this, R.font.inter_bold));
 
             loadUserPosts();
         }
     }
 
     private void loadUserProfile() {
-        userService.getUserProfile(targetUserId, new UserService.Callback<User>() {
+        User cached = new com.example.myapplication.service.impl.OfflinePages(this).profile(targetUserId);
+        if (cached != null) showUserProfile(cached);
+        if (profileRegistration != null) return;
+        profileRegistration = userService.observeUserProfile(targetUserId, new UserService.Callback<User>() {
             @Override
             public void onSuccess(User user) {
                 if (user != null) {
+                    new com.example.myapplication.service.impl.OfflinePages(ProfileActivity.this)
+                            .saveProfile(targetUserId, user);
+                    showUserProfile(user);
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {
+                if (cached != null) Toast.makeText(ProfileActivity.this, "Đang xem hồ sơ đã lưu trên máy", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showUserProfile(User user) {
                     loadedTargetUser = user;
-                    tvProfileTitleUsername.setText(user.getUsername() != null ? user.getUsername() : user.getId());
+                    Glide.with(ProfileActivity.this).load(user.getCoverUrl())
+                            .placeholder(R.drawable.profile_cover_sample).error(R.drawable.profile_cover_sample)
+                            .centerCrop().into((ImageView)findViewById(R.id.ivProfileCover));
                     tvFullName.setText(user.getFullName() != null && !user.getFullName().isEmpty() ? user.getFullName() : "Tên hiển thị");
                     tvBio.setText(user.getBio() != null && !user.getBio().isEmpty() ? user.getBio() : "Giới thiệu ngắn về bản thân.");
 
@@ -194,17 +248,11 @@ public class ProfileActivity extends AppCompatActivity {
                     if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
                         Glide.with(ProfileActivity.this)
                                 .load(user.getAvatarUrl())
-                                .circleCrop()
+                                .placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop()
                                 .into(ivProfileAvatar);
                     } else {
                         ivProfileAvatar.setImageResource(R.drawable.bg_circle_avatar);
                     }
-                }
-            }
-
-            @Override
-            public void onError(Exception e) {}
-        });
     }
 
     private User loadedTargetUser;
@@ -250,19 +298,22 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void updateFollowButtonUI() {
+        btnProfileActionButton.setEnabled(true);
         if (isFollowingTarget) {
             btnProfileActionButton.setText("Đang theo dõi");
-            btnProfileActionButton.setBackgroundResource(R.drawable.bg_button_outline);
-            btnProfileActionButton.setTextColor(0xFF000000);
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_profile_action);
+            btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
         } else {
             btnProfileActionButton.setText("Theo dõi");
-            btnProfileActionButton.setBackgroundResource(R.drawable.bg_auth_button);
-            btnProfileActionButton.setTextColor(0xFFFFFFFF);
+            btnProfileActionButton.setBackgroundResource(R.drawable.bg_profile_action);
+            btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
         }
         btnProfileActionButton.setElevation(getResources().getDisplayMetrics().density * 4f);
     }
 
     private void handleFollowToggle() {
+        if (!btnProfileActionButton.isEnabled()) return;
+        btnProfileActionButton.setEnabled(false);
         if (isFollowingTarget) {
             userService.unfollowUser(currentUserId, targetUserId, new UserService.Callback<Void>() {
                 @Override
@@ -274,6 +325,7 @@ public class ProfileActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(Exception e) {
+                    btnProfileActionButton.setEnabled(true);
                     Toast.makeText(ProfileActivity.this, "Lỗi bỏ theo dõi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
@@ -290,6 +342,7 @@ public class ProfileActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(Exception e) {
+                    btnProfileActionButton.setEnabled(true);
                     Toast.makeText(ProfileActivity.this, "Lỗi theo dõi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
@@ -353,6 +406,7 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (targetUserId == null) return;
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.PROFILE);
         loadUserProfile();
         if (isShowingSavedPosts) {
@@ -360,5 +414,14 @@ public class ProfileActivity extends AppCompatActivity {
         } else {
             loadUserPosts();
         }
+    }
+
+    @Override
+    protected void onStop() {
+        if (profileRegistration != null) {
+            profileRegistration.remove();
+            profileRegistration = null;
+        }
+        super.onStop();
     }
 }
