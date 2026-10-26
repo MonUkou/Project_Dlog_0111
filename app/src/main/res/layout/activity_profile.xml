@@ -2,148 +2,97 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
-
-    <LinearLayout
-        android:id="@+id/headerProfile"
-        android:layout_width="match_parent"
-        android:layout_height="54dp"
-        android:background="@color/white"
-        android:elevation="2dp"
-        android:gravity="center_vertical"
-        android:paddingStart="18dp"
-        android:paddingEnd="18dp">
-        <TextView
-            android:id="@+id/tvProfileTitleUsername"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Hồ sơ"
-            android:textColor="@color/dlog_navy"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-        <ImageView
-            android:id="@+id/btnProfileSettings"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Cài đặt hồ sơ"
-            android:padding="5dp"
-            android:src="@drawable/ic_settings_24"
-            android:tint="@color/dlog_navy" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/dividerProfile"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_below="@id/headerProfile"
-        android:background="@color/dlog_feed_divider" />
+    android:background="@color/dlog_surface">
 
     <include
         android:id="@+id/bottomNavView"
         layout="@layout/inc_bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="@dimen/bottom_nav_height"
         android:layout_alignParentBottom="true" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/dividerProfile"
         android:layout_above="@id/bottomNavView"
         android:fillViewport="true">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/white"
+            android:background="@color/dlog_surface"
             android:orientation="vertical">
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="184dp"
-                android:background="@drawable/bg_profile_cover">
+                android:layout_height="232dp">
                 <ImageView
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="184dp"
+                    android:id="@+id/ivProfileCover"
                     android:contentDescription="Ảnh bìa hồ sơ"
                     android:scaleType="centerCrop"
                     android:src="@drawable/profile_cover_sample" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|start"
-                    android:layout_marginStart="18dp"
-                    android:layout_marginBottom="47dp"
-                    android:text="DLog"
-                    android:textColor="#EAF2FF"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-            </FrameLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="88dp"
-                android:layout_marginTop="-38dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
                 <ImageView
-                    android:id="@+id/ivProfileAvatar"
-                    android:layout_width="84dp"
-                    android:layout_height="84dp"
-                    android:background="@drawable/bg_profile_avatar_ring"
-                    android:contentDescription="Ảnh đại diện"
-                    android:elevation="8dp"
-                    android:padding="3dp"
-                    android:scaleType="centerCrop" />
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <Button
-                        android:id="@+id/btnMessageProfile"
-                        android:layout_width="0dp"
-                        android:layout_height="42dp"
-                        android:layout_marginEnd="7dp"
-                        android:layout_weight="0.92"
-                        android:background="@drawable/bg_button_outline"
-                        android:elevation="4dp"
-                        android:minWidth="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:text="Nhắn tin"
-                        android:textColor="@color/dlog_navy"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:visibility="gone" />
-                    <Button
-                        android:id="@+id/btnProfileActionButton"
-                        android:layout_width="0dp"
-                        android:layout_height="42dp"
-                        android:layout_weight="1.08"
-                        android:background="@drawable/bg_button_outline"
-                        android:elevation="4dp"
-                        android:minWidth="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:text="Chỉnh sửa hồ sơ"
-                        android:textColor="@color/dlog_navy"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-            </LinearLayout>
+                    android:id="@+id/btnProfileSettings"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:background="@drawable/bg_profile_camera"
+                    android:contentDescription="Cài đặt hồ sơ"
+                    android:padding="13dp"
+                    android:src="@drawable/ic_settings_24"
+                    android:tint="@color/white" />
+                <FrameLayout
+                    android:id="@+id/btnChangeCoverProfile"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginBottom="56dp"
+                    android:contentDescription="Đổi ảnh bìa"
+                    android:visibility="gone">
+                    <ImageView android:layout_width="32dp" android:layout_height="32dp"
+                        android:layout_gravity="center" android:background="@drawable/bg_profile_camera"
+                        android:padding="7dp" android:src="@drawable/ic_camera_24"
+                        android:importantForAccessibility="no" />
+                </FrameLayout>
+                <FrameLayout
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_gravity="bottom|start"
+                    android:layout_marginStart="16dp">
+                    <ImageView
+                        android:id="@+id/ivProfileAvatar"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:layout_gravity="top|start"
+                        android:background="@drawable/bg_profile_avatar_ring"
+                        android:padding="4dp"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/bg_circle_avatar"
+                        android:contentDescription="Ảnh đại diện" />
+                    <FrameLayout
+                        android:id="@+id/btnChangeAvatarProfile"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="bottom|end"
+                        android:contentDescription="Đổi ảnh đại diện"
+                        android:visibility="gone">
+                        <ImageView android:layout_width="32dp" android:layout_height="32dp"
+                            android:layout_gravity="bottom|end" android:background="@drawable/bg_profile_camera"
+                            android:padding="7dp" android:src="@drawable/ic_camera_24"
+                            android:importantForAccessibility="no" />
+                    </FrameLayout>
+                </FrameLayout>
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/tvFullName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="18dp"
-                android:layout_marginTop="7dp"
+                android:layout_marginTop="4dp"
                 android:layout_marginEnd="18dp"
                 android:text="Tên hiển thị"
                 android:textColor="@color/dlog_navy"
@@ -160,14 +109,28 @@
                 android:textColor="@color/dlog_navy"
                 android:textSize="14sp" />
 
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp" android:layout_marginTop="16dp"
+                android:gravity="center_vertical" android:orientation="horizontal">
+                <Button android:id="@+id/btnMessageProfile" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:minHeight="48dp" android:layout_weight="1"
+                    android:layout_marginEnd="8dp" android:background="@drawable/bg_profile_action"
+                    android:backgroundTint="@color/dlog_button" android:text="Nhắn tin"
+                    android:textColor="@color/white" android:textSize="14sp" android:textAllCaps="false"
+                    android:textStyle="bold" android:visibility="gone" />
+                <Button android:id="@+id/btnProfileActionButton" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:minHeight="48dp" android:layout_weight="1"
+                    android:background="@drawable/bg_profile_action" android:backgroundTint="@color/dlog_button"
+                    android:text="Sửa hồ sơ" android:textColor="@color/white" android:textSize="14sp"
+                    android:textAllCaps="false" android:textStyle="bold" />
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/llProfileStats"
                 android:layout_width="match_parent"
                 android:layout_height="68dp"
-                android:layout_marginHorizontal="14dp"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_profile_stats"
-                android:elevation="3dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:orientation="horizontal"
                 android:paddingStart="12dp"
@@ -176,11 +139,11 @@
                     <TextView android:id="@+id/tvPostsCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/dlog_navy" android:textSize="16sp" android:textStyle="bold" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bài viết" android:textColor="@color/dlog_muted_blue" android:textSize="12sp" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <LinearLayout android:id="@+id/btnShowFollowers" android:minHeight="56dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
                     <TextView android:id="@+id/tvFollowersCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/dlog_navy" android:textSize="16sp" android:textStyle="bold" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Người theo dõi" android:textColor="@color/dlog_muted_blue" android:textSize="12sp" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <LinearLayout android:id="@+id/btnShowFollowing" android:minHeight="56dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
                     <TextView android:id="@+id/tvFollowingCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/dlog_navy" android:textSize="16sp" android:textStyle="bold" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Đang theo dõi" android:textColor="@color/dlog_muted_blue" android:textSize="12sp" />
                 </LinearLayout>
@@ -190,7 +153,7 @@
                 android:id="@+id/llProfileTabs"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="3dp"
+                android:layout_marginTop="8dp"
                 android:orientation="horizontal">
                 <TextView
                     android:id="@+id/tabUserPosts"

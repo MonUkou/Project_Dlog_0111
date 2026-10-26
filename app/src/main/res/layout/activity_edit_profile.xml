@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/dlog_surface">
 
     <!-- Header -->
     <RelativeLayout
@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:paddingHorizontal="16dp"
-        android:background="@color/white"
+        android:background="@color/dlog_surface"
         android:elevation="2dp">
 
         <ImageView
@@ -19,6 +19,7 @@
             android:layout_height="32dp"
             android:layout_centerVertical="true"
             android:src="@drawable/ic_back"
+            android:tint="@color/dlog_navy"
             android:contentDescription="Back"
             android:clickable="true"
             android:focusable="true"
@@ -70,7 +71,7 @@
                 android:id="@+id/ivEditAvatar"
                 android:layout_width="90dp"
                 android:layout_height="90dp"
-                android:background="@drawable/bg_circle_avatar"
+                android:src="@drawable/bg_circle_avatar"
                 android:scaleType="centerCrop"
                 android:contentDescription="Avatar" />
 
@@ -79,6 +80,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:minHeight="48dp"
+                android:gravity="center"
                 android:text="Đổi ảnh đại diện"
                 android:textColor="@color/dlog_navy"
                 android:textSize="14sp"
@@ -87,6 +90,11 @@
                 android:focusable="true"
                 android:padding="8dp" />
 
+            <ImageView android:id="@+id/ivEditCover" android:layout_width="match_parent"
+                android:layout_height="150dp" android:layout_marginTop="16dp" android:scaleType="centerCrop"
+                android:src="@drawable/profile_cover_sample" android:contentDescription="Ảnh bìa xem trước" />
+            <Button android:id="@+id/btnChangeCover" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:minHeight="48dp" android:text="Đổi ảnh bìa" />
             <!-- Username -->
             <TextView
                 android:layout_width="match_parent"
