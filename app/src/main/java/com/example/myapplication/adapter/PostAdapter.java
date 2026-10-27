@@ -9,26 +9,31 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.example.myapplication.PostDetailActivity;
 import com.example.myapplication.PhotoViewerActivity;
+import com.example.myapplication.CreatePostActivity;
 import com.example.myapplication.ProfileActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.model.Post;
+import com.example.myapplication.model.Comment;
 import com.example.myapplication.model.SavedPost;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.InteractionService;
 import com.example.myapplication.service.impl.PostService;
+import com.example.myapplication.service.impl.OfflinePages;
 import com.example.myapplication.util.UiMotion;
 import com.example.myapplication.util.PostDisplayText;
+import com.example.myapplication.view.PhotoCollageView;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,9 +50,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private final PostService postService;
     private final InteractionService interactionService;
     private final AuthService authService;
+    private final OfflinePages offlinePages;
     private OnPostChangeListener onPostChangeListener;
     private int lastAnimatedPosition = -1;
     private final Set<String> expandedCaptionIds = new HashSet<>();
+    private final Set<String> expandedCommentIds = new HashSet<>();
 
     public interface OnPostChangeListener {
         void onPostUpdated();
@@ -59,6 +66,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         this.postService = PostService.getInstance();
         this.authService = AuthService.getInstance();
         this.interactionService = new InteractionService(authService, null);
+        this.offlinePages = new OfflinePages(context);
     }
 
     public void setOnPostChangeListener(OnPostChangeListener listener) {
@@ -67,6 +75,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
     public void setPosts(List<Post> newPosts) {
         this.posts.clear();
+        expandedCommentIds.clear();
         lastAnimatedPosition = -1;
         if (newPosts != null) {
             this.posts.addAll(newPosts);
@@ -92,29 +101,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     @Override
     public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
         Post post = posts.get(position);
-        TextView photoCount = holder.itemView.findViewById(R.id.tvPhotoCount);
         final List<String> photos = post.getImageUrls() != null && !post.getImageUrls().isEmpty()
                 ? post.getImageUrls() : java.util.Collections.singletonList(post.getImageUrl());
-        final int totalPhotos = photos.size();
-        holder.photoIndex = 0;
-        photoCount.setVisibility(totalPhotos > 1 ? View.VISIBLE : View.GONE);
-        holder.btnPreviousPhoto.setVisibility(View.GONE);
-        holder.btnNextPhoto.setVisibility(totalPhotos > 1 ? View.VISIBLE : View.GONE);
-        showPhoto(holder, photos, photoCount);
-        holder.btnPreviousPhoto.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                if (holder.photoIndex > 0) {
-                    holder.photoIndex--;
-                    showPhoto(holder, photos, photoCount);
-                }
-            }
-        });
-        holder.btnNextPhoto.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                if (holder.photoIndex + 1 < totalPhotos) {
-                    holder.photoIndex++;
-                    showPhoto(holder, photos, photoCount);
-                }
+        holder.photoCollage.show(photos, new PhotoCollageView.OnPhotoClickListener() {
+            @Override public void onPhotoClick(int index) {
+                PhotoViewerActivity.open(context, post, index);
             }
         });
         holder.itemView.setTag(post.getId());
@@ -222,6 +213,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_error));
                         holder.btnLike.setText(String.valueOf(post.getLikesCount()));
                         holder.btnLike.setEnabled(true);
+
                     }
 
                     @Override
@@ -240,9 +232,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             public void onClick(View view) {
                 boolean wasSaved = holder.btnSave.isSelected();
                 if (wasSaved) {
+                    holder.btnSave.setEnabled(false);
                     postService.unsavePost(currentUserId, post.getId(), new PostService.Callback<Void>() {
                     @Override
                     public void onSuccess(Void result) {
+                        holder.btnSave.setEnabled(true);
                 if (!post.getId().equals(holder.itemView.getTag())) return;
                         holder.btnSave.setSelected(false);
                     holder.btnSave.setContentDescription("Lưu bài viết");
@@ -252,28 +246,48 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
                     @Override
                     public void onError(Exception e) {
+                        holder.btnSave.setEnabled(true);
                         Toast.makeText(context, "Lỗi bỏ lưu bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
                 } else {
-                    showSaveCollectionDialog(holder, post, currentUserId);
+                    savePostDirectly(holder, post, currentUserId);
                 }
             }
         });
 
-        // Click Comment button or post image -> open PostDetailActivity
-        View.OnClickListener openDetailListener = new View.OnClickListener() {
+        boolean commentsExpanded = expandedCommentIds.contains(post.getId());
+        holder.commentsPanel.setVisibility(commentsExpanded ? View.VISIBLE : View.GONE);
+        holder.btnComment.setSelected(commentsExpanded);
+        holder.btnComment.setContentDescription(commentsExpanded
+                ? "Đóng bình luận" : "Mở bình luận, " + post.getCommentsCount());
+        if (commentsExpanded) {
+            loadInlineComments(holder, post);
+        } else {
+            holder.progressInlineComments.setVisibility(View.GONE);
+            holder.tvCommentsEmpty.setVisibility(View.GONE);
+            holder.tvCommentsCacheStatus.setVisibility(View.GONE);
+            holder.commentAdapter.setComments(null);
+        }
+
+        holder.btnComment.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(context, PostDetailActivity.class);
-                intent.putExtra("postId", post.getId());
-                context.startActivity(intent);
+                if (expandedCommentIds.contains(post.getId())) {
+                    expandedCommentIds.remove(post.getId());
+                } else {
+                    expandedCommentIds.add(post.getId());
+                }
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    notifyItemChanged(adapterPosition);
+                }
             }
-        };
-        holder.btnComment.setOnClickListener(openDetailListener);
-        holder.ivPostImage.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-                PhotoViewerActivity.open(context, post, holder.photoIndex);
+        });
+        holder.btnSendInlineComment.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                submitInlineComment(holder, post);
             }
         });
         holder.btnShare.setOnClickListener(new View.OnClickListener() {
@@ -294,12 +308,17 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         };
         holder.llAuthorHeader.setOnClickListener(openProfileListener);
 
-        // Long press post -> Option dialog (Save image to device F24, Edit/Delete if author)
+        // Long press post for author actions.
         holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
                 showPostOptionsDialog(post, currentUserId, position);
                 return true;
+            }
+        });
+        holder.itemView.findViewById(R.id.tvPostOptions).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                showPostOptionsDialog(post, currentUserId, position);
             }
         });
         if (position > lastAnimatedPosition) {
@@ -308,30 +327,105 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         }
     }
 
-    private void showSaveCollectionDialog(final PostViewHolder holder, final Post post, final String currentUserId) {
-        final String[] collections = {"Chung", "Du lịch", "Nhiếp ảnh đường phố", "Tối giản"};
-        new AlertDialog.Builder(context)
-                .setTitle("Lưu vào bộ sưu tập")
-                .setItems(collections, new android.content.DialogInterface.OnClickListener() {
-                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
-                        final String collection = collections[which];
-                        postService.savePost(currentUserId, post.getId(), collection, new PostService.Callback<SavedPost>() {
+    private void loadInlineComments(final PostViewHolder holder, final Post post) {
+        final boolean hasCache = offlinePages.hasComments(post.getId());
+        final List<Comment> cachedComments = offlinePages.comments(post.getId());
+        if (hasCache) {
+            holder.commentAdapter.setComments(cachedComments);
+            holder.tvCommentsCacheStatus.setText("SQLite · Đang hiển thị bình luận đã lưu và kiểm tra dữ liệu mới…");
+            holder.tvCommentsCacheStatus.setVisibility(View.VISIBLE);
+            holder.tvCommentsEmpty.setVisibility(cachedComments.isEmpty() ? View.VISIBLE : View.GONE);
+        } else {
+            holder.tvCommentsCacheStatus.setVisibility(View.GONE);
+        }
+        holder.progressInlineComments.setVisibility(View.VISIBLE);
+        if (!hasCache) holder.tvCommentsEmpty.setVisibility(View.GONE);
+        interactionService.getComments(post.getId(),
+                new InteractionService.ServiceCallback<List<Comment>>() {
                     @Override
-                    public void onSuccess(SavedPost result) {
-                if (!post.getId().equals(holder.itemView.getTag())) return;
-                        holder.btnSave.setSelected(true);
-                    holder.btnSave.setContentDescription("Bỏ lưu bài viết");
-                        holder.btnSave.setTextColor(ContextCompat.getColor(context, R.color.dlog_success));
-                                Toast.makeText(context, "Đã lưu vào “" + collection + "”", Toast.LENGTH_SHORT).show();
+                    public void onSuccess(List<Comment> comments) {
+                        if (!post.getId().equals(holder.itemView.getTag())
+                                || !expandedCommentIds.contains(post.getId())) return;
+                        holder.progressInlineComments.setVisibility(View.GONE);
+                        holder.tvCommentsCacheStatus.setVisibility(View.GONE);
+                        holder.commentAdapter.setComments(comments);
+                        offlinePages.saveComments(post.getId(), comments);
+                        boolean empty = comments == null || comments.isEmpty();
+                        holder.tvCommentsEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+                        if (!empty) {
+                            holder.rvInlineComments.scrollToPosition(comments.size() - 1);
+                        }
                     }
 
                     @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(context, "Lỗi lưu bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    public void onError(String message) {
+                        if (!post.getId().equals(holder.itemView.getTag())) return;
+                        holder.progressInlineComments.setVisibility(View.GONE);
+                        if (hasCache) {
+                            holder.commentAdapter.setComments(cachedComments);
+                            holder.tvCommentsCacheStatus.setText("Ngoại tuyến · Bình luận đang đọc từ SQLite");
+                            holder.tvCommentsCacheStatus.setVisibility(View.VISIBLE);
+                            holder.tvCommentsEmpty.setVisibility(cachedComments.isEmpty()
+                                    ? View.VISIBLE : View.GONE);
+                        } else {
+                            holder.tvCommentsCacheStatus.setVisibility(View.GONE);
+                            holder.tvCommentsEmpty.setText("Chưa từng mở bình luận này khi có mạng.");
+                            holder.tvCommentsEmpty.setVisibility(View.VISIBLE);
+                        }
                     }
-                        });
+                });
+    }
+
+    private void submitInlineComment(final PostViewHolder holder, final Post post) {
+        final String content = holder.etInlineComment.getText().toString().trim();
+        if (content.isEmpty()) {
+            holder.etInlineComment.setError("Hãy nhập nội dung bình luận");
+            holder.etInlineComment.requestFocus();
+            return;
+        }
+        holder.btnSendInlineComment.setEnabled(false);
+        interactionService.addComment(post.getId(), content,
+                new InteractionService.ServiceCallback<Comment>() {
+                    @Override
+                    public void onSuccess(Comment comment) {
+                        if (!post.getId().equals(holder.itemView.getTag())) return;
+                        holder.btnSendInlineComment.setEnabled(true);
+                        holder.etInlineComment.setText("");
+                        post.setCommentsCount(post.getCommentsCount() + 1L);
+                        holder.btnComment.setText(String.valueOf(post.getCommentsCount()));
+                        holder.btnComment.setContentDescription("Đóng bình luận");
+                        loadInlineComments(holder, post);
                     }
-                }).show();
+
+                    @Override
+                    public void onError(String message) {
+                        holder.btnSendInlineComment.setEnabled(true);
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void savePostDirectly(final PostViewHolder holder, final Post post,
+                                  final String currentUserId) {
+        holder.btnSave.setEnabled(false);
+        postService.savePost(currentUserId, post.getId(), new PostService.Callback<SavedPost>() {
+            @Override
+            public void onSuccess(SavedPost result) {
+                holder.btnSave.setEnabled(true);
+                if (!post.getId().equals(holder.itemView.getTag())) return;
+                holder.btnSave.setSelected(true);
+                holder.btnSave.setContentDescription("Bỏ lưu bài viết");
+                holder.btnSave.setTextColor(ContextCompat.getColor(context, R.color.dlog_success));
+                Toast.makeText(context, "Đã lưu vào mục Đã lưu", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(Exception error) {
+                holder.btnSave.setEnabled(true);
+                Toast.makeText(context, "Không thể lưu: " + error.getMessage(),
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -340,26 +434,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         holder.itemView.setAlpha(1f);
         holder.itemView.setTranslationY(0f);
         super.onViewRecycled(holder);
-    }
-
-    private void showPhoto(PostViewHolder holder, List<String> photos, TextView photoCount) {
-        String url = photos.get(holder.photoIndex);
-        StringBuilder indicator = new StringBuilder();
-        for (int i = 0; i < photos.size(); i++) {
-            if (i > 0) indicator.append(' ');
-            indicator.append(i == holder.photoIndex ? '●' : '○');
-        }
-        photoCount.setText(indicator.toString());
-        holder.btnPreviousPhoto.setVisibility(holder.photoIndex > 0 ? View.VISIBLE : View.GONE);
-        holder.btnNextPhoto.setVisibility(holder.photoIndex + 1 < photos.size() ? View.VISIBLE : View.GONE);
-        if (url == null || url.isEmpty()) {
-            Glide.with(context).clear(holder.ivPostImage);
-            holder.ivPostImage.setImageDrawable(null);
-            holder.tvImagePlaceholder.setVisibility(View.VISIBLE);
-        } else {
-            holder.tvImagePlaceholder.setVisibility(View.GONE);
-            Glide.with(context).load(url).centerCrop().into(holder.ivPostImage);
-        }
     }
 
     private void bindCaption(final PostViewHolder holder, final Post post, String captionText) {
@@ -410,7 +484,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private void showPostOptionsDialog(Post post, String currentUserId, int position) {
         boolean isAuthor = currentUserId != null && currentUserId.equals(post.getAuthorId());
         List<String> options = new ArrayList<>();
-        options.add("Lưu ảnh về thiết bị");
+        options.add("Xem ảnh / báo cáo");
         if (isAuthor) {
             options.add("Sửa bài viết");
             options.add("Xóa bài viết");
@@ -422,20 +496,12 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 String selected = options.get(which);
-                if (selected.equals("Lưu ảnh về thiết bị")) {
-                    postService.saveImageToDevice(context, post.getImageUrl(), new PostService.Callback<String>() {
-                    @Override
-                    public void onSuccess(String msg) {
-                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(context, "Lỗi lưu ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                    });
+                if (selected.equals("Xem ảnh / báo cáo")) {
+                    PhotoViewerActivity.open(context, post, 0);
                 } else if (selected.equals("Sửa bài viết")) {
-                    showEditPostDialog(post, position);
+                    Intent edit = new Intent(context, CreatePostActivity.class);
+                    edit.putExtra(CreatePostActivity.EXTRA_EDIT_POST_ID, post.getId());
+                    context.startActivity(edit);
                 } else if (selected.equals("Xóa bài viết")) {
                     showDeletePostConfirmDialog(post, position);
                 }
@@ -453,39 +519,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         sendIntent.setType("text/plain");
         sendIntent.putExtra(Intent.EXTRA_TEXT, text);
         context.startActivity(Intent.createChooser(sendIntent, "Chia sẻ bài viết"));
-    }
-
-    private void showEditPostDialog(Post post, int position) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Sửa bài viết");
-
-        final EditText input = new EditText(context);
-        input.setText(post.getCaption());
-        input.setPadding(32, 32, 32, 32);
-        builder.setView(input);
-
-        builder.setPositiveButton("Lưu", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                final String newCaption = input.getText().toString().trim();
-                postService.updatePost(authService.getCurrentUserId(), post.getId(), newCaption, new PostService.Callback<Post>() {
-                @Override
-                public void onSuccess(Post updatedPost) {
-                    post.setCaption(newCaption);
-                    notifyItemChanged(position);
-                    Toast.makeText(context, "Đã cập nhật bài viết", Toast.LENGTH_SHORT).show();
-                    if (onPostChangeListener != null) onPostChangeListener.onPostUpdated();
-                }
-
-                @Override
-                public void onError(Exception e) {
-                    Toast.makeText(context, "Lỗi sửa bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-                });
-            }
-        });
-        builder.setNegativeButton("Hủy", null);
-        builder.show();
     }
 
     private void showDeletePostConfirmDialog(Post post, int position) {
@@ -527,8 +560,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         ImageView ivAuthorAvatar;
         TextView tvAuthorUsername;
         TextView tvPostTime;
-        ImageView ivPostImage;
-        TextView tvImagePlaceholder;
+        PhotoCollageView photoCollage;
         TextView btnLike;
         TextView btnComment;
         TextView btnShare;
@@ -537,9 +569,14 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         TextView tvCaption;
         View captionRow;
         TextView btnCaptionMore;
-        TextView btnPreviousPhoto;
-        TextView btnNextPhoto;
-        int photoIndex;
+        View commentsPanel;
+        RecyclerView rvInlineComments;
+        ProgressBar progressInlineComments;
+        TextView tvCommentsEmpty;
+        TextView tvCommentsCacheStatus;
+        EditText etInlineComment;
+        TextView btnSendInlineComment;
+        CommentAdapter commentAdapter;
 
         public PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -547,10 +584,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             ivAuthorAvatar = itemView.findViewById(R.id.ivAuthorAvatar);
             tvAuthorUsername = itemView.findViewById(R.id.tvAuthorUsername);
             tvPostTime = itemView.findViewById(R.id.tvPostTime);
-            btnPreviousPhoto = itemView.findViewById(R.id.btnPreviousPhoto);
-            btnNextPhoto = itemView.findViewById(R.id.btnNextPhoto);
-            ivPostImage = itemView.findViewById(R.id.ivPostImage);
-            tvImagePlaceholder = itemView.findViewById(R.id.tvImagePlaceholder);
+            photoCollage = itemView.findViewById(R.id.photoContainer);
             btnLike = itemView.findViewById(R.id.btnLike);
             btnComment = itemView.findViewById(R.id.btnComment);
             btnShare = itemView.findViewById(R.id.btnShare);
@@ -559,6 +593,16 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             tvCaption = itemView.findViewById(R.id.tvCaption);
             captionRow = itemView.findViewById(R.id.captionRow);
             btnCaptionMore = itemView.findViewById(R.id.btnCaptionMore);
+            commentsPanel = itemView.findViewById(R.id.commentsPanel);
+            rvInlineComments = itemView.findViewById(R.id.rvInlineComments);
+            progressInlineComments = itemView.findViewById(R.id.progressInlineComments);
+            tvCommentsEmpty = itemView.findViewById(R.id.tvCommentsEmpty);
+            tvCommentsCacheStatus = itemView.findViewById(R.id.tvCommentsCacheStatus);
+            etInlineComment = itemView.findViewById(R.id.etInlineComment);
+            btnSendInlineComment = itemView.findViewById(R.id.btnSendInlineComment);
+            commentAdapter = new CommentAdapter(itemView.getContext());
+            rvInlineComments.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+            rvInlineComments.setAdapter(commentAdapter);
         }
     }
 }

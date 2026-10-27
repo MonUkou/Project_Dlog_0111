@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,13 +25,11 @@ public class EditProfileActivity extends AppCompatActivity {
     private Uri avatarUri, coverUri;
     private boolean pickingCover, saving;
     private final ActivityResultLauncher<String[]> picker = registerForActivityResult(
-        new ActivityResultContracts.OpenDocument(), new ActivityResultCallback<Uri>() {
-            @Override public void onActivityResult(Uri uri) {
-                if (uri == null) return;
-                try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
-                catch (SecurityException ignored) { }
-                select(uri);
-            }
+        new ActivityResultContracts.OpenDocument(), uri -> {
+            if (uri == null) return;
+            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
+            catch (SecurityException ignored) { }
+            select(uri);
         });
 
     @Override protected void onCreate(Bundle state) {
@@ -48,18 +45,10 @@ public class EditProfileActivity extends AppCompatActivity {
             if (state.getString("avatarUri") != null) avatarUri = Uri.parse(state.getString("avatarUri"));
             if (state.getString("coverUri") != null) coverUri = Uri.parse(state.getString("coverUri"));
         }
-        findViewById(R.id.btnBackEditProfile).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) { if (!saving) finish(); }
-        });
-        findViewById(R.id.btnChangeAvatar).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) { choose(false); }
-        });
-        findViewById(R.id.btnChangeCover).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) { choose(true); }
-        });
-        save.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) { saveProfile(); }
-        });
+        findViewById(R.id.btnBackEditProfile).setOnClickListener(v -> { if (!saving) finish(); });
+        findViewById(R.id.btnChangeAvatar).setOnClickListener(v -> choose(false));
+        findViewById(R.id.btnChangeCover).setOnClickListener(v -> choose(true));
+        save.setOnClickListener(v -> saveProfile());
         save.setEnabled(false); progress.setVisibility(View.VISIBLE);
         UserService.getInstance().getUserProfile(AuthService.getInstance().getCurrentUserId(), new UserService.Callback<User>() {
             public void onSuccess(User result) {
@@ -83,14 +72,10 @@ public class EditProfileActivity extends AppCompatActivity {
     private void choose(boolean isCover) {
         if (saving) return;
         pickingCover = isCover;
-        ImagePickerDialog.show(this, new Runnable() {
-            @Override public void run() {
-                try { picker.launch(new String[]{"image/*"}); }
-                catch (Exception error) { fail(error); }
-            }
-        }, new java.util.function.Consumer<Uri>() {
-            @Override public void accept(Uri uri) { select(uri); }
-        });
+        ImagePickerDialog.show(this, () -> {
+            try { picker.launch(new String[]{"image/*"}); }
+            catch (Exception error) { fail(error); }
+        }, this::select);
     }
     private void select(Uri uri) {
         if (pickingCover) coverUri = uri; else avatarUri = uri;

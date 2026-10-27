@@ -420,6 +420,91 @@ public class PostService {
         });
     }
 
+    /** Lưu lại bộ ảnh hiện có cùng ảnh mới, giữ nguyên ID và các lượt tương tác. */
+    public void updatePostWithImages(final String currentUserId, final String postId,
+                                     final String caption, final List<Uri> imageUris,
+                                     final List<String> hashtags, final Context context,
+                                     final Callback<Post> callback) {
+        if (currentUserId == null || currentUserId.isEmpty() || postId == null || postId.isEmpty()
+                || imageUris == null || imageUris.isEmpty() || imageUris.size() > 10) {
+            callback.onError(new IllegalArgumentException("Chọn từ 1 đến 10 ảnh để lưu."));
+            return;
+        }
+        final List<Uri> images = new ArrayList<>(imageUris);
+        final List<String> tags = hashtags == null ? new ArrayList<String>() : new ArrayList<>(hashtags);
+        final Context app = context.getApplicationContext();
+        getPostDetail(postId, new Callback<Post>() {
+            @Override public void onSuccess(final Post post) {
+                if (!currentUserId.equals(post.getAuthorId())) {
+                    callback.onError(new SecurityException("Chỉ tác giả được sửa bộ ảnh này."));
+                    return;
+                }
+                IO_EXECUTOR.execute(new Runnable() {
+                    @Override public void run() {
+                        final List<String> urls = new ArrayList<>();
+                        final List<Map<String, String>> metadata = new ArrayList<>();
+                        try {
+                            for (int index = 0; index < images.size(); index++) {
+                                Uri uri = images.get(index);
+                                String value = uri.toString();
+                                int oldIndex = post.getImageUrls().indexOf(value);
+                                if (oldIndex >= 0) {
+                                    urls.add(value);
+                                    List<Map<String, String>> oldMetadata = post.getPhotoMetadata();
+                                    metadata.add(oldIndex < oldMetadata.size()
+                                            ? oldMetadata.get(oldIndex) : new HashMap<String, String>());
+                                } else {
+                                    String scheme = uri.getScheme();
+                                    if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+                                        throw new SecurityException("Ảnh mạng không thuộc bộ ảnh này.");
+                                    }
+                                    metadata.add(readExifWithoutLocation(app, uri));
+                                    String mime = resolveImageMimeType(app, uri);
+                                    File file = copyImageToCache(app, uri, postId, mime);
+                                    try {
+                                        urls.add(CloudinaryUploader.upload(app, file, mime));
+                                    } finally {
+                                        file.delete();
+                                    }
+                                }
+                            }
+                            MAIN_HANDLER.post(new Runnable() {
+                                @Override public void run() {
+                                    post.setId(postId);
+                                    post.setCaption(caption == null ? "" : caption.trim());
+                                    post.setHashtags(tags);
+                                    post.setImageUrls(urls);
+                                    post.setImageUrl(urls.get(0));
+                                    post.setPhotoMetadata(metadata);
+                                    post.touch();
+                                    db.collection("posts").document(postId).update(
+                                            "caption", post.getCaption(),
+                                            "hashtags", post.getHashtags(),
+                                            "imageUrls", post.getImageUrls(),
+                                            "imageUrl", post.getImageUrl(),
+                                            "photoMetadata", post.getPhotoMetadata(),
+                                            "updatedAt", post.getUpdatedAt())
+                                            .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                                                @Override public void onSuccess(Void unused) { callback.onSuccess(post); }
+                                            })
+                                            .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                                                @Override public void onFailure(@NonNull Exception error) { callback.onError(error); }
+                                            });
+                                }
+                            });
+                        } catch (final Exception error) {
+                            MAIN_HANDLER.post(new Runnable() {
+                                @Override public void run() { callback.onError(error); }
+                            });
+                        }
+                    }
+                });
+            }
+
+            @Override public void onError(Exception error) { callback.onError(error); }
+        });
+    }
+
     // F17: Xóa bài viết (Chỉ tác giả)
     public void deletePost(String currentUserId, String postId, Callback<Void> callback) {
         if (currentUserId == null || postId == null) {
@@ -494,9 +579,7 @@ public class PostService {
         int batchSize = Math.max(20, Math.min(50, limit));
         Query query = db.collection("posts").orderBy("createdAt", Query.Direction.DESCENDING).limit(batchSize);
         if (cursor != null) query = query.startAfter(cursor);
-        query.get().addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.QuerySnapshot>() {
-        @Override
-        public void onSuccess(com.google.firebase.firestore.QuerySnapshot snapshot) {
+        query.get().addOnSuccessListener(snapshot -> {
             List<DocumentSnapshot> documents = snapshot.getDocuments();
             List<Post> raw = new ArrayList<>();
             for (DocumentSnapshot doc : documents) {

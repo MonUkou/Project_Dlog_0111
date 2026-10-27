@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dlog_surface">
+
+    <include
+        android:id="@+id/bottomNavView"
+        layout="@layout/inc_nav_rail"
+        android:layout_width="64dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true" />
+
+    <LinearLayout
+        android:id="@+id/searchContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_toStartOf="@id/bottomNavView"
+        android:orientation="vertical">
+        <LinearLayout
+            android:id="@+id/headerSearch"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@color/dlog_surface"
+            android:elevation="2dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp">
+            <EditText
+                android:id="@+id/etSearch"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_rounded_edittext"
+                android:hint="Tìm tài khoản hoặc #hashtag"
+                android:inputType="text"
+                android:paddingHorizontal="14dp"
+                android:textColor="@color/dlog_navy"
+                android:textColorHint="@color/dlog_muted_blue"
+                android:textSize="14sp" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/searchModes"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@color/dlog_surface"
+            android:orientation="horizontal">
+            <TextView android:id="@+id/tabSearchUsers" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:gravity="center" android:text="Tài khoản" android:textColor="@color/dlog_blue" android:textSize="14sp" android:textStyle="bold" />
+            <TextView android:id="@+id/tabSearchTags" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:gravity="center" android:text="Ảnh / Hashtag" android:textColor="@color/dlog_muted_blue" android:textSize="14sp" />
+        </LinearLayout>
+        <View android:id="@+id/dividerSearch" android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dlog_feed_divider" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+                <HorizontalScrollView android:id="@+id/tagSuggestionsScroll" android:layout_width="match_parent" android:layout_height="48dp" android:scrollbars="none" android:visibility="gone">
+                    <LinearLayout android:id="@+id/tagSuggestions" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="12dp" />
+                </HorizontalScrollView>
+                <LinearLayout android:id="@+id/photoSortBar" android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="12dp" android:visibility="gone">
+                    <TextView android:id="@+id/sortNewest" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:gravity="center" android:text="Mới nhất" android:textColor="@color/dlog_blue" android:textStyle="bold" />
+                    <TextView android:id="@+id/sortOldest" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:gravity="center" android:text="Cũ nhất" android:textColor="@color/dlog_muted_blue" />
+                    <TextView android:id="@+id/sortPopular" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:gravity="center" android:text="Phổ biến" android:textColor="@color/dlog_muted_blue" />
+                </LinearLayout>
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSearchResults" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+                <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvTagPosts" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone" />
+            </LinearLayout>
+            <ProgressBar android:id="@+id/progressBarSearch" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+            <TextView android:id="@+id/tvEmptySearch" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:text="Nhập từ khóa để tìm kiếm" android:textColor="@color/dlog_muted_blue" android:textSize="15sp" />
+        </FrameLayout>
+    </LinearLayout>
+</RelativeLayout>

@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="120dp"
     android:layout_margin="1dp"
-    android:background="#ECECEC">
+    android:background="@color/dlog_feed_image_placeholder">
 
     <ImageView
         android:id="@+id/ivGridImage"
@@ -18,7 +18,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="Ảnh"
-        android:textColor="#888888"
+        android:textColor="@color/dlog_muted"
         android:textSize="14sp" />
 
 </FrameLayout>

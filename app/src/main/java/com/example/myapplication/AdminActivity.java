@@ -352,14 +352,6 @@ public class AdminActivity extends AppCompatActivity {
         row.addView(createTextColumn(caption, author,
                 hidden ? "Đã ẩn" : likes + " lượt thích · " + comments + " bình luận",
                 hidden ? MUTED : BLUE));
-        row.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(AdminActivity.this, PostDetailActivity.class);
-                intent.putExtra(PostDetailActivity.EXTRA_POST_ID, doc.getId());
-                startActivity(intent);
-            }
-        });
         row.addView(actionMenu(doc, "posts", caption, hidden));
         content.addView(row);
     }
@@ -504,8 +496,30 @@ public class AdminActivity extends AppCompatActivity {
 
     private void addReportRow(DocumentSnapshot doc) {
         LinearLayout row = createRow();
-        row.addView(createTextColumn(firstValue(doc, "title", "type", "reason"),
-                firstValue(doc, "description", "message"), "Mã: " + doc.getId(), RED));
+        final String postId = doc.getString("postId");
+        String imageUrl = doc.getString("imageUrl");
+        if ("image".equals(doc.getString("type")) && imageUrl != null && !imageUrl.isEmpty()) {
+            ImageView image = new ImageView(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(70), dp(70));
+            params.setMarginEnd(dp(12));
+            image.setLayoutParams(params);
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setContentDescription("Ảnh bị báo cáo");
+            Glide.with(this).load(imageUrl).centerCrop().into(image);
+            row.addView(image);
+        }
+        Long imageIndex = doc.getLong("imageIndex");
+        String title = "image".equals(doc.getString("type"))
+                ? "Ảnh " + (imageIndex == null ? 1 : imageIndex + 1) + " bị báo cáo"
+                : firstValue(doc, "title", "type", "reason");
+        String details = "image".equals(doc.getString("type"))
+                ? firstValue(doc, "reason") + " · Người báo cáo: " + firstValue(doc, "reporterId")
+                : firstValue(doc, "description", "message");
+        row.addView(createTextColumn(title, details,
+                postId == null ? "Mã: " + doc.getId() : "Nội dung: " + postId, RED));
+        if (postId != null && !postId.isEmpty()) {
+            row.setContentDescription("Nội dung có ảnh bị báo cáo: " + postId);
+        }
         content.addView(row);
     }
 

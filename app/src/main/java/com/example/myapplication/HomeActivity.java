@@ -262,7 +262,7 @@ public class HomeActivity extends AppCompatActivity {
             if (!saved.isEmpty()) {
                 postAdapter.setPosts(saved);
                 tvStateFeed.setVisibility(View.GONE);
-                tvOfflineFeed.setText("Đang kiểm tra dữ liệu mới…");
+                tvOfflineFeed.setText("SQLite · Đang hiển thị bảng tin đã lưu và kiểm tra dữ liệu mới…");
                 tvOfflineFeed.setVisibility(View.VISIBLE);
             }
         }
@@ -341,8 +341,8 @@ public class HomeActivity extends AppCompatActivity {
                         }
                         if (postAdapter.getItemCount() > 0) {
                             tvOfflineFeed.setText(isRefresh
-                                    ? "Ngoại tuyến · Đang xem dữ liệu đã lưu"
-                                    : "Ngoại tuyến · Đã hết nội dung lưu trên máy");
+                                    ? "Ngoại tuyến · Bảng tin đang đọc từ SQLite"
+                                    : "Ngoại tuyến · Đã hết các trang lưu trong SQLite");
                             tvOfflineFeed.setVisibility(View.VISIBLE);
                             return;
                         }
@@ -389,6 +389,12 @@ public class HomeActivity extends AppCompatActivity {
         super.onResume();
         loadDrawerUser();
         loadPeople();
+        if (getSharedPreferences("dlog_ui", MODE_PRIVATE)
+                .getBoolean("refresh_feed_after_edit", false)) {
+            getSharedPreferences("dlog_ui", MODE_PRIVATE).edit()
+                    .remove("refresh_feed_after_edit").apply();
+            loadFeedPosts(true);
+        }
         // Keep this call here so the bottom navigation is re-selected after returning from another screen.
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.FEED);
     }

@@ -2,15 +2,15 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/dlog_surface">
 
     <!-- Header / Search input -->
     <LinearLayout
         android:id="@+id/headerSearch"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="@dimen/search_header_height"
         android:padding="10dp"
-        android:background="@color/white"
+        android:background="@color/dlog_surface"
         android:elevation="2dp"
         android:gravity="center_vertical">
 
@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/bg_rounded_edittext"
-            android:hint="Tìm kiếm người dùng..."
+            android:hint="Tìm tài khoản hoặc #hashtag"
             android:inputType="text"
             android:paddingHorizontal="14dp"
             android:textColor="@color/dlog_navy"
@@ -27,11 +27,30 @@
             android:textSize="15sp" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/searchModes"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_below="@id/headerSearch"
+        android:orientation="horizontal"
+        android:background="@color/dlog_surface">
+        <TextView android:id="@+id/tabSearchUsers" android:layout_width="0dp"
+            android:layout_height="match_parent" android:layout_weight="1"
+            android:gravity="center" android:text="Tài khoản" android:textSize="14sp"
+            android:textStyle="bold" android:textColor="@color/dlog_blue"
+            android:background="?attr/selectableItemBackground" />
+        <TextView android:id="@+id/tabSearchTags" android:layout_width="0dp"
+            android:layout_height="match_parent" android:layout_weight="1"
+            android:gravity="center" android:text="Ảnh / Hashtag" android:textSize="14sp"
+            android:textColor="@color/dlog_muted_blue"
+            android:background="?attr/selectableItemBackground" />
+    </LinearLayout>
+
     <View
         android:id="@+id/dividerSearch"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_below="@id/headerSearch"
+        android:layout_below="@id/searchModes"
         android:background="@color/dlog_feed_divider" />
 
     <!-- Bottom Navigation -->
@@ -39,7 +58,7 @@
         android:id="@+id/bottomNavView"
         layout="@layout/inc_bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="@dimen/bottom_nav_height"
         android:layout_alignParentBottom="true" />
 
     <!-- Search Results List -->
@@ -49,10 +68,45 @@
         android:layout_below="@id/dividerSearch"
         android:layout_above="@id/bottomNavView">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvSearchResults"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+            android:orientation="vertical">
+            <HorizontalScrollView android:id="@+id/tagSuggestionsScroll"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:fillViewport="false" android:scrollbars="none" android:visibility="gone">
+                <LinearLayout android:id="@+id/tagSuggestions"
+                    android:layout_width="wrap_content" android:layout_height="match_parent"
+                    android:gravity="center_vertical" android:orientation="horizontal"
+                    android:paddingHorizontal="12dp" />
+            </HorizontalScrollView>
+            <LinearLayout android:id="@+id/photoSortBar"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:paddingHorizontal="12dp" android:visibility="gone">
+                <TextView android:id="@+id/sortNewest" android:layout_width="0dp"
+                    android:layout_height="48dp" android:layout_weight="1"
+                    android:gravity="center" android:text="Mới nhất"
+                    android:textColor="@color/dlog_blue" android:textStyle="bold"
+                    android:background="?attr/selectableItemBackground" />
+                <TextView android:id="@+id/sortOldest" android:layout_width="0dp"
+                    android:layout_height="48dp" android:layout_weight="1"
+                    android:gravity="center" android:text="Cũ nhất"
+                    android:textColor="@color/dlog_muted_blue"
+                    android:background="?attr/selectableItemBackground" />
+                <TextView android:id="@+id/sortPopular" android:layout_width="0dp"
+                    android:layout_height="48dp" android:layout_weight="1"
+                    android:gravity="center" android:text="Phổ biến"
+                    android:textColor="@color/dlog_muted_blue"
+                    android:background="?attr/selectableItemBackground" />
+            </LinearLayout>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvSearchResults"
+                android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvTagPosts"
+                android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" android:visibility="gone" />
+        </LinearLayout>
 
         <ProgressBar
             android:id="@+id/progressBarSearch"

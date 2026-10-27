@@ -3,13 +3,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/dlog_feed_background">
+    android:background="@color/dlog_chat_background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:gravity="center_vertical"
-        android:background="@android:color/white"
+        android:background="@color/dlog_chat_toolbar"
         android:elevation="2dp"
         android:paddingHorizontal="12dp">
         <ImageView

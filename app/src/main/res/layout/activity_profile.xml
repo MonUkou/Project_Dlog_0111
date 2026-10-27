@@ -149,6 +149,18 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/tvOfflineProfile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/dlog_border"
+                android:gravity="center"
+                android:padding="8dp"
+                android:text="Ngoại tuyến · Đang xem dữ liệu SQLite"
+                android:textColor="@color/dlog_navy"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/llProfileTabs"
                 android:layout_width="match_parent"

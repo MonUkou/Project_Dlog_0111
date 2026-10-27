@@ -25,4 +25,11 @@
     <color name="dlog_brand_caption_bg">#E616263B</color>
     <color name="dlog_scrim">#B00B1728</color>
     <color name="dlog_drawer">#102540</color>
+    <color name="dlog_chat_background">#081424</color>
+    <color name="dlog_chat_toolbar">#16263B</color>
+    <color name="dlog_chat_composer">#16263B</color>
+    <color name="dlog_chat_bubble_mine">#356FB8</color>
+    <color name="dlog_chat_bubble_theirs">#223650</color>
+    <color name="dlog_chat_bubble_mine_text">#FFFFFFFF</color>
+    <color name="dlog_chat_bubble_theirs_text">#F1F6FF</color>
 </resources>
