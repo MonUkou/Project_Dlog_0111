@@ -5,7 +5,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -17,20 +19,29 @@ import androidx.annotation.NonNull;
 
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.SavedPost;
+import com.example.myapplication.util.FeedPageSelector;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.storage.FirebaseStorage;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
@@ -79,7 +90,7 @@ public class PostService {
     }
 
     /** Stage provider/resource URIs before uploading profile images. */
-    public void uploadProfileImage(String uid, String kind, Uri uri, Context context, Callback<String> callback) {
+    public void uploadProfileImage(String uid, String kind, final Uri uri, Context context, final Callback<String> callback) {
         if (uid == null || uid.isEmpty() || !("avatars".equals(kind) || "covers".equals(kind))) {
             callback.onError(new IllegalArgumentException("Vui lòng đăng nhập lại.")); return;
         }
@@ -107,7 +118,7 @@ public class PostService {
 
     // F15: Đăng bài viết với một hoặc nhiều ảnh.
     public void createPost(final String authorId, final String caption, final List<Uri> imageUris,
-                           final List<String> hashtags, final Context context, final Callback<Post> callback) {
+                           final List<String> hashtags, Context context, final Callback<Post> callback) {
         if (authorId == null || authorId.trim().isEmpty() || imageUris == null || imageUris.isEmpty()
                 || imageUris.size() > 10) {
             callback.onError(new IllegalArgumentException("Chọn từ 1 đến 10 ảnh để đăng."));
@@ -130,7 +141,7 @@ public class PostService {
                             try { urls.add(CloudinaryUploader.upload(app, file, mime)); }
                             finally { file.delete(); }
                         } catch (Exception imageError) {
-                            throw new java.io.IOException("Ảnh " + (index + 1) + "/" + imageUris.size()
+                            throw new IOException("Ảnh " + (index + 1) + "/" + imageUris.size()
                                     + ": " + imageError.getMessage(), imageError);
                         }
                     }
@@ -152,18 +163,18 @@ public class PostService {
     private File copyImageToCache(Context context, Uri imageUri, String postId, String mimeType) throws Exception {
         File cacheDirectory = new File(context.getCacheDir(), "post_uploads");
         if (!cacheDirectory.exists() && !cacheDirectory.mkdirs()) {
-            throw new java.io.IOException("Không thể tạo vùng đệm tạm để tải ảnh.");
+            throw new IOException("Không thể tạo vùng đệm tạm để tải ảnh.");
         }
         File stagedImage = new File(cacheDirectory, postId + "_" + UUID.randomUUID() + extensionForMimeType(mimeType));
         try (InputStream input = context.getContentResolver().openInputStream(imageUri);
              OutputStream output = new FileOutputStream(stagedImage)) {
-            if (input == null) throw new java.io.IOException("Nguồn ảnh không mở được. Hãy tải ảnh từ Drive xuống máy rồi chọn lại.");
+            if (input == null) throw new IOException("Nguồn ảnh không mở được. Hãy tải ảnh từ Drive xuống máy rồi chọn lại.");
             byte[] buffer = new byte[64 * 1024];
             int count;
             long total = 0;
             while ((count = input.read(buffer)) != -1) {
                 total += count;
-                if (total > 20L * 1024 * 1024) throw new java.io.IOException("Ảnh vượt quá 20 MB. Vui lòng chọn ảnh nhỏ hơn.");
+                if (total > 20L * 1024 * 1024) throw new IOException("Ảnh vượt quá 20 MB. Vui lòng chọn ảnh nhỏ hơn.");
                 output.write(buffer, 0, count);
             }
             output.flush();
@@ -176,7 +187,7 @@ public class PostService {
         if (!stagedImage.isFile() || stagedImage.length() == 0) {
             //noinspection ResultOfMethodCallIgnored
             stagedImage.delete();
-            throw new java.io.IOException("Ảnh tải từ Drive bị rỗng. Hãy tải ảnh xuống máy trước rồi chọn lại.");
+            throw new IOException("Ảnh tải từ Drive bị rỗng. Hãy tải ảnh xuống máy trước rồi chọn lại.");
         }
         optimizeImage(stagedImage, mimeType);
         return stagedImage;
@@ -210,12 +221,12 @@ public class PostService {
 
         if ("image/jpeg".equals(mimeType)) {
             try {
-                android.media.ExifInterface exif = new android.media.ExifInterface(source.getAbsolutePath());
-                int orientation = exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION,
-                        android.media.ExifInterface.ORIENTATION_NORMAL);
-                float degrees = orientation == android.media.ExifInterface.ORIENTATION_ROTATE_90 ? 90f
-                        : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_180 ? 180f
-                        : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_270 ? 270f : 0f;
+                ExifInterface exif = new ExifInterface(source.getAbsolutePath());
+                int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_NORMAL);
+                float degrees = orientation == ExifInterface.ORIENTATION_ROTATE_90 ? 90f
+                        : orientation == ExifInterface.ORIENTATION_ROTATE_180 ? 180f
+                        : orientation == ExifInterface.ORIENTATION_ROTATE_270 ? 270f : 0f;
                 if (degrees != 0f) {
                     Matrix matrix = new Matrix();
                     matrix.postRotate(degrees);
@@ -234,13 +245,13 @@ public class PostService {
         int quality = format == Bitmap.CompressFormat.PNG ? 100 : 84;
         try (FileOutputStream output = new FileOutputStream(optimized)) {
             if (!working.compress(format, quality, output)) {
-                throw new java.io.IOException("Không thể tối ưu ảnh trước khi tải lên.");
+                throw new IOException("Không thể tối ưu ảnh trước khi tải lên.");
             }
         } finally {
             working.recycle();
         }
         if (optimized.length() > 0 && (!source.delete() || !optimized.renameTo(source))) {
-            try (InputStream input = new java.io.FileInputStream(optimized);
+            try (InputStream input = new FileInputStream(optimized);
                  OutputStream output = new FileOutputStream(source)) {
                 byte[] buffer = new byte[64 * 1024];
                 int count;
@@ -252,7 +263,7 @@ public class PostService {
 
     private String extensionForMimeType(String mimeType) {
         String subtype = mimeType == null || mimeType.lastIndexOf('/') < 0
-                ? "" : mimeType.substring(mimeType.lastIndexOf('/') + 1).toLowerCase(java.util.Locale.ROOT);
+                ? "" : mimeType.substring(mimeType.lastIndexOf('/') + 1).toLowerCase(Locale.ROOT);
         if ("png".equals(subtype)) return ".png";
         if ("webp".equals(subtype)) return ".webp";
         if ("gif".equals(subtype)) return ".gif";
@@ -272,7 +283,7 @@ public class PostService {
             }
         } catch (Exception ignored) { }
         if (displayName != null) {
-            String name = displayName.toLowerCase(java.util.Locale.ROOT);
+            String name = displayName.toLowerCase(Locale.ROOT);
             if (name.endsWith(".png")) return "image/png";
             if (name.endsWith(".webp")) return "image/webp";
             if (name.endsWith(".gif")) return "image/gif";
@@ -287,13 +298,13 @@ public class PostService {
         Map<String, String> values = new HashMap<>();
         try (InputStream input = context.getContentResolver().openInputStream(uri)) {
             if (input == null) return values;
-            android.media.ExifInterface exif = new android.media.ExifInterface(input);
-            putExif(values, "Thiết bị", exif.getAttribute(android.media.ExifInterface.TAG_MODEL));
-            putExif(values, "Hãng", exif.getAttribute(android.media.ExifInterface.TAG_MAKE));
-            putExif(values, "ISO", exif.getAttribute(android.media.ExifInterface.TAG_ISO_SPEED_RATINGS));
-            putExif(values, "Khẩu độ", exif.getAttribute(android.media.ExifInterface.TAG_F_NUMBER));
-            putExif(values, "Tiêu cự", exif.getAttribute(android.media.ExifInterface.TAG_FOCAL_LENGTH));
-            putExif(values, "Thời gian chụp", exif.getAttribute(android.media.ExifInterface.TAG_DATETIME_ORIGINAL));
+            ExifInterface exif = new ExifInterface(input);
+            putExif(values, "Thiết bị", exif.getAttribute(ExifInterface.TAG_MODEL));
+            putExif(values, "Hãng", exif.getAttribute(ExifInterface.TAG_MAKE));
+            putExif(values, "ISO", exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS));
+            putExif(values, "Khẩu độ", exif.getAttribute(ExifInterface.TAG_F_NUMBER));
+            putExif(values, "Tiêu cự", exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH));
+            putExif(values, "Thời gian chụp", exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL));
         } catch (Exception ignored) { }
         return values;
     }
@@ -315,15 +326,15 @@ public class PostService {
             for (int y = 0; y < bitmap.getHeight(); y += stepY) {
                 for (int x = 0; x < bitmap.getWidth(); x += stepX) {
                     int color = bitmap.getPixel(x, y);
-                    red += android.graphics.Color.red(color);
-                    green += android.graphics.Color.green(color);
-                    blue += android.graphics.Color.blue(color);
+                    red += Color.red(color);
+                    green += Color.green(color);
+                    blue += Color.blue(color);
                     count++;
                 }
             }
             bitmap.recycle();
             float[] hsv = new float[3];
-            android.graphics.Color.RGBToHSV((int) (red / count), (int) (green / count), (int) (blue / count), hsv);
+            Color.RGBToHSV((int) (red / count), (int) (green / count), (int) (blue / count), hsv);
             if (hsv[1] < 0.16f) return "don_sac";
             if (hsv[1] > 0.58f) return "ruc_ro";
             if (hsv[0] < 75f || hsv[0] > 330f) return "am";
@@ -332,10 +343,10 @@ public class PostService {
         return "trung_tinh";
     }
 
-    private void savePostToFirestore(String postId, String authorId, String caption, String imageUrl,
+    private void savePostToFirestore(String postId, final String authorId, String caption, String imageUrl,
                                      List<String> imageUrls, List<String> hashtags,
-                                     List<Map<String, String>> photoMetadata, String colorTone, Callback<Post> callback) {
-        Post post = new Post();
+                                     List<Map<String, String>> photoMetadata, String colorTone, final Callback<Post> callback) {
+        final Post post = new Post();
         post.setId(postId);
         post.setAuthorId(authorId);
         post.setCaption(caption != null ? caption.trim() : "");
@@ -349,7 +360,7 @@ public class PostService {
 
         // Fetch author's username and avatar to cache in post if available
         db.collection("users").document(authorId).get()
-                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<DocumentSnapshot>() {
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override public void onSuccess(DocumentSnapshot userDoc) {
                         if (userDoc.exists()) {
                             String username = userDoc.getString("username");
@@ -362,7 +373,7 @@ public class PostService {
                         savePostToFirestoreInternal(post, callback);
                     }
                 })
-                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                .addOnFailureListener(new OnFailureListener() {
                     @Override public void onFailure(@NonNull Exception error) {
                         post.setAuthorUsername(authorId);
                         savePostToFirestoreInternal(post, callback);
@@ -370,27 +381,27 @@ public class PostService {
                 });
     }
 
-    private void savePostToFirestoreInternal(Post post, Callback<Post> callback) {
+    private void savePostToFirestoreInternal(final Post post, final Callback<Post> callback) {
         if (!post.validate()) {
             callback.onError(new IllegalArgumentException("Dữ liệu bài viết không hợp lệ."));
             return;
         }
 
         db.collection("posts").document(post.getId()).set(post.toMap())
-                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override public void onSuccess(Void unused) {
                         db.collection("users").document(post.getAuthorId())
                                 .update("postsCount", FieldValue.increment(1));
                         callback.onSuccess(post);
                     }
                 })
-                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                .addOnFailureListener(new OnFailureListener() {
                     @Override public void onFailure(@NonNull Exception error) { callback.onError(error); }
                 });
     }
 
     // F16: Sửa bài viết (Chỉ tác giả)
-    public void updatePost(String currentUserId, String postId, String newCaption, Callback<Post> callback) {
+    public void updatePost(final String currentUserId, String postId, final String newCaption, final Callback<Post> callback) {
         if (currentUserId == null || postId == null) {
             callback.onError(new IllegalArgumentException("Tham số không hợp lệ."));
             return;
@@ -398,7 +409,7 @@ public class PostService {
 
         getPostDetail(postId, new Callback<Post>() {
             @Override
-            public void onSuccess(Post post) {
+            public void onSuccess(final Post post) {
                 if (!currentUserId.equals(post.getAuthorId())) {
                     callback.onError(new SecurityException("Bạn không có quyền chỉnh sửa bài viết này."));
                     return;
@@ -407,10 +418,14 @@ public class PostService {
                 post.setCaption(newCaption != null ? newCaption.trim() : "");
                 post.touch();
 
-                db.collection("posts").document(postId)
+                db.collection("posts").document(post.getId())
                         .update("caption", post.getCaption(), "updatedAt", post.getUpdatedAt())
-                        .addOnSuccessListener(aVoid -> callback.onSuccess(post))
-                        .addOnFailureListener(callback::onError);
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override public void onSuccess(Void aVoid) { callback.onSuccess(post); }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                        });
             }
 
             @Override
@@ -423,7 +438,7 @@ public class PostService {
     /** Lưu lại bộ ảnh hiện có cùng ảnh mới, giữ nguyên ID và các lượt tương tác. */
     public void updatePostWithImages(final String currentUserId, final String postId,
                                      final String caption, final List<Uri> imageUris,
-                                     final List<String> hashtags, final Context context,
+                                     final List<String> hashtags, Context context,
                                      final Callback<Post> callback) {
         if (currentUserId == null || currentUserId.isEmpty() || postId == null || postId.isEmpty()
                 || imageUris == null || imageUris.isEmpty() || imageUris.size() > 10) {
@@ -484,10 +499,10 @@ public class PostService {
                                             "imageUrl", post.getImageUrl(),
                                             "photoMetadata", post.getPhotoMetadata(),
                                             "updatedAt", post.getUpdatedAt())
-                                            .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
                                                 @Override public void onSuccess(Void unused) { callback.onSuccess(post); }
                                             })
-                                            .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                                            .addOnFailureListener(new OnFailureListener() {
                                                 @Override public void onFailure(@NonNull Exception error) { callback.onError(error); }
                                             });
                                 }
@@ -506,7 +521,7 @@ public class PostService {
     }
 
     // F17: Xóa bài viết (Chỉ tác giả)
-    public void deletePost(String currentUserId, String postId, Callback<Void> callback) {
+    public void deletePost(final String currentUserId, final String postId, final Callback<Void> callback) {
         if (currentUserId == null || postId == null) {
             callback.onError(new IllegalArgumentException("Tham số không hợp lệ."));
             return;
@@ -514,7 +529,7 @@ public class PostService {
 
         getPostDetail(postId, new Callback<Post>() {
             @Override
-            public void onSuccess(Post post) {
+            public void onSuccess(final Post post) {
                 if (!currentUserId.equals(post.getAuthorId())) {
                     callback.onError(new SecurityException("Bạn không có quyền xóa bài viết này."));
                     return;
@@ -522,19 +537,23 @@ public class PostService {
 
                 db.collection("posts").document(postId)
                         .delete()
-                        .addOnSuccessListener(aVoid -> {
-                            db.collection("users").document(post.getAuthorId())
-                                    .update("postsCount", FieldValue.increment(-1));
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override public void onSuccess(Void aVoid) {
+                                db.collection("users").document(post.getAuthorId())
+                                        .update("postsCount", FieldValue.increment(-1));
 
-                            if (post.getImageUrl() != null && post.getImageUrl().contains("firebasestorage")) {
-                                try {
-                                    storage.getReferenceFromUrl(post.getImageUrl()).delete();
-                                } catch (Exception ignored) {}
+                                if (post.getImageUrl() != null && post.getImageUrl().contains("firebasestorage")) {
+                                    try {
+                                        storage.getReferenceFromUrl(post.getImageUrl()).delete();
+                                    } catch (Exception ignored) {}
+                                }
+
+                                callback.onSuccess(null);
                             }
-
-                            callback.onSuccess(null);
                         })
-                        .addOnFailureListener(callback::onError);
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                        });
             }
 
             @Override
@@ -545,23 +564,27 @@ public class PostService {
     }
 
     // F18: Xem chi tiết bài viết
-    public void getPostDetail(String postId, Callback<Post> callback) {
+    public void getPostDetail(String postId, final Callback<Post> callback) {
         if (postId == null || postId.trim().isEmpty()) {
             callback.onError(new IllegalArgumentException("ID bài viết không hợp lệ."));
             return;
         }
 
         db.collection("posts").document(postId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists() && documentSnapshot.getData() != null
-                            && !Boolean.TRUE.equals(documentSnapshot.getBoolean("hidden"))) {
-                        Post post = Post.fromMap(documentSnapshot.getData());
-                        callback.onSuccess(post);
-                    } else {
-                        callback.onError(new Exception("Bài viết không tồn tại."));
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        if (documentSnapshot.exists() && documentSnapshot.getData() != null
+                                && !Boolean.TRUE.equals(documentSnapshot.getBoolean("hidden"))) {
+                            Post post = Post.fromMap(documentSnapshot.getData());
+                            callback.onSuccess(post);
+                        } else {
+                            callback.onError(new Exception("Bài viết không tồn tại."));
+                        }
                     }
                 })
-                .addOnFailureListener(callback::onError);
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                });
     }
 
     // F19: Chronological feed excludes the viewer, including across page boundaries.
@@ -571,38 +594,42 @@ public class PostService {
 
     public void getFeedPosts(String viewerId, DocumentSnapshot lastVisible, int limit, Callback<FeedResult> callback) {
         if (limit <= 0) { callback.onError(new IllegalArgumentException("Giới hạn bài viết không hợp lệ.")); return; }
-        collectFeedPage(viewerId, lastVisible, limit, new ArrayList<>(), callback);
+        collectFeedPage(viewerId, lastVisible, limit, new ArrayList<Post>(), callback);
     }
 
-    private void collectFeedPage(String viewerId, DocumentSnapshot cursor, int limit,
-                                 List<Post> visible, Callback<FeedResult> callback) {
-        int batchSize = Math.max(20, Math.min(50, limit));
+    private void collectFeedPage(final String viewerId, final DocumentSnapshot cursor, final int limit,
+                                 final List<Post> visible, final Callback<FeedResult> callback) {
+        final int batchSize = Math.max(20, Math.min(50, limit));
         Query query = db.collection("posts").orderBy("createdAt", Query.Direction.DESCENDING).limit(batchSize);
         if (cursor != null) query = query.startAfter(cursor);
-        query.get().addOnSuccessListener(snapshot -> {
-            List<DocumentSnapshot> documents = snapshot.getDocuments();
-            List<Post> raw = new ArrayList<>();
-            for (DocumentSnapshot doc : documents) {
-                Post post = doc.getData() == null ? null : Post.fromMap(doc.getData());
-                if (post != null) post.setId(doc.getId());
-                raw.add(post);
+        query.get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+            @Override public void onSuccess(QuerySnapshot snapshot) {
+                List<DocumentSnapshot> documents = snapshot.getDocuments();
+                List<Post> raw = new ArrayList<>();
+                for (DocumentSnapshot doc : documents) {
+                    Post post = doc.getData() == null ? null : Post.fromMap(doc.getData());
+                    if (post != null) post.setId(doc.getId());
+                    raw.add(post);
+                }
+                FeedPageSelector.Selection selection =
+                        FeedPageSelector.select(raw, viewerId, limit - visible.size());
+                visible.addAll(selection.posts);
+                DocumentSnapshot next = selection.lastConsumedIndex < 0 ? cursor : documents.get(selection.lastConsumedIndex);
+                boolean hasMore = selection.hasUnreadItems || documents.size() == batchSize;
+                if (visible.size() < limit && hasMore) {
+                    // An entire raw page can belong to the viewer. Continue instead of showing a false empty feed.
+                    collectFeedPage(viewerId, next, limit, visible, callback);
+                } else {
+                    callback.onSuccess(new FeedResult(visible, next, hasMore));
+                }
             }
-            com.example.myapplication.util.FeedPageSelector.Selection selection =
-                    com.example.myapplication.util.FeedPageSelector.select(raw, viewerId, limit - visible.size());
-            visible.addAll(selection.posts);
-            DocumentSnapshot next = selection.lastConsumedIndex < 0 ? cursor : documents.get(selection.lastConsumedIndex);
-            boolean hasMore = selection.hasUnreadItems || documents.size() == batchSize;
-            if (visible.size() < limit && hasMore) {
-                // An entire raw page can belong to the viewer. Continue instead of showing a false empty feed.
-                collectFeedPage(viewerId, next, limit, visible, callback);
-            } else {
-                callback.onSuccess(new FeedResult(visible, next, hasMore));
-            }
-        }).addOnFailureListener(callback::onError);
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+        });
     }
 
     // F20: Xem bài viết của một người dùng
-    public void getPostsByUserId(String userId, Callback<List<Post>> callback) {
+    public void getPostsByUserId(final String userId, final Callback<List<Post>> callback) {
         if (userId == null || userId.trim().isEmpty()) {
             callback.onError(new IllegalArgumentException("ID người dùng không hợp lệ."));
             return;
@@ -612,34 +639,46 @@ public class PostService {
                 .whereEqualTo("authorId", userId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Post> posts = new ArrayList<>();
-                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
-                        if (doc.getData() != null) {
-                            Post post = Post.fromMap(doc.getData());
-                            if (post != null && !post.isHidden()) {
-                                posts.add(post);
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                        List<Post> posts = new ArrayList<>();
+                        for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                            if (doc.getData() != null) {
+                                Post post = Post.fromMap(doc.getData());
+                                if (post != null && !post.isHidden()) {
+                                    posts.add(post);
+                                }
                             }
                         }
+                        callback.onSuccess(posts);
                     }
-                    callback.onSuccess(posts);
                 })
-                .addOnFailureListener(e -> {
-                    db.collection("posts")
-                            .whereEqualTo("authorId", userId)
-                            .get()
-                            .addOnSuccessListener(queryDocumentSnapshots2 -> {
-                                List<Post> posts = new ArrayList<>();
-                                for (DocumentSnapshot doc : queryDocumentSnapshots2.getDocuments()) {
-                                    if (doc.getData() != null) {
-                                        Post post = Post.fromMap(doc.getData());
-                                        if (post != null && !post.isHidden()) posts.add(post);
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) {
+                        db.collection("posts")
+                                .whereEqualTo("authorId", userId)
+                                .get()
+                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                    @Override public void onSuccess(QuerySnapshot queryDocumentSnapshots2) {
+                                        List<Post> posts = new ArrayList<>();
+                                        for (DocumentSnapshot doc : queryDocumentSnapshots2.getDocuments()) {
+                                            if (doc.getData() != null) {
+                                                Post post = Post.fromMap(doc.getData());
+                                                if (post != null && !post.isHidden()) posts.add(post);
+                                            }
+                                        }
+                                        Collections.sort(posts, new Comparator<Post>() {
+                                            @Override public int compare(Post p1, Post p2) {
+                                                return Long.compare(p2.getCreatedAt(), p1.getCreatedAt());
+                                            }
+                                        });
+                                        callback.onSuccess(posts);
                                     }
-                                }
-                                posts.sort((p1, p2) -> Long.compare(p2.getCreatedAt(), p1.getCreatedAt()));
-                                callback.onSuccess(posts);
-                            })
-                            .addOnFailureListener(callback::onError);
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override public void onFailure(@NonNull Exception error) { callback.onError(error); }
+                                });
+                    }
                 });
     }
 
@@ -648,46 +687,56 @@ public class PostService {
         savePost(userId, postId, "Chung", callback);
     }
 
-    public void savePost(String userId, String postId, String collectionName, Callback<SavedPost> callback) {
+    public void savePost(final String userId, final String postId, final String collectionName, final Callback<SavedPost> callback) {
         if (userId == null || postId == null) {
             callback.onError(new IllegalArgumentException("Tham số không hợp lệ."));
             return;
         }
 
-        String docId = userId + "_" + postId;
+        final String docId = userId + "_" + postId;
 
         db.collection("saved_posts").document(docId).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists() && doc.getData() != null) {
-                        SavedPost existing = SavedPost.fromMap(doc.getData());
-                        existing.setCollectionName(collectionName);
-                        db.collection("saved_posts").document(docId).set(existing.toMap())
-                                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
-                                    @Override public void onSuccess(Void unused) { callback.onSuccess(existing); }
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot doc) {
+                        if (doc.exists() && doc.getData() != null) {
+                            final SavedPost existing = SavedPost.fromMap(doc.getData());
+                            existing.setCollectionName(collectionName);
+                            db.collection("saved_posts").document(docId).set(existing.toMap())
+                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                        @Override public void onSuccess(Void unused) { callback.onSuccess(existing); }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override public void onFailure(@NonNull Exception error) { callback.onError(error); }
+                                    });
+                            return;
+                        }
+
+                        final SavedPost savedPost = new SavedPost(userId, postId);
+                        savedPost.setId(docId);
+                        savedPost.setCollectionName(collectionName);
+
+                        if (!savedPost.validate()) {
+                            callback.onError(new IllegalArgumentException("Dữ liệu lưu bài viết không hợp lệ."));
+                            return;
+                        }
+
+                        db.collection("saved_posts").document(docId)
+                                .set(savedPost.toMap())
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override public void onSuccess(Void aVoid) { callback.onSuccess(savedPost); }
                                 })
-                                .addOnFailureListener(callback::onError);
-                        return;
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                                });
                     }
-
-                    SavedPost savedPost = new SavedPost(userId, postId);
-                    savedPost.setId(docId);
-                    savedPost.setCollectionName(collectionName);
-
-                    if (!savedPost.validate()) {
-                        callback.onError(new IllegalArgumentException("Dữ liệu lưu bài viết không hợp lệ."));
-                        return;
-                    }
-
-                    db.collection("saved_posts").document(docId)
-                            .set(savedPost.toMap())
-                            .addOnSuccessListener(aVoid -> callback.onSuccess(savedPost))
-                            .addOnFailureListener(callback::onError);
                 })
-                .addOnFailureListener(callback::onError);
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                });
     }
 
     // F22: Bỏ lưu bài viết
-    public void unsavePost(String userId, String postId, Callback<Void> callback) {
+    public void unsavePost(String userId, String postId, final Callback<Void> callback) {
         if (userId == null || postId == null) {
             callback.onError(new IllegalArgumentException("Tham số không hợp lệ."));
             return;
@@ -696,12 +745,16 @@ public class PostService {
         String docId = userId + "_" + postId;
         db.collection("saved_posts").document(docId)
                 .delete()
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
-                .addOnFailureListener(callback::onError);
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override public void onSuccess(Void aVoid) { callback.onSuccess(null); }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                });
     }
 
     // Kiểm tra bài viết đã lưu chưa
-    public void isPostSaved(String userId, String postId, Callback<Boolean> callback) {
+    public void isPostSaved(String userId, String postId, final Callback<Boolean> callback) {
         if (userId == null || postId == null) {
             callback.onSuccess(false);
             return;
@@ -709,12 +762,16 @@ public class PostService {
 
         String docId = userId + "_" + postId;
         db.collection("saved_posts").document(docId).get()
-                .addOnSuccessListener(doc -> callback.onSuccess(doc.exists()))
-                .addOnFailureListener(e -> callback.onSuccess(false));
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot doc) { callback.onSuccess(doc.exists()); }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) { callback.onSuccess(false); }
+                });
     }
 
     // F23: Danh sách bài viết đã lưu
-    public void getSavedPosts(String userId, Callback<List<Post>> callback) {
+    public void getSavedPosts(String userId, final Callback<List<Post>> callback) {
         if (userId == null || userId.trim().isEmpty()) {
             callback.onError(new IllegalArgumentException("ID người dùng không hợp lệ."));
             return;
@@ -723,25 +780,29 @@ public class PostService {
         db.collection("saved_posts")
                 .whereEqualTo("userId", userId)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<String> postIds = new ArrayList<>();
-                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
-                        String pId = doc.getString("postId");
-                        if (pId != null) postIds.add(pId);
-                    }
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                        List<String> postIds = new ArrayList<>();
+                        for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                            String pId = doc.getString("postId");
+                            if (pId != null) postIds.add(pId);
+                        }
 
-                    if (postIds.isEmpty()) {
-                        callback.onSuccess(new ArrayList<>());
-                        return;
-                    }
+                        if (postIds.isEmpty()) {
+                            callback.onSuccess(new ArrayList<Post>());
+                            return;
+                        }
 
-                    fetchPostsByIds(postIds, callback);
+                        fetchPostsByIds(postIds, callback);
+                    }
                 })
-                .addOnFailureListener(callback::onError);
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) { callback.onError(e); }
+                });
     }
 
-    private void fetchPostsByIds(List<String> postIds, Callback<List<Post>> callback) {
-        List<Post> posts = new ArrayList<>();
+    private void fetchPostsByIds(List<String> postIds, final Callback<List<Post>> callback) {
+        final List<Post> posts = new ArrayList<>();
         final int total = postIds.size();
         final int[] remaining = {total};
 
@@ -752,7 +813,11 @@ public class PostService {
                     synchronized (posts) {
                         posts.add(post);
                         if (--remaining[0] == 0) {
-                            posts.sort((p1, p2) -> Long.compare(p2.getCreatedAt(), p1.getCreatedAt()));
+                            Collections.sort(posts, new Comparator<Post>() {
+                                @Override public int compare(Post p1, Post p2) {
+                                    return Long.compare(p2.getCreatedAt(), p1.getCreatedAt());
+                                }
+                            });
                             callback.onSuccess(posts);
                         }
                     }
@@ -771,65 +836,67 @@ public class PostService {
     }
 
     // F24: Lưu ảnh về thiết bị
-    public void saveImageToDevice(Context context, String imageUrl, Callback<String> callback) {
+    public void saveImageToDevice(final Context context, final String imageUrl, final Callback<String> callback) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             callback.onError(new IllegalArgumentException("Đường dẫn ảnh không hợp lệ."));
             return;
         }
 
-        IO_EXECUTOR.execute(() -> {
-            try {
-                Bitmap bitmap;
-                if (imageUrl.startsWith("content://") || imageUrl.startsWith("file://")) {
-                    InputStream is = context.getContentResolver().openInputStream(Uri.parse(imageUrl));
-                    bitmap = BitmapFactory.decodeStream(is);
-                    if (is != null) is.close();
-                } else {
-                    URL url = new URL(imageUrl);
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setDoInput(true);
-                    connection.connect();
-                    InputStream input = connection.getInputStream();
-                    bitmap = BitmapFactory.decodeStream(input);
-                    input.close();
-                }
-
-                if (bitmap == null) {
-                    callback.onError(new Exception("Không thể tải hình ảnh."));
-                    return;
-                }
-
-                String filename = "DLog_" + System.currentTimeMillis() + ".jpg";
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ContentValues values = new ContentValues();
-                    values.put(MediaStore.Images.Media.DISPLAY_NAME, filename);
-                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                    values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/DLog");
-
-                    Uri uri = context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-                    if (uri != null) {
-                        OutputStream out = context.getContentResolver().openOutputStream(uri);
-                        if (out != null) {
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
-                            out.close();
-                        }
-                        callback.onSuccess("Đã lưu ảnh vào Thư viện (" + filename + ")");
+        IO_EXECUTOR.execute(new Runnable() {
+            @Override public void run() {
+                try {
+                    Bitmap bitmap;
+                    if (imageUrl.startsWith("content://") || imageUrl.startsWith("file://")) {
+                        InputStream is = context.getContentResolver().openInputStream(Uri.parse(imageUrl));
+                        bitmap = BitmapFactory.decodeStream(is);
+                        if (is != null) is.close();
                     } else {
-                        callback.onError(new Exception("Không thể lưu ảnh vào thiết bị."));
+                        URL url = new URL(imageUrl);
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setDoInput(true);
+                        connection.connect();
+                        InputStream input = connection.getInputStream();
+                        bitmap = BitmapFactory.decodeStream(input);
+                        input.close();
                     }
-                } else {
-                    File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                    File dlogDir = new File(picturesDir, "DLog");
-                    if (!dlogDir.exists()) dlogDir.mkdirs();
-                    File file = new File(dlogDir, filename);
-                    FileOutputStream fos = new FileOutputStream(file);
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-                    fos.close();
-                    callback.onSuccess("Đã lưu ảnh vào " + file.getAbsolutePath());
+
+                    if (bitmap == null) {
+                        callback.onError(new Exception("Không thể tải hình ảnh."));
+                        return;
+                    }
+
+                    String filename = "DLog_" + System.currentTimeMillis() + ".jpg";
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ContentValues values = new ContentValues();
+                        values.put(MediaStore.Images.Media.DISPLAY_NAME, filename);
+                        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                        values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/DLog");
+
+                        Uri uri = context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                        if (uri != null) {
+                            OutputStream out = context.getContentResolver().openOutputStream(uri);
+                            if (out != null) {
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                                out.close();
+                            }
+                            callback.onSuccess("Đã lưu ảnh vào Thư viện (" + filename + ")");
+                        } else {
+                            callback.onError(new Exception("Không thể lưu ảnh vào thiết bị."));
+                        }
+                    } else {
+                        File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+                        File dlogDir = new File(picturesDir, "DLog");
+                        if (!dlogDir.exists()) dlogDir.mkdirs();
+                        File file = new File(dlogDir, filename);
+                        FileOutputStream fos = new FileOutputStream(file);
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                        fos.close();
+                        callback.onSuccess("Đã lưu ảnh vào " + file.getAbsolutePath());
+                    }
+                } catch (Exception e) {
+                    callback.onError(e);
                 }
-            } catch (Exception e) {
-                callback.onError(e);
             }
         });
     }
