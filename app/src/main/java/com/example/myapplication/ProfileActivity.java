@@ -108,8 +108,18 @@ public class ProfileActivity extends AppCompatActivity {
         btnProfileActionButton = findViewById(R.id.btnProfileActionButton);
         btnProfileActionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.dlog_button)));
         btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
-        findViewById(R.id.btnShowFollowers).setOnClickListener(v -> openFollowList(false));
-        findViewById(R.id.btnShowFollowing).setOnClickListener(v -> openFollowList(true));
+        findViewById(R.id.btnShowFollowers).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openFollowList(false);
+            }
+        });
+        findViewById(R.id.btnShowFollowing).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openFollowList(true);
+            }
+        });
 
         llProfileTabs = findViewById(R.id.llProfileTabs);
         tabUserPosts = findViewById(R.id.tabUserPosts);
@@ -120,8 +130,12 @@ public class ProfileActivity extends AppCompatActivity {
         tvStateProfile = findViewById(R.id.tvStateProfile);
         tvOfflineProfile = findViewById(R.id.tvOfflineProfile);
 
-        findViewById(R.id.btnProfileSettings).setOnClickListener(v ->
-                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class)));
+        findViewById(R.id.btnProfileSettings).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class));
+            }
+        });
 
         if (isSelfProfile) {
             findViewById(R.id.btnMessageProfile).setVisibility(View.GONE);
@@ -138,22 +152,40 @@ public class ProfileActivity extends AppCompatActivity {
             btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
 
             llProfileTabs.setVisibility(View.VISIBLE);
-            tabUserPosts.setOnClickListener(v -> switchTab(false));
-            tabSavedPosts.setOnClickListener(v -> switchTab(true));
+            tabUserPosts.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    switchTab(false);
+                }
+            });
+            tabSavedPosts.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    switchTab(true);
+                }
+            });
         } else {
             findViewById(R.id.btnProfileSettings).setVisibility(View.GONE);
             llProfileTabs.setVisibility(View.GONE);
             findViewById(R.id.btnMessageProfile).setVisibility(View.VISIBLE);
-            findViewById(R.id.btnMessageProfile).setOnClickListener(v -> openPrivateChat());
+            findViewById(R.id.btnMessageProfile).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    openPrivateChat();
+                }
+            });
             checkFollowStatus();
         }
 
-        btnProfileActionButton.setOnClickListener(v -> {
-            if (isSelfProfile) {
-                Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
-                startActivity(intent);
-            } else {
-                handleFollowToggle();
+        btnProfileActionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isSelfProfile) {
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    startActivity(intent);
+                } else {
+                    handleFollowToggle();
+                }
             }
         });
     }
