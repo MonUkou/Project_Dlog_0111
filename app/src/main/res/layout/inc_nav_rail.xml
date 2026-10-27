@@ -4,33 +4,58 @@
     android:layout_width="64dp"
     android:layout_height="match_parent"
     android:background="@color/dlog_surface"
+    android:clipChildren="true"
+    android:clipToPadding="true"
     android:elevation="8dp"
     android:gravity="center"
-    android:orientation="vertical"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:orientation="vertical">
 
-    <TextView
+    <Space
+        android:layout_width="64dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
         android:id="@+id/navFeed"
         style="@style/DLogNavRailIcon"
         android:contentDescription="Bảng tin"
-        android:drawableTop="@drawable/ic_home_24" />
+        android:src="@drawable/ic_home_24" />
 
-    <TextView
+    <Space
+        android:layout_width="64dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
         android:id="@+id/navSearch"
         style="@style/DLogNavRailIcon"
         android:contentDescription="Khám phá"
-        android:drawableTop="@drawable/ic_explore_24" />
+        android:src="@drawable/ic_explore_24" />
 
-    <TextView
+    <Space
+        android:layout_width="64dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
         android:id="@+id/navInbox"
         style="@style/DLogNavRailIcon"
         android:contentDescription="Hộp thư"
-        android:drawableTop="@drawable/ic_chat_24" />
+        android:src="@drawable/ic_chat_24" />
 
-    <TextView
+    <Space
+        android:layout_width="64dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
         android:id="@+id/navProfile"
         style="@style/DLogNavRailIcon"
         android:contentDescription="Hồ sơ"
-        android:drawableTop="@drawable/ic_person_outline" />
+        android:src="@drawable/ic_person_outline" />
+
+    <Space
+        android:layout_width="64dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 </LinearLayout>
