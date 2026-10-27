@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bottomNavContainer"
+    android:layout_width="64dp"
+    android:layout_height="match_parent"
+    android:background="@color/dlog_surface"
+    android:elevation="8dp"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/navFeed"
+        style="@style/DLogNavRailIcon"
+        android:contentDescription="Bảng tin"
+        android:drawableTop="@drawable/ic_home_24" />
+
+    <TextView
+        android:id="@+id/navSearch"
+        style="@style/DLogNavRailIcon"
+        android:contentDescription="Khám phá"
+        android:drawableTop="@drawable/ic_explore_24" />
+
+    <TextView
+        android:id="@+id/navInbox"
+        style="@style/DLogNavRailIcon"
+        android:contentDescription="Hộp thư"
+        android:drawableTop="@drawable/ic_chat_24" />
+
+    <TextView
+        android:id="@+id/navProfile"
+        style="@style/DLogNavRailIcon"
+        android:contentDescription="Hồ sơ"
+        android:drawableTop="@drawable/ic_person_outline" />
+</LinearLayout>

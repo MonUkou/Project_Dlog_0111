@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.User;
+import com.example.myapplication.model.Comment;
 import com.example.myapplication.util.FeedPageSelector;
 
 import org.json.JSONArray;
@@ -37,6 +38,13 @@ public final class OfflinePages extends SQLiteOpenHelper {
     private String get(String key) {
         try (Cursor cursor = getReadableDatabase().query("pages", new String[]{"body"}, "page_key=?", new String[]{key}, null, null, null)) {
             return cursor.moveToFirst() ? cursor.getString(0) : null;
+        }
+    }
+
+    private boolean contains(String key) {
+        try (Cursor cursor = getReadableDatabase().query("pages", new String[]{"page_key"},
+                "page_key=?", new String[]{key}, null, null, null)) {
+            return cursor.moveToFirst();
         }
     }
     public void saveFeed(String viewerId, List<Post> posts) {
@@ -84,6 +92,101 @@ public final class OfflinePages extends SQLiteOpenHelper {
             String body = get("post:" + postId);
             return body == null ? null : postFromJson(new JSONObject(body));
         } catch (Exception ignored) { return null; }
+    }
+
+    /** Explicit cache for the photo grid belonging to a profile the user opened. */
+    public void saveProfilePosts(String userId, List<Post> posts) {
+        savePostList("profile_posts:" + userId, posts);
+    }
+
+    public List<Post> profilePosts(String userId) {
+        return readPostList("profile_posts:" + userId);
+    }
+
+    public boolean hasProfilePosts(String userId) {
+        return userId != null && contains("profile_posts:" + userId);
+    }
+
+    /** Explicit cache for the current account's Saved tab. */
+    public void saveSavedPosts(String userId, List<Post> posts) {
+        savePostList("saved_posts:" + userId, posts);
+    }
+
+    public List<Post> savedPosts(String userId) {
+        return readPostList("saved_posts:" + userId);
+    }
+
+    public boolean hasSavedPosts(String userId) {
+        return userId != null && contains("saved_posts:" + userId);
+    }
+
+    /** Comments are cached only after their panel has been opened online at least once. */
+    public void saveComments(String postId, List<Comment> comments) {
+        if (postId == null || comments == null) return;
+        JSONArray array = new JSONArray();
+        for (Comment comment : comments) {
+            if (comment != null) array.put(new JSONObject(comment.toMap()));
+        }
+        put("comments:" + postId, array.toString());
+    }
+
+    public boolean hasComments(String postId) {
+        return postId != null && contains("comments:" + postId);
+    }
+
+    public List<Comment> comments(String postId) {
+        List<Comment> comments = new ArrayList<>();
+        if (postId == null) return comments;
+        try {
+            String body = get("comments:" + postId);
+            if (body == null) return comments;
+            JSONArray array = new JSONArray(body);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject item = array.getJSONObject(i);
+                Comment comment = new Comment();
+                comment.setId(nullableString(item, "id"));
+                comment.setPostId(nullableString(item, "postId"));
+                comment.setAuthorId(nullableString(item, "authorId"));
+                comment.setUsername(nullableString(item, "username"));
+                comment.setAvatarUrl(nullableString(item, "avatarUrl"));
+                comment.setContent(nullableString(item, "content"));
+                comment.setHidden(item.optBoolean("hidden", false));
+                comment.setCreatedAt(item.optLong("createdAt", 0L));
+                comment.setUpdatedAt(item.optLong("updatedAt", 0L));
+                comments.add(comment);
+            }
+        } catch (Exception ignored) { }
+        return comments;
+    }
+
+    private void savePostList(String key, List<Post> posts) {
+        if (key == null || posts == null) return;
+        JSONArray array = new JSONArray();
+        for (Post post : posts) {
+            if (post != null) array.put(new JSONObject(post.toMap()));
+        }
+        put(key, array.toString());
+    }
+
+    private List<Post> readPostList(String key) {
+        List<Post> posts = new ArrayList<>();
+        if (key == null) return posts;
+        try {
+            String body = get(key);
+            if (body == null) return posts;
+            JSONArray array = new JSONArray(body);
+            for (int i = 0; i < array.length(); i++) {
+                Post post = postFromJson(array.getJSONObject(i));
+                if (post != null) posts.add(post);
+            }
+        } catch (Exception ignored) { }
+        return posts;
+    }
+
+    private String nullableString(JSONObject item, String key) {
+        if (!item.has(key) || item.isNull(key)) return null;
+        String value = item.optString(key, null);
+        return value == null || "null".equals(value) ? null : value;
     }
 
     public void savePost(Post post) {

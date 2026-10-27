@@ -174,7 +174,7 @@
                 <TextView style="@style/DLogDrawerText" android:text="Cài đặt" />
             </LinearLayout>
             <LinearLayout android:id="@+id/rowMenuAdmin" style="@style/DLogDrawerRow" android:visibility="gone">
-                <ImageView style="@style/DLogDrawerIcon" android:src="@drawable/ic_settings_24" android:contentDescription="" />
+                <ImageView style="@style/DLogDrawerIcon" android:src="@drawable/ic_admin_24" android:contentDescription="" />
                 <TextView style="@style/DLogDrawerText" android:text="Quản trị" />
             </LinearLayout>
             <LinearLayout android:id="@+id/rowMenuHelp" style="@style/DLogDrawerRow">

@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" android:maxSdkVersion="28" />
 
     <application
+        android:name=".DLogApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -23,6 +24,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity android:name=".MenuActivity" android:exported="false" />
+        <activity android:name=".FollowListActivity" android:exported="false" />
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".AdminActivity" android:exported="false" />
         <activity android:name=".ForgotPasswordActivity" android:exported="false" />
@@ -38,10 +40,8 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
-        <activity
-            android:name=".PostDetailActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".PhotoViewerActivity" android:exported="false" android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <activity android:name=".PhotoEditorActivity" android:exported="false" />
 
         <activity
             android:name=".ProfileActivity"

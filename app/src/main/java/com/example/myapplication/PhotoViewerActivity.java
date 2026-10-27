@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,17 +15,24 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.myapplication.model.Post;
 import com.example.myapplication.view.ZoomDismissImageView;
+import com.example.myapplication.service.impl.PostService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.HashMap;
 
 public class PhotoViewerActivity extends AppCompatActivity {
     private static final String EXTRA_URLS = "photo_urls";
     private static final String EXTRA_INDEX = "photo_index";
     private static final String EXTRA_METADATA = "photo_metadata";
+    private static final String EXTRA_POST_ID = "photo_post_id";
+    private static final String EXTRA_AUTHOR_ID = "photo_author_id";
 
     private final ArrayList<String> urls = new ArrayList<>();
     private final ArrayList<String> metadata = new ArrayList<>();
@@ -33,6 +41,8 @@ public class PhotoViewerActivity extends AppCompatActivity {
     private TextView dots;
     private ImageButton previous;
     private ImageButton next;
+    private String postId;
+    private String authorId;
 
     public static void open(Context context, Post post, int startIndex) {
         if (context == null || post == null) return;
@@ -46,6 +56,8 @@ public class PhotoViewerActivity extends AppCompatActivity {
         intent.putStringArrayListExtra(EXTRA_URLS, images);
         intent.putStringArrayListExtra(EXTRA_METADATA, specs);
         intent.putExtra(EXTRA_INDEX, Math.max(0, Math.min(startIndex, images.size() - 1)));
+        intent.putExtra(EXTRA_POST_ID, post.getId());
+        intent.putExtra(EXTRA_AUTHOR_ID, post.getAuthorId());
         context.startActivity(intent);
     }
 
@@ -65,6 +77,8 @@ public class PhotoViewerActivity extends AppCompatActivity {
         if (receivedMetadata != null) metadata.addAll(receivedMetadata);
         if (urls.isEmpty()) { finish(); return; }
         index = Math.max(0, Math.min(getIntent().getIntExtra(EXTRA_INDEX, 0), urls.size() - 1));
+        postId = getIntent().getStringExtra(EXTRA_POST_ID);
+        authorId = getIntent().getStringExtra(EXTRA_AUTHOR_ID);
 
         photo = findViewById(R.id.zoomPhoto);
         dots = findViewById(R.id.tvViewerDots);
@@ -80,6 +94,12 @@ public class PhotoViewerActivity extends AppCompatActivity {
         });
         findViewById(R.id.btnPhotoInfo).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { showMetadata(); }
+        });
+        findViewById(R.id.btnViewerDownload).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { downloadCurrentPhoto(); }
+        });
+        findViewById(R.id.btnViewerReport).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { chooseReportReason(); }
         });
         previous.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { move(-1); }
@@ -128,5 +148,56 @@ public class PhotoViewerActivity extends AppCompatActivity {
         if (text.length() == 0) text.append("Ảnh này không có thông số EXIF khả dụng.");
         new AlertDialog.Builder(this).setTitle("Thông số ảnh")
                 .setMessage(text.toString().trim()).setPositiveButton("Đóng", null).show();
+    }
+
+    private void downloadCurrentPhoto() {
+        final String url = urls.get(index);
+        PostService.getInstance().saveImageToDevice(this, url, new PostService.Callback<String>() {
+            @Override public void onSuccess(String message) {
+                Toast.makeText(PhotoViewerActivity.this, message, Toast.LENGTH_LONG).show();
+            }
+            @Override public void onError(Exception error) {
+                Toast.makeText(PhotoViewerActivity.this,
+                        "Không thể tải ảnh: " + error.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void chooseReportReason() {
+        if (postId == null || postId.isEmpty() || FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Cần đăng nhập và mở ảnh từ bài đăng để báo cáo.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String[] reasons = {"Nội dung không phù hợp", "Vi phạm quyền ảnh", "Spam hoặc lừa đảo", "Lý do khác"};
+        new AlertDialog.Builder(this).setTitle("Báo cáo ảnh " + (index + 1))
+                .setItems(reasons, new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        submitReport(reasons[which]);
+                    }
+                }).setNegativeButton("Hủy", null).show();
+    }
+
+    private void submitReport(String reason) {
+        Map<String, Object> report = new HashMap<>();
+        report.put("type", "image");
+        report.put("postId", postId);
+        report.put("authorId", authorId == null ? "" : authorId);
+        report.put("reporterId", FirebaseAuth.getInstance().getCurrentUser().getUid());
+        report.put("imageIndex", index);
+        report.put("imageUrl", urls.get(index));
+        report.put("reason", reason);
+        report.put("status", "open");
+        report.put("createdAt", FieldValue.serverTimestamp());
+        FirebaseFirestore.getInstance().collection("reports").add(report)
+                .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.DocumentReference>() {
+                    @Override public void onSuccess(com.google.firebase.firestore.DocumentReference reference) {
+                        Toast.makeText(PhotoViewerActivity.this, "Đã gửi báo cáo ảnh cho quản trị viên.", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override public void onFailure(@androidx.annotation.NonNull Exception error) {
+                        Toast.makeText(PhotoViewerActivity.this, "Không gửi được báo cáo: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 }

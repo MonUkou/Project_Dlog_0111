@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+    function validImage() {
+      return request.resource.size > 0
+        && request.resource.size <= 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    match /{kind}/{uid}/{filename} {
+      allow read: if signedIn() && kind in ['posts', 'avatars', 'covers'];
+      allow create, update: if kind in ['posts', 'avatars', 'covers']
+        && owner(uid) && validImage();
+      allow delete: if kind in ['posts', 'avatars', 'covers'] && owner(uid);
+    }
+  }
+}
