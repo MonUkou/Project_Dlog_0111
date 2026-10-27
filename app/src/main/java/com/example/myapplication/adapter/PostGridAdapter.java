@@ -12,7 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.example.myapplication.PostDetailActivity;
+import com.example.myapplication.PhotoViewerActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.model.Post;
 
@@ -60,10 +60,8 @@ public class PostGridAdapter extends RecyclerView.Adapter<PostGridAdapter.GridVi
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(context, PostDetailActivity.class);
-                intent.putExtra("postId", post.getId());
-                context.startActivity(intent);
+            public void onClick(View view) {
+                PhotoViewerActivity.open(context, post, 0);
             }
         });
     }

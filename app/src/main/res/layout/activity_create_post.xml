@@ -27,10 +27,11 @@
             android:src="@drawable/ic_back"/>
 
         <TextView
+            android:id="@+id/tvCreateTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="Bài viết mới"
+            android:text="Chia sẻ ảnh"
             android:textColor="@color/dlog_ink"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -46,7 +47,7 @@
             android:minWidth="72dp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:text="Đăng"
+            android:text="Chia sẻ"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
@@ -62,7 +63,7 @@
         android:layout_below="@id/headerCreatePost"
         android:background="@color/dlog_border" />
 
-    <!-- Nội dung tạo bài viết -->
+    <!-- Ảnh là nội dung chính; mô tả ngắn nằm phía dưới. -->
     <ScrollView
         android:id="@+id/scrollView2"
         android:layout_width="match_parent"
@@ -109,7 +110,7 @@
                         android:id="@+id/tvCreateName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Bạn đang nghĩ gì?"
+                        android:text="Khoảnh khắc của bạn"
                         android:textColor="@color/dlog_ink"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -118,77 +119,24 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Chia sẻ khoảnh khắc của bạn"
+                        android:text="Chọn ảnh để chia sẻ"
                         android:textColor="@color/dlog_muted"
                         android:textSize="12sp" />
 
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Nội dung bài viết -->
-            <EditText
-                android:id="@+id/etCaption"
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:background="@android:color/transparent"
-                android:gravity="top|start"
-                android:hint="Viết mô tả cho bài viết..."
-                android:inputType="textCapSentences|textMultiLine"
-                android:padding="0dp"
-                android:textColor="@color/dlog_ink"
-                android:textColorHint="#8B9BB2"
-                android:textSize="16sp" />
-
-            <EditText
-                android:id="@+id/etHashtags"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:hint="Chủ đề: #dulich #ueh"
-                android:inputType="text"
-                android:singleLine="true"
-                android:textColor="@color/dlog_ink"
-                android:textColorHint="@color/dlog_muted"
-                android:contentDescription="Hashtag chủ đề" />
-
-            <TextView
-                android:id="@+id/tvSelectedCount"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Chọn tối đa 10 ảnh"
-                android:textColor="@color/dlog_muted"
-                android:textSize="14sp" />
-
-            <Button
-                android:id="@+id/btnEditSelectedImage"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_marginTop="6dp"
-                android:backgroundTint="@color/dlog_feed_image_placeholder"
-                android:text="Chỉnh ảnh đầu tiên"
-                android:textAllCaps="false"
-                android:textColor="@color/dlog_blue"
-                android:visibility="gone" />
-
             <!-- Khu vực chọn ảnh -->
             <FrameLayout
                 android:id="@+id/btnSelectImage"
                 android:layout_width="match_parent"
-                android:layout_height="280dp"
-                android:layout_marginTop="10dp"
-                android:background="@color/dlog_feed_background"
+                android:layout_height="260dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_post_photo"
                 android:clickable="true"
+                android:clipToOutline="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground">
-
-                <!-- Ảnh được chọn từ thiết bị -->
-                <ImageView
-                    android:id="@+id/ivSelectedImage"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:contentDescription="Ảnh bài viết đã chọn"
-                    android:scaleType="centerCrop"
-                    android:visibility="gone" />
 
                 <!-- Gợi ý khi chưa chọn ảnh -->
                 <LinearLayout
@@ -209,7 +157,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:text="Chọn nhiều ảnh từ thiết bị"
+                        android:text="Chọn ảnh để chia sẻ"
                         android:textColor="@color/dlog_blue"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -218,12 +166,93 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Nhấn vào đây để mở thư viện ảnh"
+                        android:text="Từ thiết bị hoặc thư viện DLog"
                         android:textColor="@color/dlog_muted"
                         android:textSize="12sp" />
 
                 </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/photoCollage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
             </FrameLayout>
+
+            <TextView
+                android:id="@+id/tvSelectedCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Chọn tối đa 10 ảnh"
+                android:textColor="@color/dlog_muted"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnAddMoreImages"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_outline"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="＋ Thêm ảnh thứ 2"
+                    android:textColor="@color/dlog_blue"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/btnEditSelectedImage"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_outline"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="Chỉnh ảnh đầu"
+                    android:textColor="@color/dlog_blue"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/etCaption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@android:color/transparent"
+                android:gravity="top|start"
+                android:hint="Thêm vài lời về ảnh..."
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:padding="4dp"
+                android:textColor="@color/dlog_ink"
+                android:textColorHint="@color/dlog_muted"
+                android:textSize="15sp" />
+
+            <EditText
+                android:id="@+id/etHashtags"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Thêm chủ đề #dulich #ueh"
+                android:inputType="text"
+                android:singleLine="true"
+                android:textColor="@color/dlog_ink"
+                android:textColorHint="@color/dlog_muted"
+                android:contentDescription="Hashtag chủ đề" />
 
             <!-- Trạng thái đăng bài -->
             <LinearLayout
@@ -244,7 +273,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
-                    android:text="Đang tải ảnh và đăng bài..."
+                    android:text="Đang tải ảnh lên..."
                     android:textColor="@color/dlog_muted"
                     android:textSize="14sp" />
 

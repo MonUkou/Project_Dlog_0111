@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dlog_chat_background">
+    <include android:id="@+id/bottomNavView" layout="@layout/inc_nav_rail" android:layout_width="64dp" android:layout_height="match_parent" android:layout_alignParentEnd="true" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:layout_toStartOf="@id/bottomNavView" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="52dp" android:background="@color/dlog_chat_toolbar" android:elevation="2dp" android:gravity="center_vertical" android:paddingHorizontal="12dp">
+            <ImageView android:id="@+id/btnBackChats" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:contentDescription="Quay lại" android:focusable="true" android:padding="12dp" android:src="@drawable/ic_back" android:tint="@color/dlog_navy" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="Tin nhắn" android:textColor="@color/dlog_navy" android:textSize="18sp" android:textStyle="bold" />
+            <View android:layout_width="48dp" android:layout_height="48dp" />
+        </LinearLayout>
+        <EditText android:id="@+id/etChatSearch" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginHorizontal="16dp" android:layout_marginTop="8dp" android:layout_marginBottom="8dp" android:background="@drawable/bg_auth_input" android:hint="Tìm người để nhắn tin" android:inputType="text" android:paddingHorizontal="14dp" android:textColor="@color/dlog_navy" android:textColorHint="@color/dlog_muted_blue" android:textSize="14sp" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvChatThreads" android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="8dp" />
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvChatPeople" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" />
+            <TextView android:id="@+id/tvChatsEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="center" android:gravity="center" android:padding="28dp" android:text="Chưa có cuộc trò chuyện. Tìm người dùng ở phía trên để bắt đầu." android:textColor="@color/dlog_muted_blue" android:textSize="14sp" />
+            <ProgressBar android:id="@+id/progressChats" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+</RelativeLayout>

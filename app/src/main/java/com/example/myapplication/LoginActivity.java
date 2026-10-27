@@ -41,6 +41,14 @@ public class LoginActivity extends AppCompatActivity {
         authService = AuthService.getInstance();
         authService.init(getApplicationContext());
 
+        // Firebase Auth và UID dự phòng đều được lưu qua các lần đóng/mở app.
+        // Nếu người dùng đã đăng nhập trước đó, cho phép vào dữ liệu SQLite ngay cả
+        // khi thiết bị đang ngoại tuyến. Nút Đăng xuất vẫn xóa cả hai trạng thái này.
+        if (authService.getCurrentUserId() != null) {
+            navigateHome();
+            return;
+        }
+
         initViews();
         setupListeners();
     }

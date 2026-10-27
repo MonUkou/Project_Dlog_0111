@@ -65,7 +65,7 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         holder.bubble.setLayoutParams(bubbleParams);
         holder.bubble.setBackgroundResource(mine ? R.drawable.bg_chat_bubble_mine : R.drawable.bg_chat_bubble_theirs);
         holder.bubble.setTextColor(ContextCompat.getColor(context,
-                mine ? R.color.dlog_on_primary : R.color.dlog_ink));
+                mine ? R.color.dlog_chat_bubble_mine_text : R.color.dlog_chat_bubble_theirs_text));
         holder.bubble.setText(message.text);
         LinearLayout.LayoutParams timeParams = (LinearLayout.LayoutParams) holder.time.getLayoutParams();
         timeParams.gravity = mine ? Gravity.END : Gravity.START;

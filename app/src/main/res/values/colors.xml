@@ -27,4 +27,11 @@
     <color name="dlog_chart_interaction">#7545A7</color>
     <color name="dlog_brand_caption_bg">#E6FFFFFF</color>
     <color name="dlog_scrim">#990B2445</color>
+    <color name="dlog_chat_background">#F1F6FD</color>
+    <color name="dlog_chat_toolbar">#FFFFFFFF</color>
+    <color name="dlog_chat_composer">#FFFFFFFF</color>
+    <color name="dlog_chat_bubble_mine">#24569B</color>
+    <color name="dlog_chat_bubble_theirs">#FFFFFFFF</color>
+    <color name="dlog_chat_bubble_mine_text">#FFFFFFFF</color>
+    <color name="dlog_chat_bubble_theirs_text">#172B4D</color>
 </resources>

@@ -2,8 +2,6 @@ package com.example.myapplication.adapter;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,10 +11,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.example.myapplication.CreatePostActivity;
 import com.example.myapplication.ProfileActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.model.User;
@@ -24,7 +23,7 @@ import com.example.myapplication.model.User;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Displays real DLog accounts in the horizontal people strip. */
+/** Displays followed accounts in the horizontal people strip. */
 public class UserStripAdapter extends RecyclerView.Adapter<UserStripAdapter.UserViewHolder> {
     private final Context context;
     private final String currentUserId;
@@ -37,10 +36,11 @@ public class UserStripAdapter extends RecyclerView.Adapter<UserStripAdapter.User
 
     public void setUsers(List<User> items) {
         users.clear();
-        if (items != null) users.addAll(items);
-        if (currentUserId != null) {
-            users.sort((left, right) -> Boolean.compare(
-                    !currentUserId.equals(left.getId()), !currentUserId.equals(right.getId())));
+        if (items != null) {
+            for (User user : items) {
+                if (user != null && user.getId() != null
+                        && !user.getId().equals(currentUserId)) users.add(user);
+            }
         }
         notifyDataSetChanged();
     }
@@ -51,7 +51,7 @@ public class UserStripAdapter extends RecyclerView.Adapter<UserStripAdapter.User
         LinearLayout item = new LinearLayout(context);
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER_HORIZONTAL);
-        item.setLayoutParams(new RecyclerView.LayoutParams(dp(68), ViewGroup.LayoutParams.WRAP_CONTENT));
+        item.setLayoutParams(new RecyclerView.LayoutParams(dp(80), ViewGroup.LayoutParams.WRAP_CONTENT));
         item.setPadding(dp(3), dp(2), dp(3), 0);
 
         FrameLayout avatarFrame = new FrameLayout(context);
@@ -64,45 +64,32 @@ public class UserStripAdapter extends RecyclerView.Adapter<UserStripAdapter.User
         avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
         avatarFrame.addView(avatar, new FrameLayout.LayoutParams(-1, -1));
 
-        TextView addBadge = new TextView(context);
-        addBadge.setText("+");
-        addBadge.setTextColor(Color.WHITE);
-        addBadge.setTextSize(14);
-        addBadge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        addBadge.setGravity(Gravity.CENTER);
-        addBadge.setBackgroundResource(R.drawable.bg_story_add);
-        FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(dp(21), dp(21), Gravity.BOTTOM | Gravity.END);
-        avatarFrame.addView(addBadge, badgeParams);
-
         TextView name = new TextView(context);
         name.setGravity(Gravity.CENTER);
-        name.setTextColor(Color.rgb(23, 43, 77));
-        name.setTextSize(10);
+        name.setTextColor(ContextCompat.getColor(context, R.color.dlog_ink));
+        name.setTextSize(12);
+        name.setTypeface(ResourcesCompat.getFont(context, R.font.inter_medium));
         name.setMaxLines(1);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(-1, -2);
         nameParams.topMargin = dp(3);
         item.addView(name, nameParams);
-        return new UserViewHolder(item, avatar, name, addBadge);
+        return new UserViewHolder(item, avatar, name);
     }
 
     @Override
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
-        User user = users.get(position);
-        boolean isCurrentUser = currentUserId != null && currentUserId.equals(user.getId());
+        final User user = users.get(position);
         String name = user.getFullName() != null && !user.getFullName().trim().isEmpty()
                 ? user.getFullName() : user.getUsername();
         holder.name.setText(name == null || name.isEmpty() ? "Người dùng" : name);
-        holder.addBadge.setVisibility(isCurrentUser ? View.VISIBLE : View.GONE);
         if (user.getAvatarUrl() != null && !user.getAvatarUrl().trim().isEmpty()) {
-            Glide.with(context).load(user.getAvatarUrl()).circleCrop().into(holder.avatar);
+            Glide.with(context).load(user.getAvatarUrl()).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(holder.avatar);
         } else {
             holder.avatar.setImageResource(R.drawable.bg_circle_avatar);
         }
-        holder.itemView.setOnClickListener(v -> {
-            if (isCurrentUser) {
-                context.startActivity(new Intent(context, CreatePostActivity.class));
-            } else {
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
                 Intent intent = new Intent(context, ProfileActivity.class);
                 intent.putExtra("userId", user.getId());
                 context.startActivity(intent);
@@ -116,12 +103,10 @@ public class UserStripAdapter extends RecyclerView.Adapter<UserStripAdapter.User
     static class UserViewHolder extends RecyclerView.ViewHolder {
         final ImageView avatar;
         final TextView name;
-        final TextView addBadge;
-        UserViewHolder(View item, ImageView avatar, TextView name, TextView addBadge) {
+        UserViewHolder(View item, ImageView avatar, TextView name) {
             super(item);
             this.avatar = avatar;
             this.name = name;
-            this.addBadge = addBadge;
         }
     }
 
