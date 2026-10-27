@@ -25,8 +25,18 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         emailInput = findViewById(R.id.etResetEmail);
         submit = findViewById(R.id.btnSendResetEmail);
         progress = findViewById(R.id.progressResetEmail);
-        findViewById(R.id.btnBackReset).setOnClickListener(v -> finish());
-        submit.setOnClickListener(v -> sendResetEmail());
+        findViewById(R.id.btnBackReset).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
+        submit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendResetEmail();
+            }
+        });
     }
 
     private void sendResetEmail() {

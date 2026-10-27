@@ -102,14 +102,31 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        btnSearchHome.setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, SearchActivity.class)));
+        btnSearchHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, SearchActivity.class));
+            }
+        });
 
-        btnNotificationsHome.setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, NotificationActivity.class)));
-        btnMenuHome.setOnClickListener(v -> homeDrawer.openDrawer(GravityCompat.START));
-        findViewById(R.id.quickCreatePost).setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class)));
+        btnNotificationsHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, NotificationActivity.class));
+            }
+        });
+        btnMenuHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                homeDrawer.openDrawer(GravityCompat.START);
+            }
+        });
+        findViewById(R.id.quickCreatePost).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class));
+            }
+        });
         btnScrollToTop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -128,26 +145,63 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupDrawerMenu() {
-        findViewById(R.id.rowMenuProfile).setOnClickListener(v -> openProfile(false));
-        findViewById(R.id.rowMenuSaved).setOnClickListener(v -> openProfile(true));
-        findViewById(R.id.rowMenuCreate).setOnClickListener(v ->
-                startActivity(new Intent(this, CreatePostActivity.class)));
-        findViewById(R.id.rowMenuNotifications).setOnClickListener(v ->
-                startActivity(new Intent(this, NotificationActivity.class)));
-        findViewById(R.id.rowMenuChats).setOnClickListener(v ->
-                startActivity(new Intent(this, ChatsActivity.class)));
-        findViewById(R.id.rowMenuSettings).setOnClickListener(v ->
-                startActivity(new Intent(this, SettingsActivity.class)));
-        findViewById(R.id.rowMenuAdmin).setOnClickListener(v ->
-                startActivity(new Intent(this, AdminActivity.class)));
-        findViewById(R.id.rowMenuHelp).setOnClickListener(v ->
-                Toast.makeText(this, "Trung tâm trợ giúp sẽ sớm có mặt.", Toast.LENGTH_SHORT).show());
-        findViewById(R.id.rowMenuLogout).setOnClickListener(v -> {
-            authService.logout();
-            Intent intent = new Intent(this, LoginActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
+        findViewById(R.id.rowMenuProfile).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openProfile(false);
+            }
+        });
+        findViewById(R.id.rowMenuSaved).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openProfile(true);
+            }
+        });
+        findViewById(R.id.rowMenuCreate).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class));
+            }
+        });
+        findViewById(R.id.rowMenuNotifications).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, NotificationActivity.class));
+            }
+        });
+        findViewById(R.id.rowMenuChats).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, ChatsActivity.class));
+            }
+        });
+        findViewById(R.id.rowMenuSettings).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, SettingsActivity.class));
+            }
+        });
+        findViewById(R.id.rowMenuAdmin).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, AdminActivity.class));
+            }
+        });
+        findViewById(R.id.rowMenuHelp).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(HomeActivity.this, "Trung tâm trợ giúp sẽ sớm có mặt.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        findViewById(R.id.rowMenuLogout).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                authService.logout();
+                Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }
         });
     }
 
