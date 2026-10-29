@@ -106,15 +106,21 @@ public class AuthService implements IAuthService {
                         final String uid = firebaseUser.getUid();
                         final User user = new User(uid, username, username, email, "",
                                 "Giới thiệu ngắn về bản thân.");
-                        db.collection("users").document(uid).set(user.toMap())
-                                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                    @Override
-                                    public void onSuccess(Void unused) {
-                                        setCurrentUserId(uid);
-                                        if (callback != null) callback.onSuccess(user);
-                                    }
-                                })
-                                .addOnFailureListener(errorListener(callback));
+                        ReadableIdService.nextUserCode(new ReadableIdService.Callback() {
+                            @Override public void onSuccess(String code) {
+                                user.setUserCode(code);
+                                db.collection("users").document(uid).set(user.toMap())
+                                        .addOnSuccessListener(unused -> {
+                                            setCurrentUserId(uid);
+                                            if (callback != null) callback.onSuccess(user);
+                                        })
+                                        .addOnFailureListener(errorListener(callback));
+                            }
+
+                            @Override public void onError(Exception error) {
+                                if (callback != null) callback.onError(error);
+                            }
+                        });
                     }
                 })
                 .addOnFailureListener(errorListener(callback));
@@ -222,14 +228,20 @@ public class AuthService implements IAuthService {
 
                                         final User user = new User(uid, username, username, email,
                                                 photoUrl, "");
-                                        db.collection("users").document(uid).set(user.toMap())
-                                                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                    @Override
-                                                    public void onSuccess(Void unused) {
-                                                        if (callback != null) callback.onSuccess(user);
-                                                    }
-                                                })
-                                                .addOnFailureListener(errorListener(callback));
+                                        ReadableIdService.nextUserCode(new ReadableIdService.Callback() {
+                                            @Override public void onSuccess(String code) {
+                                                user.setUserCode(code);
+                                                db.collection("users").document(uid).set(user.toMap())
+                                                        .addOnSuccessListener(unused -> {
+                                                            if (callback != null) callback.onSuccess(user);
+                                                        })
+                                                        .addOnFailureListener(errorListener(callback));
+                                            }
+
+                                            @Override public void onError(Exception error) {
+                                                if (callback != null) callback.onError(error);
+                                            }
+                                        });
                                     }
                                 })
                                 .addOnFailureListener(errorListener(callback));

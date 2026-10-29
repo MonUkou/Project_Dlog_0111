@@ -22,6 +22,7 @@ import java.util.List;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
@@ -105,6 +106,18 @@ public class CreatePostActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_post);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (posting) {
+                    Toast.makeText(CreatePostActivity.this,
+                            "Ảnh đang được tải lên, vui lòng đợi.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
 
         postService = PostService.getInstance();
         authService = AuthService.getInstance();
@@ -434,72 +447,72 @@ public class CreatePostActivity extends AppCompatActivity {
         List<String> hashtags = HashtagParser.extract(
                 caption, etHashtags.getText().toString());
         PostService.Callback<Post> saveCallback = new PostService.Callback<Post>() {
-                    @Override
-                    public void onSuccess(Post post) {
-                        posting = false;
-                        llLoadingCreate.setVisibility(View.GONE);
-                        btnSubmitPost.setEnabled(true);
-                        btnSelectImage.setEnabled(true);
-                        btnAddMoreImages.setEnabled(true);
-                        btnEditSelectedImage.setEnabled(true);
+            @Override
+            public void onSuccess(Post post) {
+                posting = false;
+                llLoadingCreate.setVisibility(View.GONE);
+                btnSubmitPost.setEnabled(true);
+                btnSelectImage.setEnabled(true);
+                btnAddMoreImages.setEnabled(true);
+                btnEditSelectedImage.setEnabled(true);
 
-                        Toast.makeText(CreatePostActivity.this,
-                                editingPostId == null ? "Đã chia sẻ ảnh!" : "Đã lưu bộ ảnh!",
-                                Toast.LENGTH_SHORT).show();
+                Toast.makeText(CreatePostActivity.this,
+                        editingPostId == null ? "Đã chia sẻ ảnh!" : "Đã lưu bộ ảnh!",
+                        Toast.LENGTH_SHORT).show();
 
-                        if (editingPostId != null) {
-                            getSharedPreferences("dlog_ui", MODE_PRIVATE).edit()
-                                    .putBoolean("refresh_feed_after_edit", true).apply();
-                            Intent home = new Intent(CreatePostActivity.this, HomeActivity.class);
-                            home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            home.putExtra("refresh_after_post", true);
-                            startActivity(home);
-                            finish();
-                            return;
-                        }
+                if (editingPostId != null) {
+                    getSharedPreferences("dlog_ui", MODE_PRIVATE).edit()
+                            .putBoolean("refresh_feed_after_edit", true).apply();
+                    Intent home = new Intent(CreatePostActivity.this, HomeActivity.class);
+                    home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    home.putExtra("refresh_after_post", true);
+                    startActivity(home);
+                    finish();
+                    return;
+                }
 
-                        Intent intent = new Intent(
-                                CreatePostActivity.this,
-                                HomeActivity.class
-                        );
+                Intent intent = new Intent(
+                        CreatePostActivity.this,
+                        HomeActivity.class
+                );
 
-                        intent.addFlags(
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        );
-                        intent.putExtra("refresh_after_post", true);
+                intent.addFlags(
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                );
+                intent.putExtra("refresh_after_post", true);
 
-                        startActivity(intent);
-                        finish();
-                    }
+                startActivity(intent);
+                finish();
+            }
 
-                    @Override
-                    public void onError(Exception e) {
-                        posting = false;
-                        setRequestedOrientation(orientationBeforePost);
-                        llLoadingCreate.setVisibility(View.GONE);
-                        btnSubmitPost.setEnabled(true);
-                        btnSubmitPost.setText(editingPostId == null ? "Chia sẻ" : "Lưu");
-                        btnSelectImage.setEnabled(true);
-                        btnAddMoreImages.setEnabled(true);
-                        btnEditSelectedImage.setEnabled(true);
-                        btnBackCreate.setEnabled(true);
+            @Override
+            public void onError(Exception e) {
+                posting = false;
+                setRequestedOrientation(orientationBeforePost);
+                llLoadingCreate.setVisibility(View.GONE);
+                btnSubmitPost.setEnabled(true);
+                btnSubmitPost.setText(editingPostId == null ? "Chia sẻ" : "Lưu");
+                btnSelectImage.setEnabled(true);
+                btnAddMoreImages.setEnabled(true);
+                btnEditSelectedImage.setEnabled(true);
+                btnBackCreate.setEnabled(true);
 
-                        String message;
+                String message;
 
-                        if (e == null || e.getMessage() == null) {
-                            message = "Không thể đăng bài. Vui lòng thử lại.";
-                        } else {
-                            message = e.getMessage();
-                        }
+                if (e == null || e.getMessage() == null) {
+                    message = "Không thể đăng bài. Vui lòng thử lại.";
+                } else {
+                    message = e.getMessage();
+                }
 
-                        Toast.makeText(
-                                CreatePostActivity.this,
-                                "Không thể chia sẻ ảnh: " + message,
-                                Toast.LENGTH_LONG
-                        ).show();
-                    }
-                };
+                Toast.makeText(
+                        CreatePostActivity.this,
+                        "Không thể chia sẻ ảnh: " + message,
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        };
         if (editingPostId == null) {
             postService.createPost(currentUserId, caption, new ArrayList<Uri>(selectedImages),
                     hashtags, this, saveCallback);
@@ -507,15 +520,6 @@ public class CreatePostActivity extends AppCompatActivity {
             postService.updatePostWithImages(currentUserId, editingPostId, caption,
                     new ArrayList<Uri>(selectedImages), hashtags, this, saveCallback);
         }
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (posting) {
-            Toast.makeText(this, "Ảnh đang được tải lên, vui lòng đợi.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        super.onBackPressed();
     }
 
     @Override
