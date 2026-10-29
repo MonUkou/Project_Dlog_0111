@@ -122,8 +122,18 @@ public class ProfileActivity extends AppCompatActivity {
         btnProfileActionButton = findViewById(R.id.btnProfileActionButton);
         btnProfileActionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.dlog_button)));
         btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
-        findViewById(R.id.btnShowFollowers).setOnClickListener(v -> openFollowList(false));
-        findViewById(R.id.btnShowFollowing).setOnClickListener(v -> openFollowList(true));
+        findViewById(R.id.btnShowFollowers).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openFollowList(false);
+            }
+        });
+        findViewById(R.id.btnShowFollowing).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openFollowList(true);
+            }
+        });
 
         llProfileTabs = findViewById(R.id.llProfileTabs);
         tabUserPosts = findViewById(R.id.tabUserPosts);
@@ -137,13 +147,32 @@ public class ProfileActivity extends AppCompatActivity {
         sortNewest = findViewById(R.id.profileSortNewest);
         sortOldest = findViewById(R.id.profileSortOldest);
         sortPopular = findViewById(R.id.profileSortPopular);
-        sortNewest.setOnClickListener(v -> setSortMode(0));
-        sortOldest.setOnClickListener(v -> setSortMode(1));
-        sortPopular.setOnClickListener(v -> setSortMode(2));
+        sortNewest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setSortMode(0);
+            }
+        });
+        sortOldest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setSortMode(1);
+            }
+        });
+        sortPopular.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setSortMode(2);
+            }
+        });
         updateSortControls();
 
-        findViewById(R.id.btnProfileSettings).setOnClickListener(v ->
-                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class)));
+        findViewById(R.id.btnProfileSettings).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class));
+            }
+        });
 
         if (isSelfProfile) {
             findViewById(R.id.btnMessageProfile).setVisibility(View.GONE);
@@ -160,22 +189,40 @@ public class ProfileActivity extends AppCompatActivity {
             btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
 
             llProfileTabs.setVisibility(View.VISIBLE);
-            tabUserPosts.setOnClickListener(v -> switchTab(false));
-            tabSavedPosts.setOnClickListener(v -> switchTab(true));
+            tabUserPosts.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    switchTab(false);
+                }
+            });
+            tabSavedPosts.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    switchTab(true);
+                }
+            });
         } else {
             findViewById(R.id.btnProfileSettings).setVisibility(View.GONE);
             llProfileTabs.setVisibility(View.GONE);
             findViewById(R.id.btnMessageProfile).setVisibility(View.VISIBLE);
-            findViewById(R.id.btnMessageProfile).setOnClickListener(v -> openPrivateChat());
+            findViewById(R.id.btnMessageProfile).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    openPrivateChat();
+                }
+            });
             checkFollowStatus();
         }
 
-        btnProfileActionButton.setOnClickListener(v -> {
-            if (isSelfProfile) {
-                Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
-                startActivity(intent);
-            } else {
-                handleFollowToggle();
+        btnProfileActionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isSelfProfile) {
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    startActivity(intent);
+                } else {
+                    handleFollowToggle();
+                }
             }
         });
     }
@@ -196,7 +243,12 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         rvProfilePosts.setLayoutManager(new GridLayoutManager(this, 3));
         postGridAdapter = new PostGridAdapter(this);
-        postGridAdapter.setOnPostClickListener(this::showPostDialog);
+        postGridAdapter.setOnPostClickListener(new PostGridAdapter.OnPostClickListener() {
+            @Override
+            public void onPostClick(Post post) {
+                showPostDialog(post);
+            }
+        });
         rvProfilePosts.setAdapter(postGridAdapter);
     }
 
@@ -214,8 +266,11 @@ public class ProfileActivity extends AppCompatActivity {
             dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         }
         dialog.setCanceledOnTouchOutside(true);
-        dialog.setOnDismissListener(ignored -> {
-            if (isShowingSavedPosts) loadSavedPosts();
+        dialog.setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(android.content.DialogInterface ignored) {
+                if (isShowingSavedPosts) loadSavedPosts();
+            }
         });
         dialog.show();
         if (dialog.getWindow() != null) {
