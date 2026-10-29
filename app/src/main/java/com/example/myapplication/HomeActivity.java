@@ -12,6 +12,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -29,6 +30,7 @@ import com.example.myapplication.service.impl.UserService;
 import com.example.myapplication.util.BottomNavHelper;
 import com.example.myapplication.util.FeedPageSelector;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.AppBarLayout;
@@ -52,6 +54,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private PostAdapter postAdapter;
     private PostService postService;
+    private ListenerRegistration postRealtimeRegistration;
     private AuthService authService;
     private UserStripAdapter userStripAdapter;
     private ListenerRegistration currentUserRegistration;
@@ -70,6 +73,17 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
+                    homeDrawer.closeDrawer(GravityCompat.START);
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
 
         postService = PostService.getInstance();
         authService = AuthService.getInstance();
@@ -79,6 +93,7 @@ public class HomeActivity extends AppCompatActivity {
         setupPeopleStrip();
         setupRecyclerView();
         loadFeedPosts(true);
+        observeVisiblePostChanges();
     }
 
     private void initViews() {
@@ -317,7 +332,7 @@ public class HomeActivity extends AppCompatActivity {
                 postAdapter.setPosts(saved);
                 tvStateFeed.setVisibility(View.GONE);
                 tvOfflineFeed.setText("SQLite · Đang hiển thị bảng tin đã lưu và kiểm tra dữ liệu mới…");
-                tvOfflineFeed.setVisibility(View.VISIBLE);
+                tvOfflineFeed.setVisibility(View.GONE);
             }
         }
         if (isRefresh) {
@@ -397,13 +412,37 @@ public class HomeActivity extends AppCompatActivity {
                             tvOfflineFeed.setText(isRefresh
                                     ? "Ngoại tuyến · Bảng tin đang đọc từ SQLite"
                                     : "Ngoại tuyến · Đã hết các trang lưu trong SQLite");
-                            tvOfflineFeed.setVisibility(View.VISIBLE);
+                            tvOfflineFeed.setVisibility(View.GONE);
                             return;
                         }
 
                         Toast.makeText(HomeActivity.this,
                                 "Lỗi tải bảng tin: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void observeVisiblePostChanges() {
+        if (postRealtimeRegistration != null) {
+            postRealtimeRegistration.remove();
+        }
+        postRealtimeRegistration = FirebaseFirestore.getInstance()
+                .collection("posts")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(100)
+                .addSnapshotListener(new com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot>() {
+                    @Override
+                    public void onEvent(com.google.firebase.firestore.QuerySnapshot snapshot, com.google.firebase.firestore.FirebaseFirestoreException error) {
+                        if (error != null || snapshot == null || isFinishing() || isDestroyed()) return;
+                        for (DocumentSnapshot document : snapshot.getDocuments()) {
+                            if (document.getData() == null) continue;
+                            Post updated = Post.fromMap(document.getData());
+                            if (updated != null) {
+                                updated.setId(document.getId());
+                                postAdapter.updatePostRealtime(updated);
+                            }
+                        }
                     }
                 });
     }
@@ -431,6 +470,10 @@ public class HomeActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        if (postRealtimeRegistration != null) {
+            postRealtimeRegistration.remove();
+            postRealtimeRegistration = null;
+        }
         if (currentUserRegistration != null) {
             currentUserRegistration.remove();
             currentUserRegistration = null;
@@ -466,12 +509,4 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
-            homeDrawer.closeDrawer(GravityCompat.START);
-            return;
-        }
-        super.onBackPressed();
-    }
 }
