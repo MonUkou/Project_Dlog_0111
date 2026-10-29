@@ -43,9 +43,6 @@
         <activity android:name=".PhotoViewerActivity" android:exported="false" android:theme="@style/Theme.AppCompat.NoActionBar" />
         <activity android:name=".PhotoEditorActivity" android:exported="false" />
 
-        <activity android:name=".PhotoViewerActivity" android:exported="false" android:theme="@style/Theme.AppCompat.NoActionBar" />
-        <activity android:name=".PhotoEditorActivity" android:exported="false" />
-
         <activity
             android:name=".ProfileActivity"
             android:exported="false" />
