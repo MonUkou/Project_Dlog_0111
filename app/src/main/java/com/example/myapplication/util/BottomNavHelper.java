@@ -56,41 +56,42 @@ public class BottomNavHelper {
 
         navFeed.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-            if (activeTab != Tab.FEED) {
-                Intent intent = new Intent(activity, HomeActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                activity.startActivity(intent);
-            }
+                if (activeTab != Tab.FEED) {
+                    Intent intent = new Intent(activity, HomeActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    activity.startActivity(intent);
+                }
             }
         });
 
         navSearch.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-            if (activeTab != Tab.SEARCH) {
-                Intent intent = new Intent(activity, SearchActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                activity.startActivity(intent);
-            }
+                if (activeTab != Tab.SEARCH) {
+                    Intent intent = new Intent(activity, SearchActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    activity.startActivity(intent);
+                }
             }
         });
 
         navInbox.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-            if (activeTab != Tab.INBOX) {
-                Intent intent = new Intent(activity, ChatsActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                activity.startActivity(intent);
-            }
+                if (activeTab != Tab.INBOX) {
+                    Intent intent = new Intent(activity, ChatsActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    activity.startActivity(intent);
+                }
             }
         });
 
         navProfile.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-            if (activeTab != Tab.PROFILE) {
-                Intent intent = new Intent(activity, com.example.myapplication.ProfileActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                activity.startActivity(intent);
-            }
+                if (activeTab != Tab.PROFILE || (activity instanceof com.example.myapplication.ProfileActivity
+                        && !((com.example.myapplication.ProfileActivity) activity).isSelfProfile())) {
+                    Intent intent = new Intent(activity, com.example.myapplication.ProfileActivity.class);
+                    intent.putExtra("openOwnProfile", true);
+                    activity.startActivity(intent);
+                }
             }
         });
     }

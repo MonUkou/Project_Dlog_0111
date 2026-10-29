@@ -185,7 +185,7 @@ public class SearchActivity extends AppCompatActivity {
         rvSearchResults.setVisibility(enabled ? View.GONE : View.VISIBLE);
         rvTagPosts.setVisibility(enabled ? View.VISIBLE : View.GONE);
         tagSuggestionsScroll.setVisibility(enabled ? View.VISIBLE : View.GONE);
-        photoSortBar.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        photoSortBar.setVisibility(View.GONE);
         tabUsers.setTextColor(getColor(enabled ? R.color.dlog_muted_blue : R.color.dlog_blue));
         tabTags.setTextColor(getColor(enabled ? R.color.dlog_blue : R.color.dlog_muted_blue));
         tabUsers.setTypeface(null, enabled ? android.graphics.Typeface.NORMAL : android.graphics.Typeface.BOLD);
@@ -223,6 +223,14 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void searchTags(String query, final int generation) {
+        if (query.isEmpty()) {
+            progressBarSearch.setVisibility(View.GONE);
+            rvTagPosts.setVisibility(View.GONE);
+            tagPostAdapter.setPosts(new ArrayList<Post>());
+            showEmptySearchState("Chọn chủ đề bên trên hoặc nhập #hashtag");
+            return;
+        }
+        rvTagPosts.setVisibility(View.VISIBLE);
         String value = query.startsWith("#") ? query : "#" + query;
         List<String> tags = HashtagParser.extract(value);
         progressBarSearch.setVisibility(View.VISIBLE);
