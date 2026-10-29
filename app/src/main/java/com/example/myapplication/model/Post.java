@@ -8,6 +8,7 @@ import java.util.HashMap;
 
 public class Post extends BaseEntity {
 
+    private String postCode;
     private String authorId;
     private String imageUrl;
     private List<String> imageUrls = new ArrayList<>();
@@ -39,6 +40,9 @@ public class Post extends BaseEntity {
     public String getAuthorId() {
         return authorId;
     }
+
+    public String getPostCode() { return postCode; }
+    public void setPostCode(String postCode) { this.postCode = postCode; }
 
     public void setAuthorId(String authorId) {
         this.authorId = authorId;
@@ -115,6 +119,7 @@ public class Post extends BaseEntity {
     @Override
     public Map<String, Object> toMap() {
         Map<String, Object> map = baseMap();
+        if (postCode != null && !postCode.trim().isEmpty()) map.put("postCode", postCode);
         map.put("authorId", authorId);
         map.put("imageUrl", imageUrl);
         map.put("imageUrls", imageUrls);
@@ -133,6 +138,7 @@ public class Post extends BaseEntity {
     public static Post fromMap(Map<String, Object> map) {
         if (map == null) return null;
         Post post = new Post();
+        if (map.get("postCode") instanceof String) post.setPostCode((String) map.get("postCode"));
         post.hidden = Boolean.TRUE.equals(map.get("hidden"));
         if (map.get("createdAt") instanceof Number) post.setCreatedAt(((Number) map.get("createdAt")).longValue());
         if (map.get("updatedAt") instanceof Number) post.setUpdatedAt(((Number) map.get("updatedAt")).longValue());
