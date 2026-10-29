@@ -1,6 +1,9 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -15,9 +18,11 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.bumptech.glide.Glide;
 import com.example.myapplication.adapter.PostGridAdapter;
+import com.example.myapplication.adapter.PostAdapter;
 import com.example.myapplication.model.Follow;
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.User;
@@ -30,6 +35,9 @@ import com.example.myapplication.util.BottomNavHelper;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class ProfileActivity extends AppCompatActivity {
 
@@ -51,6 +59,10 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView tvOfflineProfile;
 
     private PostGridAdapter postGridAdapter;
+    private List<Post> displayedPosts = new ArrayList<>();
+    private int sortMode;
+    private TextView sortNewest, sortOldest, sortPopular;
+    private View profileSortBar;
     private UserService userService;
     private PostService postService;
     private AuthService authService;
@@ -59,6 +71,7 @@ public class ProfileActivity extends AppCompatActivity {
     private String targetUserId;
     private String currentUserId;
     private boolean isSelfProfile;
+    public boolean isSelfProfile() { return isSelfProfile; }
     private boolean isShowingSavedPosts = false;
     private boolean isFollowingTarget = false;
     private ListenerRegistration profileRegistration;
@@ -75,6 +88,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         currentUserId = authService.getCurrentUserId();
         targetUserId = getIntent().getStringExtra("userId");
+        if (getIntent().getBooleanExtra("openOwnProfile", false)) targetUserId = currentUserId;
         if (targetUserId == null || targetUserId.isEmpty()) {
             targetUserId = currentUserId;
         }
@@ -108,18 +122,8 @@ public class ProfileActivity extends AppCompatActivity {
         btnProfileActionButton = findViewById(R.id.btnProfileActionButton);
         btnProfileActionButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.dlog_button)));
         btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
-        findViewById(R.id.btnShowFollowers).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openFollowList(false);
-            }
-        });
-        findViewById(R.id.btnShowFollowing).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openFollowList(true);
-            }
-        });
+        findViewById(R.id.btnShowFollowers).setOnClickListener(v -> openFollowList(false));
+        findViewById(R.id.btnShowFollowing).setOnClickListener(v -> openFollowList(true));
 
         llProfileTabs = findViewById(R.id.llProfileTabs);
         tabUserPosts = findViewById(R.id.tabUserPosts);
@@ -129,13 +133,17 @@ public class ProfileActivity extends AppCompatActivity {
         progressBarProfile = findViewById(R.id.progressBarProfile);
         tvStateProfile = findViewById(R.id.tvStateProfile);
         tvOfflineProfile = findViewById(R.id.tvOfflineProfile);
+        profileSortBar = findViewById(R.id.profileSortBar);
+        sortNewest = findViewById(R.id.profileSortNewest);
+        sortOldest = findViewById(R.id.profileSortOldest);
+        sortPopular = findViewById(R.id.profileSortPopular);
+        sortNewest.setOnClickListener(v -> setSortMode(0));
+        sortOldest.setOnClickListener(v -> setSortMode(1));
+        sortPopular.setOnClickListener(v -> setSortMode(2));
+        updateSortControls();
 
-        findViewById(R.id.btnProfileSettings).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class));
-            }
-        });
+        findViewById(R.id.btnProfileSettings).setOnClickListener(v ->
+                startActivity(new Intent(ProfileActivity.this, SettingsActivity.class)));
 
         if (isSelfProfile) {
             findViewById(R.id.btnMessageProfile).setVisibility(View.GONE);
@@ -152,40 +160,22 @@ public class ProfileActivity extends AppCompatActivity {
             btnProfileActionButton.setTextColor(ContextCompat.getColor(this, R.color.white));
 
             llProfileTabs.setVisibility(View.VISIBLE);
-            tabUserPosts.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    switchTab(false);
-                }
-            });
-            tabSavedPosts.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    switchTab(true);
-                }
-            });
+            tabUserPosts.setOnClickListener(v -> switchTab(false));
+            tabSavedPosts.setOnClickListener(v -> switchTab(true));
         } else {
             findViewById(R.id.btnProfileSettings).setVisibility(View.GONE);
             llProfileTabs.setVisibility(View.GONE);
             findViewById(R.id.btnMessageProfile).setVisibility(View.VISIBLE);
-            findViewById(R.id.btnMessageProfile).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    openPrivateChat();
-                }
-            });
+            findViewById(R.id.btnMessageProfile).setOnClickListener(v -> openPrivateChat());
             checkFollowStatus();
         }
 
-        btnProfileActionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isSelfProfile) {
-                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
-                    startActivity(intent);
-                } else {
-                    handleFollowToggle();
-                }
+        btnProfileActionButton.setOnClickListener(v -> {
+            if (isSelfProfile) {
+                Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                startActivity(intent);
+            } else {
+                handleFollowToggle();
             }
         });
     }
@@ -206,12 +196,80 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         rvProfilePosts.setLayoutManager(new GridLayoutManager(this, 3));
         postGridAdapter = new PostGridAdapter(this);
+        postGridAdapter.setOnPostClickListener(this::showPostDialog);
         rvProfilePosts.setAdapter(postGridAdapter);
+    }
+
+    private void showPostDialog(Post post) {
+        Dialog dialog = new Dialog(this);
+        RecyclerView postList = new RecyclerView(this);
+        postList.setLayoutManager(new LinearLayoutManager(this));
+        PostAdapter adapter = new PostAdapter(this);
+        postList.setAdapter(adapter);
+        adapter.setPosts(Collections.singletonList(post));
+        dialog.setContentView(postList);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.7f);
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        }
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.setOnDismissListener(ignored -> {
+            if (isShowingSavedPosts) loadSavedPosts();
+        });
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            int width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(540));
+            int height = (int) (getResources().getDisplayMetrics().heightPixels * 0.84f);
+            dialog.getWindow().setLayout(width, height);
+        }
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void setSortMode(int mode) {
+        sortMode = mode;
+        updateSortControls();
+        showSortedPosts();
+    }
+
+    private void updateSortControls() {
+        TextView[] controls = {sortNewest, sortOldest, sortPopular};
+        for (int i = 0; i < controls.length; i++) {
+            boolean selected = i == sortMode;
+            controls[i].setSelected(selected);
+            controls[i].setTextColor(ContextCompat.getColor(this,
+                    selected ? R.color.dlog_blue : R.color.dlog_muted_blue));
+        }
+    }
+
+    private void showSortedPosts() {
+        List<Post> sorted = new ArrayList<>(displayedPosts);
+        Collections.sort(sorted, new Comparator<Post>() {
+            @Override public int compare(Post left, Post right) {
+                if (sortMode == 2) {
+                    int likes = Long.compare(right.getLikesCount(), left.getLikesCount());
+                    if (likes != 0) return likes;
+                }
+                return sortMode == 1
+                        ? Long.compare(left.getCreatedAt(), right.getCreatedAt())
+                        : Long.compare(right.getCreatedAt(), left.getCreatedAt());
+            }
+        });
+        postGridAdapter.setPosts(sorted);
+    }
+
+    private void displayPosts(List<Post> posts) {
+        displayedPosts = posts == null ? new ArrayList<>() : new ArrayList<>(posts);
+        showSortedPosts();
     }
 
     private void switchTab(boolean showSaved) {
         if (isShowingSavedPosts == showSaved) return;
         isShowingSavedPosts = showSaved;
+        profileSortBar.setVisibility(showSaved ? View.GONE : View.VISIBLE);
 
         if (showSaved) {
             tabUserPosts.setTextColor(ContextCompat.getColor(this, R.color.dlog_muted));
@@ -377,10 +435,10 @@ public class ProfileActivity extends AppCompatActivity {
         final List<Post> cachedPosts = offline.profilePosts(targetUserId);
         final boolean hasCache = offline.hasProfilePosts(targetUserId);
         if (hasCache) {
-            postGridAdapter.setPosts(cachedPosts);
+            displayPosts(cachedPosts);
             tvPostsCount.setText(String.valueOf(cachedPosts.size()));
             tvOfflineProfile.setText("SQLite · Đang hiển thị ảnh hồ sơ đã lưu và kiểm tra dữ liệu mới…");
-            tvOfflineProfile.setVisibility(View.VISIBLE);
+            tvOfflineProfile.setVisibility(View.GONE);
         }
 
         postService.getPostsByUserId(targetUserId, new PostService.Callback<List<Post>>() {
@@ -397,7 +455,7 @@ public class ProfileActivity extends AppCompatActivity {
                 } else {
                     tvStateProfile.setVisibility(View.GONE);
                 }
-                postGridAdapter.setPosts(posts);
+                displayPosts(posts);
             }
 
             @Override
@@ -405,7 +463,7 @@ public class ProfileActivity extends AppCompatActivity {
                 progressBarProfile.setVisibility(View.GONE);
                 if (hasCache) {
                     tvOfflineProfile.setText("Ngoại tuyến · Ảnh hồ sơ đang đọc từ SQLite");
-                    tvOfflineProfile.setVisibility(View.VISIBLE);
+                    tvOfflineProfile.setVisibility(View.GONE);
                     tvStateProfile.setVisibility(cachedPosts.isEmpty() ? View.VISIBLE : View.GONE);
                     if (cachedPosts.isEmpty()) tvStateProfile.setText("Hồ sơ đã lưu chưa có ảnh");
                 } else {
@@ -425,9 +483,9 @@ public class ProfileActivity extends AppCompatActivity {
         final List<Post> cachedPosts = offline.savedPosts(targetUserId);
         final boolean hasCache = offline.hasSavedPosts(targetUserId);
         if (hasCache) {
-            postGridAdapter.setPosts(cachedPosts);
+            displayPosts(cachedPosts);
             tvOfflineProfile.setText("SQLite · Đang hiển thị mục Đã lưu và kiểm tra dữ liệu mới…");
-            tvOfflineProfile.setVisibility(View.VISIBLE);
+            tvOfflineProfile.setVisibility(View.GONE);
         }
 
         postService.getSavedPosts(targetUserId, new PostService.Callback<List<Post>>() {
@@ -442,7 +500,7 @@ public class ProfileActivity extends AppCompatActivity {
                 } else {
                     tvStateProfile.setVisibility(View.GONE);
                 }
-                postGridAdapter.setPosts(posts);
+                displayPosts(posts);
             }
 
             @Override
@@ -450,7 +508,7 @@ public class ProfileActivity extends AppCompatActivity {
                 progressBarProfile.setVisibility(View.GONE);
                 if (hasCache) {
                     tvOfflineProfile.setText("Ngoại tuyến · Mục Đã lưu đang đọc từ SQLite");
-                    tvOfflineProfile.setVisibility(View.VISIBLE);
+                    tvOfflineProfile.setVisibility(View.GONE);
                     tvStateProfile.setVisibility(cachedPosts.isEmpty() ? View.VISIBLE : View.GONE);
                     if (cachedPosts.isEmpty()) tvStateProfile.setText("Mục Đã lưu ngoại tuyến đang trống");
                 } else {
