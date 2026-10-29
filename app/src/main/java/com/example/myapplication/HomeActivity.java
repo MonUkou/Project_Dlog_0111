@@ -12,6 +12,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -29,6 +30,7 @@ import com.example.myapplication.service.impl.UserService;
 import com.example.myapplication.util.BottomNavHelper;
 import com.example.myapplication.util.FeedPageSelector;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.AppBarLayout;
@@ -52,6 +54,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private PostAdapter postAdapter;
     private PostService postService;
+    private ListenerRegistration postRealtimeRegistration;
     private AuthService authService;
     private UserStripAdapter userStripAdapter;
     private ListenerRegistration currentUserRegistration;
@@ -70,6 +73,17 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
+                    homeDrawer.closeDrawer(GravityCompat.START);
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
 
         postService = PostService.getInstance();
         authService = AuthService.getInstance();
@@ -79,6 +93,7 @@ public class HomeActivity extends AppCompatActivity {
         setupPeopleStrip();
         setupRecyclerView();
         loadFeedPosts(true);
+        observeVisiblePostChanges();
     }
 
     private void initViews() {
@@ -102,31 +117,14 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        btnSearchHome.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, SearchActivity.class));
-            }
-        });
+        btnSearchHome.setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, SearchActivity.class)));
 
-        btnNotificationsHome.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, NotificationActivity.class));
-            }
-        });
-        btnMenuHome.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                homeDrawer.openDrawer(GravityCompat.START);
-            }
-        });
-        findViewById(R.id.quickCreatePost).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class));
-            }
-        });
+        btnNotificationsHome.setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, NotificationActivity.class)));
+        btnMenuHome.setOnClickListener(v -> homeDrawer.openDrawer(GravityCompat.START));
+        findViewById(R.id.quickCreatePost).setOnClickListener(v ->
+                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class)));
         btnScrollToTop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -145,63 +143,26 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupDrawerMenu() {
-        findViewById(R.id.rowMenuProfile).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openProfile(false);
-            }
-        });
-        findViewById(R.id.rowMenuSaved).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openProfile(true);
-            }
-        });
-        findViewById(R.id.rowMenuCreate).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class));
-            }
-        });
-        findViewById(R.id.rowMenuNotifications).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, NotificationActivity.class));
-            }
-        });
-        findViewById(R.id.rowMenuChats).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, ChatsActivity.class));
-            }
-        });
-        findViewById(R.id.rowMenuSettings).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, SettingsActivity.class));
-            }
-        });
-        findViewById(R.id.rowMenuAdmin).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, AdminActivity.class));
-            }
-        });
-        findViewById(R.id.rowMenuHelp).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(HomeActivity.this, "Trung tâm trợ giúp sẽ sớm có mặt.", Toast.LENGTH_SHORT).show();
-            }
-        });
-        findViewById(R.id.rowMenuLogout).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                authService.logout();
-                Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-            }
+        findViewById(R.id.rowMenuProfile).setOnClickListener(v -> openProfile(false));
+        findViewById(R.id.rowMenuSaved).setOnClickListener(v -> openProfile(true));
+        findViewById(R.id.rowMenuCreate).setOnClickListener(v ->
+                startActivity(new Intent(this, CreatePostActivity.class)));
+        findViewById(R.id.rowMenuNotifications).setOnClickListener(v ->
+                startActivity(new Intent(this, NotificationActivity.class)));
+        findViewById(R.id.rowMenuChats).setOnClickListener(v ->
+                startActivity(new Intent(this, ChatsActivity.class)));
+        findViewById(R.id.rowMenuSettings).setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class)));
+        findViewById(R.id.rowMenuAdmin).setOnClickListener(v ->
+                startActivity(new Intent(this, AdminActivity.class)));
+        findViewById(R.id.rowMenuHelp).setOnClickListener(v ->
+                Toast.makeText(this, "Trung tâm trợ giúp sẽ sớm có mặt.", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.rowMenuLogout).setOnClickListener(v -> {
+            authService.logout();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         });
     }
 
@@ -317,7 +278,7 @@ public class HomeActivity extends AppCompatActivity {
                 postAdapter.setPosts(saved);
                 tvStateFeed.setVisibility(View.GONE);
                 tvOfflineFeed.setText("SQLite · Đang hiển thị bảng tin đã lưu và kiểm tra dữ liệu mới…");
-                tvOfflineFeed.setVisibility(View.VISIBLE);
+                tvOfflineFeed.setVisibility(View.GONE);
             }
         }
         if (isRefresh) {
@@ -397,13 +358,34 @@ public class HomeActivity extends AppCompatActivity {
                             tvOfflineFeed.setText(isRefresh
                                     ? "Ngoại tuyến · Bảng tin đang đọc từ SQLite"
                                     : "Ngoại tuyến · Đã hết các trang lưu trong SQLite");
-                            tvOfflineFeed.setVisibility(View.VISIBLE);
+                            tvOfflineFeed.setVisibility(View.GONE);
                             return;
                         }
 
                         Toast.makeText(HomeActivity.this,
                                 "Lỗi tải bảng tin: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void observeVisiblePostChanges() {
+        if (postRealtimeRegistration != null) {
+            postRealtimeRegistration.remove();
+        }
+        postRealtimeRegistration = FirebaseFirestore.getInstance()
+                .collection("posts")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(100)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null || isFinishing() || isDestroyed()) return;
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
+                        if (document.getData() == null) continue;
+                        Post updated = Post.fromMap(document.getData());
+                        if (updated != null) {
+                            updated.setId(document.getId());
+                            postAdapter.updatePostRealtime(updated);
+                        }
                     }
                 });
     }
@@ -431,6 +413,10 @@ public class HomeActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        if (postRealtimeRegistration != null) {
+            postRealtimeRegistration.remove();
+            postRealtimeRegistration = null;
+        }
         if (currentUserRegistration != null) {
             currentUserRegistration.remove();
             currentUserRegistration = null;
@@ -466,12 +452,4 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
-            homeDrawer.closeDrawer(GravityCompat.START);
-            return;
-        }
-        super.onBackPressed();
-    }
 }
