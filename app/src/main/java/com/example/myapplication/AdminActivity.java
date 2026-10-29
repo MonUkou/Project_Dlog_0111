@@ -7,6 +7,8 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.text.format.DateUtils;
+import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -22,6 +24,7 @@ import androidx.core.content.res.ResourcesCompat;
 
 import com.bumptech.glide.Glide;
 import com.example.myapplication.ui.WeeklyTrendView;
+import com.example.myapplication.view.PhotoCollageView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentReference;
@@ -32,6 +35,8 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.OnFailureListener;
 
 import java.util.Calendar;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 
@@ -88,6 +93,7 @@ public class AdminActivity extends AppCompatActivity {
                             denyAccess();
                             return;
                         }
+                        normalizeReadableCodes();
                         bindNavigation();
                         showOverview();
                     }
@@ -105,11 +111,27 @@ public class AdminActivity extends AppCompatActivity {
         finish();
     }
 
+    private void normalizeReadableCodes() {
+        com.example.myapplication.service.impl.ReadableCodeMigration.run(db,
+                new com.example.myapplication.service.impl.ReadableCodeMigration.Callback() {
+                    @Override public void onSuccess(int users, int posts) {
+                        Toast.makeText(AdminActivity.this,
+                                "Đã chuẩn hóa " + users + " người dùng và " + posts + " bài đăng.",
+                                Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override public void onError(Exception error) {
+                        Toast.makeText(AdminActivity.this,
+                                "Không thể gán mã quản lý: " + error.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
     private void bindNavigation() {
         final TextView overview = findViewById(R.id.adminNavOverview);
         final TextView users = findViewById(R.id.adminNavUsers);
         final TextView posts = findViewById(R.id.adminNavPosts);
-        final TextView comments = findViewById(R.id.adminNavComments);
         final TextView reports = findViewById(R.id.adminNavReports);
         final TextView settings = findViewById(R.id.adminNavSettings);
 
@@ -132,13 +154,6 @@ public class AdminActivity extends AppCompatActivity {
             public void onClick(View v) {
                 setActiveTab(posts);
                 showCollection("posts", "Quản lý bài viết");
-            }
-        });
-        comments.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setActiveTab(comments);
-                showCollection("comments", "Quản lý bình luận");
             }
         });
         reports.setOnClickListener(new View.OnClickListener() {
@@ -313,10 +328,19 @@ public class AdminActivity extends AppCompatActivity {
         }
         row.addView(avatar);
         String name = firstValue(doc, "fullName", "username");
-        String email = firstValue(doc, "email");
+        String userCode = firstValue(doc, "userCode");
         boolean locked = Boolean.TRUE.equals(doc.getBoolean("locked"));
-        String role = locked ? "Đã khóa" : "admin".equalsIgnoreCase(doc.getString("role")) ? "Quản trị viên" : "Đang hoạt động";
-        row.addView(createTextColumn(name, email, role, GREEN));
+        boolean online = Boolean.TRUE.equals(doc.getBoolean("online"));
+        boolean admin = "admin".equalsIgnoreCase(doc.getString("role"));
+        String status = locked ? "Đã khóa"
+                : online ? (admin ? "Quản trị viên · Đang hoạt động" : "Đang hoạt động")
+                  : (admin ? "Quản trị viên · Ngoại tuyến" : offlineLabel(doc.getLong("lastSeenAt")));
+        int statusColor = locked ? RED : online ? GREEN : MUTED;
+        row.addView(createTextColumn(name, userCode, status, statusColor));
+        row.setBackgroundResource(R.drawable.bg_admin_card_clickable);
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setContentDescription("Xem hồ sơ " + name + ", " + userCode + ", " + status);
         row.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -350,10 +374,169 @@ public class AdminActivity extends AppCompatActivity {
         long comments = numberValue(doc, "commentsCount");
         boolean hidden = Boolean.TRUE.equals(doc.getBoolean("hidden"));
         row.addView(createTextColumn(caption, author,
-                hidden ? "Đã ẩn" : likes + " lượt thích · " + comments + " bình luận",
+                hidden ? firstValue(doc, "postCode") + " · Đã ẩn"
+                        : firstValue(doc, "postCode") + " · " + likes + " lượt thích · " + comments + " bình luận",
                 hidden ? MUTED : BLUE));
         row.addView(actionMenu(doc, "posts", caption, hidden));
+        row.setBackgroundResource(R.drawable.bg_admin_card_clickable);
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setContentDescription("Mở bài đăng " + firstValue(doc, "postCode"));
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { showPostManagementDialog(doc); }
+        });
         content.addView(row);
+    }
+
+    private String offlineLabel(Long lastSeenAt) {
+        if (lastSeenAt == null || lastSeenAt <= 0L) return "Ngoại tuyến";
+        CharSequence relative = DateUtils.getRelativeTimeSpanString(lastSeenAt,
+                System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS,
+                DateUtils.FORMAT_ABBREV_RELATIVE);
+        return "Ngoại tuyến · hoạt động " + relative;
+    }
+
+    private void showPostManagementDialog(final DocumentSnapshot postDoc) {
+        final LinearLayout dialogContent = new LinearLayout(this);
+        dialogContent.setOrientation(LinearLayout.VERTICAL);
+        dialogContent.setPadding(dp(16), dp(8), dp(16), dp(16));
+
+        String postCode = firstValue(postDoc, "postCode");
+        String author = firstValue(postDoc, "authorUsername", "authorId");
+        dialogContent.addView(createText(postCode + " · " + author, 16, NAVY, true));
+
+        final List<String> images = new ArrayList<>();
+        Object rawImages = postDoc.get("imageUrls");
+        if (rawImages instanceof List) {
+            for (Object value : (List<?>) rawImages) {
+                if (value instanceof String && !((String) value).trim().isEmpty()) {
+                    images.add((String) value);
+                }
+            }
+        }
+        if (images.isEmpty()) {
+            String imageUrl = postDoc.getString("imageUrl");
+            if (imageUrl != null && !imageUrl.trim().isEmpty()) images.add(imageUrl);
+        }
+
+        PhotoCollageView collage = new PhotoCollageView(this, null);
+        LinearLayout.LayoutParams collageParams = new LinearLayout.LayoutParams(-1, dp(240));
+        collageParams.topMargin = dp(12);
+        dialogContent.addView(collage, collageParams);
+        collage.show(images, null);
+
+        TextView caption = createText(firstValue(postDoc, "caption"), 14, NAVY, false);
+        caption.setPadding(0, dp(12), 0, dp(8));
+        dialogContent.addView(caption);
+        dialogContent.addView(createText(numberValue(postDoc, "likesCount") + " lượt thích · "
+                + numberValue(postDoc, "commentsCount") + " bình luận", 12, MUTED, false));
+
+        final Button visibilityButton = new Button(this);
+        boolean hidden = Boolean.TRUE.equals(postDoc.getBoolean("hidden"));
+        final boolean[] hiddenState = { hidden };
+        visibilityButton.setText(hidden ? "Hiện lại bài viết" : "Ẩn bài viết");
+        visibilityButton.setAllCaps(false);
+        visibilityButton.setMinHeight(dp(48));
+        visibilityButton.setContentDescription(visibilityButton.getText());
+        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(-1, dp(48));
+        actionParams.topMargin = dp(12);
+        dialogContent.addView(visibilityButton, actionParams);
+
+        TextView commentsTitle = createText("Bình luận", 15, NAVY, true);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-1, -2);
+        titleParams.topMargin = dp(18);
+        dialogContent.addView(commentsTitle, titleParams);
+
+        final LinearLayout commentsContainer = new LinearLayout(this);
+        commentsContainer.setOrientation(LinearLayout.VERTICAL);
+        dialogContent.addView(commentsContainer, new LinearLayout.LayoutParams(-1, -2));
+        loadPostComments(postDoc.getId(), commentsContainer);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.addView(dialogContent, new ScrollView.LayoutParams(-1, -2));
+
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Quản lý bài đăng")
+                .setView(scroll)
+                .setNegativeButton("Đóng", null)
+                .create();
+
+        visibilityButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                boolean nextHidden = !hiddenState[0];
+                String action = nextHidden ? "Ẩn" : "Hiện lại";
+                new AlertDialog.Builder(AdminActivity.this)
+                        .setTitle(action + " bài viết?")
+                        .setMessage(action + " " + postCode + " trên DLog?")
+                        .setNegativeButton("Hủy", null)
+                        .setPositiveButton(action, (confirmDialog, which) ->
+                                updateVisibility(postDoc, "posts", nextHidden)
+                                        .addOnSuccessListener(unused -> {
+                                            hiddenState[0] = nextHidden;
+                                            visibilityButton.setText(nextHidden
+                                                    ? "Hiện lại bài viết" : "Ẩn bài viết");
+                                            visibilityButton.setContentDescription(visibilityButton.getText());
+                                            Toast.makeText(AdminActivity.this,
+                                                    nextHidden ? "Đã ẩn bài viết" : "Đã hiện lại bài viết",
+                                                    Toast.LENGTH_SHORT).show();
+                                            showCollection("posts", "Quản lý bài viết");
+                                        })
+                                        .addOnFailureListener(error -> Toast.makeText(AdminActivity.this,
+                                                "Không thể cập nhật: " + error.getMessage(),
+                                                Toast.LENGTH_LONG).show()))
+                        .show();
+            }
+        });
+        dialog.show();
+    }
+
+    private void loadPostComments(String postId, final LinearLayout container) {
+        container.removeAllViews();
+        TextView loading = createText("Đang tải bình luận…", 12, MUTED, false);
+        loading.setPadding(0, dp(12), 0, dp(12));
+        container.addView(loading);
+        db.collection("comments").whereEqualTo("postId", postId).get()
+                .addOnSuccessListener(snapshot -> {
+                    container.removeAllViews();
+                    if (snapshot.isEmpty()) {
+                        TextView empty = createText("Bài viết chưa có bình luận.", 12, MUTED, false);
+                        empty.setPadding(0, dp(12), 0, dp(12));
+                        container.addView(empty);
+                        return;
+                    }
+                    for (DocumentSnapshot comment : snapshot.getDocuments()) {
+                        addDialogCommentRow(postId, comment, container);
+                    }
+                })
+                .addOnFailureListener(error -> {
+                    container.removeAllViews();
+                    container.addView(createText("Không thể tải bình luận: " + error.getMessage(),
+                            12, RED, false));
+                });
+    }
+
+    private void addDialogCommentRow(final String postId, final DocumentSnapshot comment,
+                                     final LinearLayout container) {
+        LinearLayout row = createRow();
+        boolean hidden = Boolean.TRUE.equals(comment.getBoolean("hidden"));
+        row.addView(createTextColumn(firstValue(comment, "username", "authorId"),
+                firstValue(comment, "content"), hidden ? "Đã ẩn" : "Đang hiển thị",
+                hidden ? MUTED : GREEN));
+
+        TextView action = createText(hidden ? "Hiện" : "Ẩn", 13, hidden ? BLUE : RED, true);
+        action.setGravity(Gravity.CENTER);
+        action.setMinWidth(dp(56));
+        action.setMinHeight(dp(48));
+        action.setBackgroundResource(android.R.drawable.list_selector_background);
+        action.setContentDescription((hidden ? "Hiện lại" : "Ẩn") + " bình luận");
+        action.setOnClickListener(view -> updateVisibility(comment, "comments", !hidden)
+                .addOnSuccessListener(unused -> loadPostComments(postId, container))
+                .addOnFailureListener(error -> Toast.makeText(AdminActivity.this,
+                        "Không thể cập nhật bình luận: " + error.getMessage(),
+                        Toast.LENGTH_LONG).show()));
+        row.addView(action);
+        container.addView(row);
     }
 
     private TextView actionMenu(final DocumentSnapshot doc, final String collection,
@@ -564,7 +747,6 @@ public class AdminActivity extends AppCompatActivity {
 
         addSetting("Thông tin ứng dụng", "Phiên bản 1.0.0");
         addSetting("Quản lý nội dung", "Quyền truy cập do Firestore Rules kiểm soát");
-        addSetting("Bình luận", "Dữ liệu được tải từ collection comments");
         addSetting("Sao lưu dữ liệu", "Backup & Restore");
         addSetting("Ngôn ngữ", "Tiếng Việt");
     }
