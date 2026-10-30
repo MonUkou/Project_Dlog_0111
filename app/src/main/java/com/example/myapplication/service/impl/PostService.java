@@ -86,21 +86,21 @@ public class PostService {
         final Context app = context.getApplicationContext();
         IO_EXECUTOR.execute(new Runnable() {
             @Override public void run() {
-            File file = null;
-            try {
-                String mime = resolveImageMimeType(app, uri);
-                file = copyImageToCache(app, uri, UUID.randomUUID().toString(), mime);
-                final String url = CloudinaryUploader.upload(app, file, mime);
-                MAIN_HANDLER.post(new Runnable() {
-                    @Override public void run() { callback.onSuccess(url); }
-                });
-            } catch (final Exception error) {
-                MAIN_HANDLER.post(new Runnable() {
-                    @Override public void run() { callback.onError(error); }
-                });
-            } finally {
-                if (file != null) file.delete();
-            }
+                File file = null;
+                try {
+                    String mime = resolveImageMimeType(app, uri);
+                    file = copyImageToCache(app, uri, UUID.randomUUID().toString(), mime);
+                    final String url = CloudinaryUploader.upload(app, file, mime);
+                    MAIN_HANDLER.post(new Runnable() {
+                        @Override public void run() { callback.onSuccess(url); }
+                    });
+                } catch (final Exception error) {
+                    MAIN_HANDLER.post(new Runnable() {
+                        @Override public void run() { callback.onError(error); }
+                    });
+                } finally {
+                    if (file != null) file.delete();
+                }
             }
         });
     }
@@ -215,7 +215,7 @@ public class PostService {
                         android.media.ExifInterface.ORIENTATION_NORMAL);
                 float degrees = orientation == android.media.ExifInterface.ORIENTATION_ROTATE_90 ? 90f
                         : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_180 ? 180f
-                        : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_270 ? 270f : 0f;
+                          : orientation == android.media.ExifInterface.ORIENTATION_ROTATE_270 ? 270f : 0f;
                 if (degrees != 0f) {
                     Matrix matrix = new Matrix();
                     matrix.postRotate(degrees);
@@ -230,7 +230,7 @@ public class PostService {
         File optimized = new File(source.getParentFile(), source.getName() + ".optimized");
         Bitmap.CompressFormat format = "image/png".equals(mimeType) ? Bitmap.CompressFormat.PNG
                 : (Build.VERSION.SDK_INT >= 30 && "image/webp".equals(mimeType)
-                ? Bitmap.CompressFormat.WEBP_LOSSY : Bitmap.CompressFormat.JPEG);
+                   ? Bitmap.CompressFormat.WEBP_LOSSY : Bitmap.CompressFormat.JPEG);
         int quality = format == Bitmap.CompressFormat.PNG ? 100 : 84;
         try (FileOutputStream output = new FileOutputStream(optimized)) {
             if (!working.compress(format, quality, output)) {
@@ -492,12 +492,12 @@ public class PostService {
                                     post.setPhotoMetadata(metadata);
                                     post.touch();
                                     db.collection("posts").document(postId).update(
-                                            "caption", post.getCaption(),
-                                            "hashtags", post.getHashtags(),
-                                            "imageUrls", post.getImageUrls(),
-                                            "imageUrl", post.getImageUrl(),
-                                            "photoMetadata", post.getPhotoMetadata(),
-                                            "updatedAt", post.getUpdatedAt())
+                                                    "caption", post.getCaption(),
+                                                    "hashtags", post.getHashtags(),
+                                                    "imageUrls", post.getImageUrls(),
+                                                    "imageUrl", post.getImageUrl(),
+                                                    "photoMetadata", post.getPhotoMetadata(),
+                                                    "updatedAt", post.getUpdatedAt())
                                             .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Void>() {
                                                 @Override public void onSuccess(Void unused) { callback.onSuccess(post); }
                                             })

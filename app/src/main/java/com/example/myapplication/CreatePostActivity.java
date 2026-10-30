@@ -507,72 +507,72 @@ public class CreatePostActivity extends AppCompatActivity {
         List<String> hashtags = HashtagParser.extract(
                 caption, etHashtags.getText().toString());
         PostService.Callback<Post> saveCallback = new PostService.Callback<Post>() {
-                    @Override
-                    public void onSuccess(Post post) {
-                        posting = false;
-                        llLoadingCreate.setVisibility(View.GONE);
-                        btnSubmitPost.setEnabled(true);
-                        btnSelectImage.setEnabled(true);
-                        btnAddMoreImages.setEnabled(true);
-                        btnEditSelectedImage.setEnabled(true);
+            @Override
+            public void onSuccess(Post post) {
+                posting = false;
+                llLoadingCreate.setVisibility(View.GONE);
+                btnSubmitPost.setEnabled(true);
+                btnSelectImage.setEnabled(true);
+                btnAddMoreImages.setEnabled(true);
+                btnEditSelectedImage.setEnabled(true);
 
-                        Toast.makeText(CreatePostActivity.this,
-                                editingPostId == null ? "Đã chia sẻ ảnh!" : "Đã lưu bộ ảnh!",
-                                Toast.LENGTH_SHORT).show();
+                Toast.makeText(CreatePostActivity.this,
+                        editingPostId == null ? "Đã chia sẻ ảnh!" : "Đã lưu bộ ảnh!",
+                        Toast.LENGTH_SHORT).show();
 
-                        if (editingPostId != null) {
-                            getSharedPreferences("dlog_ui", MODE_PRIVATE).edit()
-                                    .putBoolean("refresh_feed_after_edit", true).apply();
-                            Intent home = new Intent(CreatePostActivity.this, HomeActivity.class);
-                            home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            home.putExtra("refresh_after_post", true);
-                            startActivity(home);
-                            finish();
-                            return;
-                        }
+                if (editingPostId != null) {
+                    getSharedPreferences("dlog_ui", MODE_PRIVATE).edit()
+                            .putBoolean("refresh_feed_after_edit", true).apply();
+                    Intent home = new Intent(CreatePostActivity.this, HomeActivity.class);
+                    home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    home.putExtra("refresh_after_post", true);
+                    startActivity(home);
+                    finish();
+                    return;
+                }
 
-                        Intent intent = new Intent(
-                                CreatePostActivity.this,
-                                HomeActivity.class
-                        );
+                Intent intent = new Intent(
+                        CreatePostActivity.this,
+                        HomeActivity.class
+                );
 
-                        intent.addFlags(
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        );
-                        intent.putExtra("refresh_after_post", true);
+                intent.addFlags(
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                );
+                intent.putExtra("refresh_after_post", true);
 
-                        startActivity(intent);
-                        finish();
-                    }
+                startActivity(intent);
+                finish();
+            }
 
-                    @Override
-                    public void onError(Exception e) {
-                        posting = false;
-                        setRequestedOrientation(orientationBeforePost);
-                        llLoadingCreate.setVisibility(View.GONE);
-                        btnSubmitPost.setEnabled(true);
-                        btnSubmitPost.setText(editingPostId == null ? "Chia sẻ" : "Lưu");
-                        btnSelectImage.setEnabled(true);
-                        btnAddMoreImages.setEnabled(true);
-                        btnEditSelectedImage.setEnabled(true);
-                        btnBackCreate.setEnabled(true);
+            @Override
+            public void onError(Exception e) {
+                posting = false;
+                setRequestedOrientation(orientationBeforePost);
+                llLoadingCreate.setVisibility(View.GONE);
+                btnSubmitPost.setEnabled(true);
+                btnSubmitPost.setText(editingPostId == null ? "Chia sẻ" : "Lưu");
+                btnSelectImage.setEnabled(true);
+                btnAddMoreImages.setEnabled(true);
+                btnEditSelectedImage.setEnabled(true);
+                btnBackCreate.setEnabled(true);
 
-                        String message;
+                String message;
 
-                        if (e == null || e.getMessage() == null) {
-                            message = "Không thể đăng bài. Vui lòng thử lại.";
-                        } else {
-                            message = e.getMessage();
-                        }
+                if (e == null || e.getMessage() == null) {
+                    message = "Không thể đăng bài. Vui lòng thử lại.";
+                } else {
+                    message = e.getMessage();
+                }
 
-                        Toast.makeText(
-                                CreatePostActivity.this,
-                                "Không thể chia sẻ ảnh: " + message,
-                                Toast.LENGTH_LONG
-                        ).show();
-                    }
-                };
+                Toast.makeText(
+                        CreatePostActivity.this,
+                        "Không thể chia sẻ ảnh: " + message,
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        };
         if (editingPostId == null) {
             postService.createPost(currentUserId, caption, new ArrayList<Uri>(selectedImages),
                     hashtags, this, saveCallback);

@@ -56,11 +56,11 @@ public class BottomNavHelper {
 
         navFeed.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-            if (activeTab != Tab.FEED) {
-                Intent intent = new Intent(activity, HomeActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                activity.startActivity(intent);
-            }
+                if (activeTab != Tab.FEED) {
+                    Intent intent = new Intent(activity, HomeActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    activity.startActivity(intent);
+                }
             }
         });
 

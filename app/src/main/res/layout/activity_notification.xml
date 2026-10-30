@@ -43,14 +43,14 @@
                 android:id="@+id/btnRefreshNotifications"
                 android:layout_width="wrap_content"
                 android:layout_height="42dp"
-                android:backgroundTint="#E0E8F7"
+                android:background="@drawable/bg_auth_button"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
                 android:text="Làm mới"
                 android:textAllCaps="false"
-                android:textColor="@color/dlog_ink"
+                android:textColor="@color/white"
                 android:textSize="14sp" />
         </LinearLayout>
 

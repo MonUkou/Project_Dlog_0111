@@ -21,7 +21,14 @@ public class FollowUserAdapter extends RecyclerView.Adapter<FollowUserAdapter.Ho
   holder.name.setText(name); holder.bio.setText(user.getBio());
   holder.bio.setVisibility(user.getBio()==null||user.getBio().isEmpty()?View.GONE:View.VISIBLE);
   Glide.with(holder.itemView).load(user.getAvatarUrl()).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().into(holder.avatar);
-  holder.itemView.setOnClickListener(v->{ Intent intent=new Intent(v.getContext(),ProfileActivity.class); intent.putExtra("userId",user.getId());v.getContext().startActivity(intent); });
+  holder.itemView.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+          Intent intent = new Intent(v.getContext(), ProfileActivity.class);
+          intent.putExtra("userId", user.getId());
+          v.getContext().startActivity(intent);
+      }
+  });
  }
  static class Holder extends RecyclerView.ViewHolder {
   final TextView name,bio; final ImageView avatar;

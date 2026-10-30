@@ -101,6 +101,7 @@ public class HomeActivity extends AppCompatActivity {
         setupPeopleStrip();
         setupRecyclerView();
         loadFeedPosts(true);
+        observeVisiblePostChanges();
     }
 
     private void initViews() {
@@ -132,11 +133,24 @@ public class HomeActivity extends AppCompatActivity {
             startActivity(new Intent(HomeActivity.this, SearchActivity.class));
         });
 
-        btnNotificationsHome.setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, NotificationActivity.class)));
-        btnMenuHome.setOnClickListener(v -> homeDrawer.openDrawer(GravityCompat.START));
-        findViewById(R.id.quickCreatePost).setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class)));
+        btnNotificationsHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, NotificationActivity.class));
+            }
+        });
+        btnMenuHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                homeDrawer.openDrawer(GravityCompat.START);
+            }
+        });
+        findViewById(R.id.quickCreatePost).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, CreatePostActivity.class));
+            }
+        });
         btnScrollToTop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

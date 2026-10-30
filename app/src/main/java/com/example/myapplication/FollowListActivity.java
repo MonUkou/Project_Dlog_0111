@@ -16,8 +16,18 @@ public class FollowListActivity extends AppCompatActivity {
   super.onCreate(state);setContentView(R.layout.activity_follow_list);
   userId=getIntent().getStringExtra("userId");following=getIntent().getBooleanExtra("following",false);
   ((TextView)findViewById(R.id.tvFollowListTitle)).setText(following?"Đang theo dõi":"Người theo dõi");
-  findViewById(R.id.btnBackFollowList).setOnClickListener(v->finish());
-  findViewById(R.id.btnRetryFollowList).setOnClickListener(v->load());
+  findViewById(R.id.btnBackFollowList).setOnClickListener(new View.OnClickListener() {
+   @Override
+   public void onClick(View v) {
+    finish();
+   }
+  });
+  findViewById(R.id.btnRetryFollowList).setOnClickListener(new View.OnClickListener() {
+   @Override
+   public void onClick(View v) {
+    load();
+   }
+  });
   RecyclerView list=findViewById(R.id.rvFollowUsers);list.setLayoutManager(new LinearLayoutManager(this));
   adapter=new FollowUserAdapter();list.setAdapter(adapter);
  }

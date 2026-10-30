@@ -820,20 +820,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         postService.deletePost(authService.getCurrentUserId(), post.getId(), new PostService.Callback<Void>() {
-                        @Override
-                        public void onSuccess(Void result) {
-                            if (position >= 0 && position < posts.size()) {
-                                posts.remove(position);
-                                notifyItemRemoved(position);
+                            @Override
+                            public void onSuccess(Void result) {
+                                if (position >= 0 && position < posts.size()) {
+                                    posts.remove(position);
+                                    notifyItemRemoved(position);
+                                }
+                                Toast.makeText(context, "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
+                                if (onPostChangeListener != null) onPostChangeListener.onPostDeleted(post.getId());
                             }
-                            Toast.makeText(context, "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
-                            if (onPostChangeListener != null) onPostChangeListener.onPostDeleted(post.getId());
-                        }
 
-                        @Override
-                        public void onError(Exception e) {
-                            Toast.makeText(context, "Lỗi xóa bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
+                            @Override
+                            public void onError(Exception e) {
+                                Toast.makeText(context, "Lỗi xóa bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
                         });
                     }
                 })
