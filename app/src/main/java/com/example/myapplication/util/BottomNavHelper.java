@@ -66,6 +66,11 @@ public class BottomNavHelper {
 
         navSearch.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
+            if (!NetworkState.isOnline(activity)) {
+                android.widget.Toast.makeText(activity,
+                        "Khám phá cần kết nối mạng.", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (activeTab != Tab.SEARCH) {
                 Intent intent = new Intent(activity, SearchActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -76,6 +81,11 @@ public class BottomNavHelper {
 
         navInbox.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
+            if (!NetworkState.isOnline(activity)) {
+                android.widget.Toast.makeText(activity,
+                        "Hộp thư cần kết nối mạng.", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (activeTab != Tab.INBOX) {
                 Intent intent = new Intent(activity, ChatsActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -86,9 +96,10 @@ public class BottomNavHelper {
 
         navProfile.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-            if (activeTab != Tab.PROFILE) {
+            if (activeTab != Tab.PROFILE || (activity instanceof com.example.myapplication.ProfileActivity
+                    && !((com.example.myapplication.ProfileActivity) activity).isSelfProfile())) {
                 Intent intent = new Intent(activity, com.example.myapplication.ProfileActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                intent.putExtra("openOwnProfile", true);
                 activity.startActivity(intent);
             }
             }

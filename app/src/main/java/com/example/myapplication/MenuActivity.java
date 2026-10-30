@@ -5,8 +5,10 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
@@ -32,6 +34,17 @@ public class MenuActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (drawer != null && drawer.isDrawerOpen(GravityCompat.START)) {
+                    drawer.closeDrawer(GravityCompat.START);
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
         drawer = findViewById(R.id.dlogDrawer);
         authService = AuthService.getInstance();
         authService.init(this);
@@ -58,6 +71,11 @@ public class MenuActivity extends AppCompatActivity {
         });
         findViewById(R.id.rowMenuChats).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
+                if (!com.example.myapplication.util.NetworkState.isOnline(MenuActivity.this)) {
+                    Toast.makeText(MenuActivity.this,
+                            "Hộp thư cần kết nối mạng.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 startActivity(new Intent(MenuActivity.this, ChatsActivity.class));
             }
         });
@@ -100,15 +118,6 @@ public class MenuActivity extends AppCompatActivity {
         if (drawer != null) drawer.post(new Runnable() {
             @Override public void run() { drawer.openDrawer(GravityCompat.START); }
         });
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (drawer != null && drawer.isDrawerOpen(GravityCompat.START)) {
-            drawer.closeDrawer(GravityCompat.START);
-            return;
-        }
-        super.onBackPressed();
     }
 
     private void loadUser() {

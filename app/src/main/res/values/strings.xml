@@ -36,4 +36,5 @@
     <string name="forgot_password_email_first">Nhập email để nhận liên kết đặt lại mật khẩu.</string>
     <string name="reset_email_sent">Đã gửi liên kết đặt lại mật khẩu.</string>
     <string name="reset_email_sending">Đang gửi liên kết...</string>
+    <string name="default_username">@dlog_user</string>
 </resources>

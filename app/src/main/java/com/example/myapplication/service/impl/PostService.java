@@ -347,8 +347,22 @@ public class PostService {
         post.setLikesCount(0);
         post.setCommentsCount(0);
 
+        ReadableIdService.nextPostCode(new ReadableIdService.Callback() {
+            @Override public void onSuccess(String code) {
+                post.setPostCode(code);
+                post.setId(code);
+                enrichAndSavePost(post, callback);
+            }
+
+            @Override public void onError(Exception error) {
+                callback.onError(error);
+            }
+        });
+    }
+
+    private void enrichAndSavePost(Post post, Callback<Post> callback) {
         // Fetch author's username and avatar to cache in post if available
-        db.collection("users").document(authorId).get()
+        db.collection("users").document(post.getAuthorId()).get()
                 .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<DocumentSnapshot>() {
                     @Override public void onSuccess(DocumentSnapshot userDoc) {
                         if (userDoc.exists()) {
@@ -357,14 +371,14 @@ public class PostService {
                             if (username != null) post.setAuthorUsername(username);
                             if (avatarUrl != null) post.setAuthorAvatarUrl(avatarUrl);
                         } else {
-                            post.setAuthorUsername(authorId);
+                            post.setAuthorUsername(post.getAuthorId());
                         }
                         savePostToFirestoreInternal(post, callback);
                     }
                 })
                 .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
                     @Override public void onFailure(@NonNull Exception error) {
-                        post.setAuthorUsername(authorId);
+                        post.setAuthorUsername(post.getAuthorId());
                         savePostToFirestoreInternal(post, callback);
                     }
                 });

@@ -99,18 +99,6 @@
                 android:textSize="14sp" />
 
             <TextView
-                android:id="@+id/adminNavComments"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:background="?attr/selectableItemBackground"
-                android:fontFamily="@font/inter"
-                android:gravity="center"
-                android:paddingHorizontal="16dp"
-                android:text="Bình luận"
-                android:textColor="@color/dlog_on_drawer_muted"
-                android:textSize="14sp" />
-
-            <TextView
                 android:id="@+id/adminNavReports"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"

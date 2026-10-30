@@ -22,7 +22,8 @@
 
     <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="240dp"
         android:layout_weight="1"
         android:orientation="vertical"
         android:paddingStart="10dp"
@@ -31,13 +32,13 @@
         <LinearLayout
             android:id="@+id/llAuthorHeader"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="52dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
             <ImageView
                 android:id="@+id/ivAuthorAvatar"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="@drawable/bg_circle_avatar"
                 android:contentDescription="Ảnh đại diện người đăng"
                 android:scaleType="centerCrop" />
@@ -81,11 +82,11 @@
         <LinearLayout
             android:id="@+id/captionRow"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:minHeight="36dp"
             android:gravity="top"
             android:orientation="horizontal"
-            android:paddingTop="8dp"
+            android:paddingTop="4dp"
             android:paddingEnd="4dp">
             <TextView
                 android:id="@+id/tvCaption"
@@ -93,9 +94,9 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ellipsize="end"
-                android:maxLines="3"
+                android:maxLines="2"
                 android:textColor="@color/dlog_navy"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
             <TextView
                 android:id="@+id/btnCaptionMore"
                 android:layout_width="wrap_content"
@@ -125,7 +126,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="48dp"
             android:gravity="start|center_vertical"
             android:orientation="horizontal">
             <TextView
@@ -186,7 +187,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingEnd="4dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="4dp"
             android:visibility="gone">
             <TextView
                 android:id="@+id/tvCommentsCacheStatus"
@@ -219,13 +220,13 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvInlineComments"
                 android:layout_width="match_parent"
-                android:layout_height="112dp"
+                android:layout_height="48dp"
                 android:nestedScrollingEnabled="true"
                 android:overScrollMode="ifContentScrolls"
                 android:scrollbars="vertical" />
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="48dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
                 <EditText

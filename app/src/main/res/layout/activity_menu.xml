@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/dlogDrawer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -40,7 +41,7 @@
                     android:layout_height="56dp"
                     android:contentDescription=""
                     android:src="@drawable/ic_menu_24"
-                    android:tint="@color/dlog_blue" />
+                    app:tint="@color/dlog_blue" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -117,7 +118,7 @@
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="Người dùng DLog"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/dlog_on_drawer"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                     <TextView
@@ -125,8 +126,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="@dlog_user"
-                        android:textColor="#D8E6F8"
+                        android:text="@string/default_username"
+                        android:textColor="@color/dlog_on_drawer_muted"
                         android:textSize="13sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -137,7 +138,7 @@
                 android:layout_marginBottom="8dp"
                 android:paddingStart="8dp"
                 android:text="DLog"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/dlog_on_drawer"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -167,7 +168,7 @@
                 android:layout_height="1dp"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="10dp"
-                android:background="#456080" />
+                android:background="@color/dlog_border" />
 
             <LinearLayout android:id="@+id/rowMenuSettings" style="@style/DLogDrawerRow">
                 <ImageView style="@style/DLogDrawerIcon" android:src="@drawable/ic_settings_24" android:contentDescription="" />

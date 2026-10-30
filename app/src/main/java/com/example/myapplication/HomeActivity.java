@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -12,11 +14,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.myapplication.adapter.PostAdapter;
@@ -29,11 +33,14 @@ import com.example.myapplication.service.impl.UserService;
 import com.example.myapplication.util.BottomNavHelper;
 import com.example.myapplication.util.FeedPageSelector;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.AppBarLayout;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -51,7 +58,10 @@ public class HomeActivity extends AppCompatActivity {
     private AppBarLayout feedAppBar;
 
     private PostAdapter postAdapter;
+    private OfflineFooterAdapter offlineFooterAdapter;
     private PostService postService;
+    private ListenerRegistration postRealtimeRegistration;
+    private final Set<String> realtimeHiddenPostIds = new HashSet<>();
     private AuthService authService;
     private UserStripAdapter userStripAdapter;
     private ListenerRegistration currentUserRegistration;
@@ -59,6 +69,7 @@ public class HomeActivity extends AppCompatActivity {
     private DocumentSnapshot lastVisibleDocument;
     private boolean isLoadingFeed = false;
     private boolean hasMorePosts = true;
+    private boolean showingOfflineSnapshot = false;
     private static final int PAGE_SIZE = 10;
     private int feedRequestGeneration = 0;
     private final Handler feedHandler = new Handler(Looper.getMainLooper());
@@ -70,6 +81,17 @@ public class HomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
+                    homeDrawer.closeDrawer(GravityCompat.START);
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
 
         postService = PostService.getInstance();
         authService = AuthService.getInstance();
@@ -102,8 +124,13 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        btnSearchHome.setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, SearchActivity.class)));
+        btnSearchHome.setOnClickListener(v -> {
+            if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+                Toast.makeText(this, "Khám phá cần kết nối mạng.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            startActivity(new Intent(HomeActivity.this, SearchActivity.class));
+        });
 
         btnNotificationsHome.setOnClickListener(v ->
                 startActivity(new Intent(HomeActivity.this, NotificationActivity.class)));
@@ -134,8 +161,13 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, CreatePostActivity.class)));
         findViewById(R.id.rowMenuNotifications).setOnClickListener(v ->
                 startActivity(new Intent(this, NotificationActivity.class)));
-        findViewById(R.id.rowMenuChats).setOnClickListener(v ->
-                startActivity(new Intent(this, ChatsActivity.class)));
+        findViewById(R.id.rowMenuChats).setOnClickListener(v -> {
+            if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+                Toast.makeText(this, "Hộp thư cần kết nối mạng.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            startActivity(new Intent(this, ChatsActivity.class));
+        });
         findViewById(R.id.rowMenuSettings).setOnClickListener(v ->
                 startActivity(new Intent(this, SettingsActivity.class)));
         findViewById(R.id.rowMenuAdmin).setOnClickListener(v ->
@@ -230,13 +262,18 @@ public class HomeActivity extends AppCompatActivity {
                 }
             }
         });
-        rvFeed.setAdapter(postAdapter);
+        offlineFooterAdapter = new OfflineFooterAdapter();
+        rvFeed.setAdapter(new ConcatAdapter(postAdapter, offlineFooterAdapter));
 
         // Load the next page when the user approaches the end of the feed.
         rvFeed.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
+                if (!com.example.myapplication.util.NetworkState.isOnline(HomeActivity.this)) {
+                    showOfflineFeedOnly();
+                    return;
+                }
                 int firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
                 btnScrollToTop.setVisibility(firstVisibleItem >= 3 ? View.VISIBLE : View.GONE);
 
@@ -263,7 +300,7 @@ public class HomeActivity extends AppCompatActivity {
                 postAdapter.setPosts(saved);
                 tvStateFeed.setVisibility(View.GONE);
                 tvOfflineFeed.setText("SQLite · Đang hiển thị bảng tin đã lưu và kiểm tra dữ liệu mới…");
-                tvOfflineFeed.setVisibility(View.VISIBLE);
+                tvOfflineFeed.setVisibility(View.GONE);
             }
         }
         if (isRefresh) {
@@ -282,6 +319,13 @@ public class HomeActivity extends AppCompatActivity {
             }
             isLoadingFeed = true;
         }
+
+        if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+            showOfflineFeedOnly();
+            return;
+        }
+        showingOfflineSnapshot = false;
+        offlineFooterAdapter.setVisible(false);
 
         final int requestGeneration = feedRequestGeneration;
         postService.getFeedPosts(authService.getCurrentUserId(), lastVisibleDocument, PAGE_SIZE,
@@ -343,13 +387,94 @@ public class HomeActivity extends AppCompatActivity {
                             tvOfflineFeed.setText(isRefresh
                                     ? "Ngoại tuyến · Bảng tin đang đọc từ SQLite"
                                     : "Ngoại tuyến · Đã hết các trang lưu trong SQLite");
-                            tvOfflineFeed.setVisibility(View.VISIBLE);
+                            tvOfflineFeed.setVisibility(View.GONE);
                             return;
                         }
 
                         Toast.makeText(HomeActivity.this,
                                 "Lỗi tải bảng tin: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void showOfflineFeedOnly() {
+        if (!showingOfflineSnapshot) {
+            List<Post> cached = new com.example.myapplication.service.impl.OfflinePages(this)
+                    .feed(authService.getCurrentUserId());
+            postAdapter.setPosts(cached);
+            showingOfflineSnapshot = true;
+        }
+        swipeRefreshLayout.setRefreshing(false);
+        progressBarFeed.setVisibility(View.GONE);
+        isLoadingFeed = false;
+        hasMorePosts = false;
+        tvOfflineFeed.setVisibility(View.GONE);
+        if (postAdapter.getItemCount() == 0) {
+            tvStateFeed.setVisibility(View.VISIBLE);
+            tvStateFeed.setText("Chưa có bài nào được lưu trong phiên đăng nhập này.");
+        } else {
+            tvStateFeed.setVisibility(View.GONE);
+        }
+        offlineFooterAdapter.setVisible(postAdapter.getItemCount()
+                >= com.example.myapplication.service.impl.OfflinePages.MAX_OFFLINE_FEED_POSTS);
+    }
+
+    private static final class OfflineFooterAdapter
+            extends RecyclerView.Adapter<OfflineFooterAdapter.FooterViewHolder> {
+        private boolean visible;
+
+        void setVisible(boolean visible) {
+            if (this.visible == visible) return;
+            this.visible = visible;
+            if (visible) notifyItemInserted(0); else notifyItemRemoved(0);
+        }
+
+        @NonNull
+        @Override
+        public FooterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_feed_offline_end, parent, false);
+            return new FooterViewHolder(view);
+        }
+
+        @Override public void onBindViewHolder(@NonNull FooterViewHolder holder, int position) { }
+        @Override public int getItemCount() { return visible ? 1 : 0; }
+
+        static final class FooterViewHolder extends RecyclerView.ViewHolder {
+            FooterViewHolder(@NonNull View itemView) { super(itemView); }
+        }
+    }
+
+    private void observeVisiblePostChanges() {
+        if (postRealtimeRegistration != null) {
+            postRealtimeRegistration.remove();
+        }
+        postRealtimeRegistration = FirebaseFirestore.getInstance()
+                .collection("posts")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(100)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null || isFinishing() || isDestroyed()) return;
+                    for (com.google.firebase.firestore.DocumentChange change
+                            : snapshot.getDocumentChanges()) {
+                        DocumentSnapshot document = change.getDocument();
+                        if (document.getData() == null) continue;
+                        Post updated = Post.fromMap(document.getData());
+                        if (updated != null) {
+                            updated.setId(document.getId());
+                            if (updated.isHidden()) {
+                                realtimeHiddenPostIds.add(document.getId());
+                                postAdapter.updatePostRealtime(updated);
+                            } else {
+                                boolean wasHidden = realtimeHiddenPostIds.remove(document.getId());
+                                if (wasHidden) {
+                                    postAdapter.restorePostRealtime(updated);
+                                } else {
+                                    postAdapter.updatePostRealtime(updated);
+                                }
+                            }
+                        }
                     }
                 });
     }
@@ -376,7 +501,17 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        observeVisiblePostChanges();
+    }
+
+    @Override
     protected void onStop() {
+        if (postRealtimeRegistration != null) {
+            postRealtimeRegistration.remove();
+            postRealtimeRegistration = null;
+        }
         if (currentUserRegistration != null) {
             currentUserRegistration.remove();
             currentUserRegistration = null;
@@ -412,12 +547,4 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (homeDrawer != null && homeDrawer.isDrawerOpen(GravityCompat.START)) {
-            homeDrawer.closeDrawer(GravityCompat.START);
-            return;
-        }
-        super.onBackPressed();
-    }
 }

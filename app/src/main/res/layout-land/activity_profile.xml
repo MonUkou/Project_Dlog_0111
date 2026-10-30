@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dlog_surface">
@@ -29,7 +30,7 @@
                 android:paddingBottom="12dp">
                 <FrameLayout android:layout_width="match_parent" android:layout_height="190dp">
                     <ImageView android:id="@+id/ivProfileCover" android:layout_width="match_parent" android:layout_height="150dp" android:contentDescription="Ảnh bìa hồ sơ" android:scaleType="centerCrop" android:src="@drawable/profile_cover_sample" />
-                    <ImageView android:id="@+id/btnProfileSettings" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="top|end" android:layout_margin="8dp" android:background="@drawable/bg_profile_camera" android:contentDescription="Cài đặt hồ sơ" android:padding="13dp" android:src="@drawable/ic_settings_24" android:tint="@color/white" />
+                    <ImageView android:id="@+id/btnProfileSettings" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="top|end" android:layout_margin="8dp" android:background="@drawable/bg_profile_camera" android:contentDescription="Cài đặt hồ sơ" android:padding="13dp" android:src="@drawable/ic_settings_24" app:tint="@color/white" />
                     <FrameLayout android:id="@+id/btnChangeCoverProfile" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="bottom|end" android:layout_marginEnd="8dp" android:layout_marginBottom="32dp" android:contentDescription="Đổi ảnh bìa" android:visibility="gone">
                         <ImageView android:layout_width="30dp" android:layout_height="30dp" android:layout_gravity="center" android:background="@drawable/bg_profile_camera" android:importantForAccessibility="no" android:padding="7dp" android:src="@drawable/ic_camera_24" />
                     </FrameLayout>
@@ -70,6 +71,11 @@
             <LinearLayout android:id="@+id/llProfileTabs" android:layout_width="match_parent" android:layout_height="52dp" android:orientation="horizontal">
                 <TextView android:id="@+id/tabUserPosts" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true" android:gravity="center" android:text="Ảnh đã chia sẻ" android:textColor="@color/dlog_blue" android:textSize="13sp" android:textStyle="bold" />
                 <TextView android:id="@+id/tabSavedPosts" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true" android:gravity="center" android:text="Đã lưu" android:textColor="@color/dlog_muted_blue" android:textSize="13sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/profileSortBar" android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:background="@color/dlog_surface">
+                <TextView android:id="@+id/profileSortNewest" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:background="?attr/selectableItemBackground" android:text="Mới nhất" android:textColor="@color/dlog_blue" android:contentDescription="Sắp xếp ảnh mới nhất" />
+                <TextView android:id="@+id/profileSortOldest" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:background="?attr/selectableItemBackground" android:text="Cũ nhất" android:textColor="@color/dlog_muted_blue" android:contentDescription="Sắp xếp ảnh cũ nhất" />
+                <TextView android:id="@+id/profileSortPopular" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:background="?attr/selectableItemBackground" android:text="Phổ biến" android:textColor="@color/dlog_muted_blue" android:contentDescription="Sắp xếp ảnh phổ biến" />
             </LinearLayout>
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dlog_feed_divider" />
             <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="4dp">

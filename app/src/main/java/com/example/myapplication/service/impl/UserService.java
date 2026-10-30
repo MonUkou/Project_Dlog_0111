@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.text.Normalizer;
+import java.util.Locale;
 
 public class UserService {
 
@@ -198,22 +200,57 @@ public class UserService {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<User> users = new ArrayList<>();
-                    String searchLower = queryText.trim().toLowerCase();
+                    String normalizedQuery = normalizeSearchText(queryText);
+                    String[] queryParts = normalizedQuery.split("\\s+");
                     for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                         if (doc.getData() != null) {
                             User u = User.fromMap(doc.getData());
                             if (u != null) u.setId(doc.getId());
                             if (u != null) {
-                                boolean nameMatch = u.getUsername() != null && u.getUsername().toLowerCase().contains(searchLower);
-                                boolean fullMatch = u.getFullName() != null && u.getFullName().toLowerCase().contains(searchLower);
-                                if (nameMatch || fullMatch) {
+                                String searchable = normalizeSearchText(
+                                        safeText(u.getFullName()) + " " + safeText(u.getUsername()));
+                                boolean matches = true;
+                                for (String part : queryParts) {
+                                    if (!part.isEmpty() && !searchable.contains(part)) {
+                                        matches = false;
+                                        break;
+                                    }
+                                }
+                                if (matches) {
                                     users.add(u);
                                 }
                             }
                         }
                     }
+                    users.sort((first, second) -> {
+                        int firstScore = searchScore(first, normalizedQuery);
+                        int secondScore = searchScore(second, normalizedQuery);
+                        if (firstScore != secondScore) return Integer.compare(secondScore, firstScore);
+                        java.text.Collator collator = java.text.Collator.getInstance(new Locale("vi", "VN"));
+                        return collator.compare(safeText(first.getFullName()), safeText(second.getFullName()));
+                    });
                     callback.onSuccess(users);
                 })
                 .addOnFailureListener(callback::onError);
+    }
+
+    private static int searchScore(User user, String query) {
+        String fullName = normalizeSearchText(user.getFullName());
+        String username = normalizeSearchText(user.getUsername());
+        if (fullName.equals(query) || username.equals(query)) return 3;
+        if (fullName.startsWith(query) || username.startsWith(query)) return 2;
+        return 1;
+    }
+
+    private static String normalizeSearchText(String value) {
+        String lower = safeText(value).trim().toLowerCase(new Locale("vi", "VN"));
+        return Normalizer.normalize(lower, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replaceAll("\\s+", " ");
+    }
+
+    private static String safeText(String value) {
+        return value == null ? "" : value;
     }
 }

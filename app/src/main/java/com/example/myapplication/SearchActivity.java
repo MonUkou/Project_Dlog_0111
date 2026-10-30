@@ -2,6 +2,9 @@ package com.example.myapplication;
 
 import android.content.Context;
 import android.content.Intent;
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -27,6 +30,7 @@ import com.bumptech.glide.Glide;
 import com.example.myapplication.model.User;
 import com.example.myapplication.model.Post;
 import com.example.myapplication.adapter.PostGridAdapter;
+import com.example.myapplication.adapter.PostAdapter;
 import com.example.myapplication.service.impl.UserService;
 import com.example.myapplication.service.impl.AuthService;
 import com.example.myapplication.service.impl.OfflinePages;
@@ -69,10 +73,15 @@ public class SearchActivity extends AppCompatActivity {
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable pendingSearch;
     private UserService userService;
+    private boolean blockedOffline;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!com.example.myapplication.util.NetworkState.requireOnline(this, "Khám phá")) {
+            blockedOffline = true;
+            return;
+        }
         setContentView(R.layout.activity_search);
 
         userService = UserService.getInstance();
@@ -91,6 +100,7 @@ public class SearchActivity extends AppCompatActivity {
         tagSuggestionsScroll = findViewById(R.id.tagSuggestionsScroll);
         rvTagPosts.setLayoutManager(new GridLayoutManager(this, 3));
         tagPostAdapter = new PostGridAdapter(this);
+        tagPostAdapter.setOnPostClickListener(this::showPostDialog);
         rvTagPosts.setAdapter(tagPostAdapter);
         tabUsers.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) { setTagMode(false); }
@@ -109,6 +119,17 @@ public class SearchActivity extends AppCompatActivity {
         });
         updateSortControls();
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.SEARCH);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!blockedOffline
+                && !com.example.myapplication.util.NetworkState.requireOnline(this, "Khám phá")) {
+            blockedOffline = true;
+            return;
+        }
+        if (!blockedOffline) BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.SEARCH);
     }
 
     private void initViews() {
@@ -185,12 +206,12 @@ public class SearchActivity extends AppCompatActivity {
         rvSearchResults.setVisibility(enabled ? View.GONE : View.VISIBLE);
         rvTagPosts.setVisibility(enabled ? View.VISIBLE : View.GONE);
         tagSuggestionsScroll.setVisibility(enabled ? View.VISIBLE : View.GONE);
-        photoSortBar.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        photoSortBar.setVisibility(View.GONE);
         tabUsers.setTextColor(getColor(enabled ? R.color.dlog_muted_blue : R.color.dlog_blue));
         tabTags.setTextColor(getColor(enabled ? R.color.dlog_blue : R.color.dlog_muted_blue));
         tabUsers.setTypeface(null, enabled ? android.graphics.Typeface.NORMAL : android.graphics.Typeface.BOLD);
         tabTags.setTypeface(null, enabled ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
-        etSearch.setHint(enabled ? "Tìm #hashtag của ảnh" : "Tìm tài khoản");
+        etSearch.setHint(enabled ? "Tìm #hashtag của ảnh" : "Tìm tên, có thể nhập không dấu");
         if (enabled && tagSuggestions.getChildCount() == 0) loadTagSuggestions();
         scheduleSearch();
     }
@@ -223,6 +244,14 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void searchTags(String query, final int generation) {
+        if (query.isEmpty()) {
+            progressBarSearch.setVisibility(View.GONE);
+            rvTagPosts.setVisibility(View.GONE);
+            tagPostAdapter.setPosts(new ArrayList<Post>());
+            showEmptySearchState("Chọn chủ đề bên trên hoặc nhập #hashtag");
+            return;
+        }
+        rvTagPosts.setVisibility(View.VISIBLE);
         String value = query.startsWith("#") ? query : "#" + query;
         List<String> tags = HashtagParser.extract(value);
         progressBarSearch.setVisibility(View.VISIBLE);
@@ -296,6 +325,33 @@ public class SearchActivity extends AppCompatActivity {
         });
     }
 
+    /** Opens the same complete post card dialog used by the profile screen. */
+    private void showPostDialog(Post post) {
+        Dialog dialog = new Dialog(this);
+        RecyclerView postList = new RecyclerView(this);
+        postList.setLayoutManager(new LinearLayoutManager(this));
+        PostAdapter adapter = new PostAdapter(this);
+        postList.setAdapter(adapter);
+        adapter.setPosts(Collections.singletonList(post));
+        dialog.setContentView(postList);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.7f);
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        }
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            int width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(540));
+            int height = (int) (getResources().getDisplayMetrics().heightPixels * 0.84f);
+            dialog.getWindow().setLayout(width, height);
+        }
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
     private void loadTagSuggestions() {
         FirebaseFirestore.getInstance().collection("posts")
                 .orderBy("createdAt", Query.Direction.DESCENDING).limit(60).get()
@@ -351,12 +407,6 @@ public class SearchActivity extends AppCompatActivity {
     private void showEmptySearchState(String message) {
         tvEmptySearch.setVisibility(View.VISIBLE);
         tvEmptySearch.setText(message);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.SEARCH);
     }
 
     /**
