@@ -39,9 +39,14 @@ public class ChatConversationActivity extends AppCompatActivity {
     private ChatMessageAdapter adapter;
     private ChatService chatService;
     private ListenerRegistration messagesListener;
+    private boolean blockedOffline;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!com.example.myapplication.util.NetworkState.requireOnline(this, "Hộp thư")) {
+            blockedOffline = true;
+            return;
+        }
         setContentView(R.layout.activity_chat_conversation);
         AuthService auth = AuthService.getInstance();
         auth.init(getApplicationContext());
@@ -84,6 +89,11 @@ public class ChatConversationActivity extends AppCompatActivity {
 
     @Override protected void onStart() {
         super.onStart();
+        if (blockedOffline
+                || !com.example.myapplication.util.NetworkState.requireOnline(this, "Hộp thư")) {
+            blockedOffline = true;
+            return;
+        }
         if (conversationId == null) return;
         messagesListener = chatService.listenMessages(conversationId, new ChatService.Callback<List<ChatService.ChatMessage>>() {
             @Override public void onSuccess(List<ChatService.ChatMessage> messages) {
@@ -97,6 +107,14 @@ public class ChatConversationActivity extends AppCompatActivity {
                 empty.setText("Không tải được tin nhắn. Kiểm tra quyền Firestore.");
             }
         });
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (!blockedOffline
+                && !com.example.myapplication.util.NetworkState.requireOnline(this, "Hộp thư")) {
+            blockedOffline = true;
+        }
     }
 
     private void sendMessage() {

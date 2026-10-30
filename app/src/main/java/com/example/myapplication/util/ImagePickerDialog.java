@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 public final class ImagePickerDialog {
     public static void show(Context context, Runnable devicePicker, Consumer<Uri> selected) {
         new AlertDialog.Builder(context).setTitle("Chọn hình ảnh")
-            .setItems(new String[]{"Ảnh trên thiết bị / Google Drive", "Thư viện ảnh DLog"},
+            .setItems(new String[]{"Ảnh trên thiết bị / Google Drive", "Thư viện ảnh"},
                 new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
                         if (which == 0) devicePicker.run(); else showLibrary(context, selected);
@@ -43,7 +43,7 @@ public final class ImagePickerDialog {
                 return image;
             }
         });
-        AlertDialog dialog = new AlertDialog.Builder(context).setTitle("Thư viện ảnh DLog · " + PhotoLibrary.size() + " ảnh")
+        AlertDialog dialog = new AlertDialog.Builder(context).setTitle("Thư viện ảnh · " + PhotoLibrary.size() + " ảnh")
             .setView(grid).setNegativeButton("Hủy", null).create();
         grid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {

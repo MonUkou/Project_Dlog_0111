@@ -99,6 +99,17 @@ public class ProfileActivity extends AppCompatActivity {
         }
         isSelfProfile = targetUserId.equals(currentUserId);
 
+        com.example.myapplication.service.impl.OfflinePages offlinePages =
+                new com.example.myapplication.service.impl.OfflinePages(this);
+        if (!com.example.myapplication.util.NetworkState.isOnline(this)
+                && !offlinePages.hasProfile(targetUserId)) {
+            Toast.makeText(this,
+                    "Hồ sơ này chưa được mở trong phiên khi có mạng.",
+                    Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
         initViews();
         setupRecyclerView();
         BottomNavHelper.setupBottomNav(this, BottomNavHelper.Tab.PROFILE);
@@ -148,22 +159,13 @@ public class ProfileActivity extends AppCompatActivity {
         sortOldest = findViewById(R.id.profileSortOldest);
         sortPopular = findViewById(R.id.profileSortPopular);
         sortNewest.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setSortMode(0);
-            }
+            @Override public void onClick(View v) { setSortMode(0); }
         });
         sortOldest.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setSortMode(1);
-            }
+            @Override public void onClick(View v) { setSortMode(1); }
         });
         sortPopular.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setSortMode(2);
-            }
+            @Override public void onClick(View v) { setSortMode(2); }
         });
         updateSortControls();
 
@@ -243,12 +245,7 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         rvProfilePosts.setLayoutManager(new GridLayoutManager(this, 3));
         postGridAdapter = new PostGridAdapter(this);
-        postGridAdapter.setOnPostClickListener(new PostGridAdapter.OnPostClickListener() {
-            @Override
-            public void onPostClick(Post post) {
-                showPostDialog(post);
-            }
-        });
+        postGridAdapter.setOnPostClickListener(this::showPostDialog);
         rvProfilePosts.setAdapter(postGridAdapter);
     }
 
@@ -267,8 +264,7 @@ public class ProfileActivity extends AppCompatActivity {
         }
         dialog.setCanceledOnTouchOutside(true);
         dialog.setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(android.content.DialogInterface ignored) {
+            @Override public void onDismiss(android.content.DialogInterface ignored) {
                 if (isShowingSavedPosts) loadSavedPosts();
             }
         });
@@ -348,6 +344,13 @@ public class ProfileActivity extends AppCompatActivity {
     private void loadUserProfile() {
         User cached = new com.example.myapplication.service.impl.OfflinePages(this).profile(targetUserId);
         if (cached != null) showUserProfile(cached);
+        if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+            if (cached == null) {
+                tvStateProfile.setVisibility(View.VISIBLE);
+                tvStateProfile.setText("Hồ sơ này chưa được mở trong phiên khi có mạng");
+            }
+            return;
+        }
         if (profileRegistration != null) return;
         profileRegistration = userService.observeUserProfile(targetUserId, new UserService.Callback<User>() {
             @Override
@@ -496,6 +499,16 @@ public class ProfileActivity extends AppCompatActivity {
             tvOfflineProfile.setVisibility(View.GONE);
         }
 
+        if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+            progressBarProfile.setVisibility(View.GONE);
+            tvOfflineProfile.setVisibility(View.GONE);
+            tvStateProfile.setVisibility(cachedPosts.isEmpty() ? View.VISIBLE : View.GONE);
+            if (cachedPosts.isEmpty()) {
+                tvStateProfile.setText("Lưới ảnh này chưa được mở trong phiên khi có mạng");
+            }
+            return;
+        }
+
         postService.getPostsByUserId(targetUserId, new PostService.Callback<List<Post>>() {
             @Override
             public void onSuccess(List<Post> posts) {
@@ -541,6 +554,16 @@ public class ProfileActivity extends AppCompatActivity {
             displayPosts(cachedPosts);
             tvOfflineProfile.setText("SQLite · Đang hiển thị mục Đã lưu và kiểm tra dữ liệu mới…");
             tvOfflineProfile.setVisibility(View.GONE);
+        }
+
+        if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+            progressBarProfile.setVisibility(View.GONE);
+            tvOfflineProfile.setVisibility(View.GONE);
+            tvStateProfile.setVisibility(cachedPosts.isEmpty() ? View.VISIBLE : View.GONE);
+            if (cachedPosts.isEmpty()) {
+                tvStateProfile.setText("Mục Đã lưu chưa được mở trong phiên khi có mạng");
+            }
+            return;
         }
 
         postService.getSavedPosts(targetUserId, new PostService.Callback<List<Post>>() {

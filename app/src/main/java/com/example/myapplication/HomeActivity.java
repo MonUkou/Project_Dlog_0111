@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -18,6 +20,7 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.myapplication.adapter.PostAdapter;
@@ -36,6 +39,8 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.AppBarLayout;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -53,8 +58,10 @@ public class HomeActivity extends AppCompatActivity {
     private AppBarLayout feedAppBar;
 
     private PostAdapter postAdapter;
+    private OfflineFooterAdapter offlineFooterAdapter;
     private PostService postService;
     private ListenerRegistration postRealtimeRegistration;
+    private final Set<String> realtimeHiddenPostIds = new HashSet<>();
     private AuthService authService;
     private UserStripAdapter userStripAdapter;
     private ListenerRegistration currentUserRegistration;
@@ -62,6 +69,7 @@ public class HomeActivity extends AppCompatActivity {
     private DocumentSnapshot lastVisibleDocument;
     private boolean isLoadingFeed = false;
     private boolean hasMorePosts = true;
+    private boolean showingOfflineSnapshot = false;
     private static final int PAGE_SIZE = 10;
     private int feedRequestGeneration = 0;
     private final Handler feedHandler = new Handler(Looper.getMainLooper());
@@ -118,9 +126,12 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         btnSearchHome.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, SearchActivity.class));
+            @Override public void onClick(View v) {
+            if (!com.example.myapplication.util.NetworkState.isOnline(HomeActivity.this)) {
+                Toast.makeText(HomeActivity.this, "Khám phá cần kết nối mạng.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            startActivity(new Intent(HomeActivity.this, SearchActivity.class));
             }
         });
 
@@ -161,61 +172,48 @@ public class HomeActivity extends AppCompatActivity {
 
     private void setupDrawerMenu() {
         findViewById(R.id.rowMenuProfile).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openProfile(false);
-            }
+            @Override public void onClick(View v) { openProfile(false); }
         });
         findViewById(R.id.rowMenuSaved).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openProfile(true);
-            }
+            @Override public void onClick(View v) { openProfile(true); }
         });
         findViewById(R.id.rowMenuCreate).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 startActivity(new Intent(HomeActivity.this, CreatePostActivity.class));
             }
         });
         findViewById(R.id.rowMenuNotifications).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 startActivity(new Intent(HomeActivity.this, NotificationActivity.class));
             }
         });
         findViewById(R.id.rowMenuChats).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, ChatsActivity.class));
+            @Override public void onClick(View v) {
+            if (!com.example.myapplication.util.NetworkState.isOnline(HomeActivity.this)) {
+                Toast.makeText(HomeActivity.this, "Hộp thư cần kết nối mạng.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            startActivity(new Intent(HomeActivity.this, ChatsActivity.class));
             }
         });
         findViewById(R.id.rowMenuSettings).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, SettingsActivity.class));
-            }
+            @Override public void onClick(View v) { startActivity(new Intent(HomeActivity.this, SettingsActivity.class)); }
         });
         findViewById(R.id.rowMenuAdmin).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, AdminActivity.class));
-            }
+            @Override public void onClick(View v) { startActivity(new Intent(HomeActivity.this, AdminActivity.class)); }
         });
         findViewById(R.id.rowMenuHelp).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 Toast.makeText(HomeActivity.this, "Trung tâm trợ giúp sẽ sớm có mặt.", Toast.LENGTH_SHORT).show();
             }
         });
         findViewById(R.id.rowMenuLogout).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                authService.logout();
-                Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
+            @Override public void onClick(View v) {
+            authService.logout();
+            Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
             }
         });
     }
@@ -299,13 +297,18 @@ public class HomeActivity extends AppCompatActivity {
                 }
             }
         });
-        rvFeed.setAdapter(postAdapter);
+        offlineFooterAdapter = new OfflineFooterAdapter();
+        rvFeed.setAdapter(new ConcatAdapter(postAdapter, offlineFooterAdapter));
 
         // Load the next page when the user approaches the end of the feed.
         rvFeed.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
+                if (!com.example.myapplication.util.NetworkState.isOnline(HomeActivity.this)) {
+                    showOfflineFeedOnly();
+                    return;
+                }
                 int firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
                 btnScrollToTop.setVisibility(firstVisibleItem >= 3 ? View.VISIBLE : View.GONE);
 
@@ -351,6 +354,13 @@ public class HomeActivity extends AppCompatActivity {
             }
             isLoadingFeed = true;
         }
+
+        if (!com.example.myapplication.util.NetworkState.isOnline(this)) {
+            showOfflineFeedOnly();
+            return;
+        }
+        showingOfflineSnapshot = false;
+        offlineFooterAdapter.setVisible(false);
 
         final int requestGeneration = feedRequestGeneration;
         postService.getFeedPosts(authService.getCurrentUserId(), lastVisibleDocument, PAGE_SIZE,
@@ -423,6 +433,54 @@ public class HomeActivity extends AppCompatActivity {
                 });
     }
 
+    private void showOfflineFeedOnly() {
+        if (!showingOfflineSnapshot) {
+            List<Post> cached = new com.example.myapplication.service.impl.OfflinePages(this)
+                    .feed(authService.getCurrentUserId());
+            postAdapter.setPosts(cached);
+            showingOfflineSnapshot = true;
+        }
+        swipeRefreshLayout.setRefreshing(false);
+        progressBarFeed.setVisibility(View.GONE);
+        isLoadingFeed = false;
+        hasMorePosts = false;
+        tvOfflineFeed.setVisibility(View.GONE);
+        if (postAdapter.getItemCount() == 0) {
+            tvStateFeed.setVisibility(View.VISIBLE);
+            tvStateFeed.setText("Chưa có bài nào được lưu trong phiên đăng nhập này.");
+        } else {
+            tvStateFeed.setVisibility(View.GONE);
+        }
+        offlineFooterAdapter.setVisible(postAdapter.getItemCount()
+                >= com.example.myapplication.service.impl.OfflinePages.MAX_OFFLINE_FEED_POSTS);
+    }
+
+    private static final class OfflineFooterAdapter
+            extends RecyclerView.Adapter<OfflineFooterAdapter.FooterViewHolder> {
+        private boolean visible;
+
+        void setVisible(boolean visible) {
+            if (this.visible == visible) return;
+            this.visible = visible;
+            if (visible) notifyItemInserted(0); else notifyItemRemoved(0);
+        }
+
+        @NonNull
+        @Override
+        public FooterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_feed_offline_end, parent, false);
+            return new FooterViewHolder(view);
+        }
+
+        @Override public void onBindViewHolder(@NonNull FooterViewHolder holder, int position) { }
+        @Override public int getItemCount() { return visible ? 1 : 0; }
+
+        static final class FooterViewHolder extends RecyclerView.ViewHolder {
+            FooterViewHolder(@NonNull View itemView) { super(itemView); }
+        }
+    }
+
     private void observeVisiblePostChanges() {
         if (postRealtimeRegistration != null) {
             postRealtimeRegistration.remove();
@@ -432,17 +490,29 @@ public class HomeActivity extends AppCompatActivity {
                 .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(100)
                 .addSnapshotListener(new com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot>() {
-                    @Override
-                    public void onEvent(com.google.firebase.firestore.QuerySnapshot snapshot, com.google.firebase.firestore.FirebaseFirestoreException error) {
-                        if (error != null || snapshot == null || isFinishing() || isDestroyed()) return;
-                        for (DocumentSnapshot document : snapshot.getDocuments()) {
-                            if (document.getData() == null) continue;
-                            Post updated = Post.fromMap(document.getData());
-                            if (updated != null) {
-                                updated.setId(document.getId());
+                    @Override public void onEvent(com.google.firebase.firestore.QuerySnapshot snapshot,
+                                                  com.google.firebase.firestore.FirebaseFirestoreException error) {
+                    if (error != null || snapshot == null || isFinishing() || isDestroyed()) return;
+                    for (com.google.firebase.firestore.DocumentChange change
+                            : snapshot.getDocumentChanges()) {
+                        DocumentSnapshot document = change.getDocument();
+                        if (document.getData() == null) continue;
+                        Post updated = Post.fromMap(document.getData());
+                        if (updated != null) {
+                            updated.setId(document.getId());
+                            if (updated.isHidden()) {
+                                realtimeHiddenPostIds.add(document.getId());
                                 postAdapter.updatePostRealtime(updated);
+                            } else {
+                                boolean wasHidden = realtimeHiddenPostIds.remove(document.getId());
+                                if (wasHidden) {
+                                    postAdapter.restorePostRealtime(updated);
+                                } else {
+                                    postAdapter.updatePostRealtime(updated);
+                                }
                             }
                         }
+                    }
                     }
                 });
     }
@@ -466,6 +536,12 @@ public class HomeActivity extends AppCompatActivity {
     protected void onDestroy() {
         feedHandler.removeCallbacks(ownPostExpiry);
         super.onDestroy();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        observeVisiblePostChanges();
     }
 
     @Override

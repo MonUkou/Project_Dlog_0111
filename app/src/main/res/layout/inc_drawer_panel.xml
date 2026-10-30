@@ -52,7 +52,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
-                    android:text="@dlog_user"
+                    android:text="@string/default_username"
                     android:textColor="@color/dlog_on_drawer_muted"
                     android:textSize="13sp" />
             </LinearLayout>
@@ -93,14 +93,14 @@
             android:layout_height="1dp"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="12dp"
-            android:background="#456080" />
+            android:background="@color/dlog_border" />
 
         <LinearLayout android:id="@+id/rowMenuSettings" style="@style/DLogDrawerRow">
             <ImageView style="@style/DLogDrawerIcon" android:src="@drawable/ic_settings_24" android:contentDescription="" />
             <TextView style="@style/DLogDrawerText" android:text="Cài đặt" />
         </LinearLayout>
         <LinearLayout android:id="@+id/rowMenuAdmin" style="@style/DLogDrawerRow" android:visibility="gone">
-            <ImageView style="@style/DLogDrawerIcon" android:src="@drawable/ic_settings_24" android:contentDescription="" />
+            <ImageView style="@style/DLogDrawerIcon" android:src="@drawable/ic_admin_24" android:contentDescription="" />
             <TextView style="@style/DLogDrawerText" android:text="Quản trị" />
         </LinearLayout>
         <LinearLayout android:id="@+id/rowMenuHelp" style="@style/DLogDrawerRow">

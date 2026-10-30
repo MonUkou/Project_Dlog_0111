@@ -56,6 +56,7 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private Uri selectedImageUri;
     private final ArrayList<Uri> selectedImages = new ArrayList<>();
+    private int selectedEditIndex = -1;
 
     private PostService postService;
     private AuthService authService;
@@ -68,22 +69,28 @@ public class CreatePostActivity extends AppCompatActivity {
     private static final String KEY_IMAGE_URI = "saved_image_uri";
     private static final String KEY_IMAGE_URIS = "saved_image_uris";
     private static final String KEY_EDIT_LOADED = "edit_loaded";
+    private static final String KEY_EDIT_IMAGE_INDEX = "edit_image_index";
 
     private final ActivityResultLauncher<String[]> multiPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.OpenMultipleDocuments(),
             new androidx.activity.result.ActivityResultCallback<List<Uri>>() {
                 @Override public void onActivityResult(List<Uri> uris) {
                     if (uris == null || uris.isEmpty()) return;
+                    int lastAddedIndex = -1;
                     for (Uri uri : uris) {
                         if (selectedImages.size() == 10) break;
                         try {
                             getContentResolver().takePersistableUriPermission(
                                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         } catch (SecurityException ignored) { }
-                        if (!selectedImages.contains(uri)) selectedImages.add(uri);
+                        if (!selectedImages.contains(uri)) {
+                            selectedImages.add(uri);
+                            lastAddedIndex = selectedImages.size() - 1;
+                        }
                     }
                     if (selectedImages.isEmpty()) return;
-                    selectedImageUri = selectedImages.get(0);
+                    if (lastAddedIndex >= 0) selectedEditIndex = lastAddedIndex;
+                    ensureSelectedEditIndex();
                     showSelectedImage();
                 }
             });
@@ -96,8 +103,14 @@ public class CreatePostActivity extends AppCompatActivity {
                     String value = result.getData().getStringExtra(PhotoEditorActivity.EXTRA_IMAGE_URI);
                     if (value == null || value.isEmpty()) return;
                     Uri edited = Uri.parse(value);
-                    if (selectedImages.isEmpty()) selectedImages.add(edited); else selectedImages.set(0, edited);
-                    selectedImageUri = edited;
+                    if (selectedImages.isEmpty()) {
+                        selectedImages.add(edited);
+                        selectedEditIndex = 0;
+                    } else {
+                        ensureSelectedEditIndex();
+                        selectedImages.set(selectedEditIndex, edited);
+                    }
+                    selectedImageUri = selectedImages.get(selectedEditIndex);
                     showSelectedImage();
                 }
             });
@@ -133,6 +146,7 @@ public class CreatePostActivity extends AppCompatActivity {
 
         if (savedInstanceState != null) {
             editLoaded = savedInstanceState.getBoolean(KEY_EDIT_LOADED, false);
+            selectedEditIndex = savedInstanceState.getInt(KEY_EDIT_IMAGE_INDEX, -1);
             ArrayList<String> savedUris = savedInstanceState.getStringArrayList(KEY_IMAGE_URIS);
             if (savedUris != null) {
                 for (String savedUri : savedUris) selectedImages.add(Uri.parse(savedUri));
@@ -140,11 +154,12 @@ public class CreatePostActivity extends AppCompatActivity {
             String uriString = savedInstanceState.getString(KEY_IMAGE_URI);
 
             if (!selectedImages.isEmpty()) {
-                selectedImageUri = selectedImages.get(0);
+                ensureSelectedEditIndex();
                 showSelectedImage();
             } else if (uriString != null && !uriString.isEmpty()) {
                 selectedImageUri = Uri.parse(uriString);
                 selectedImages.add(selectedImageUri);
+                selectedEditIndex = 0;
                 showSelectedImage();
             }
         }
@@ -166,6 +181,7 @@ public class CreatePostActivity extends AppCompatActivity {
                 }
                 selectedImages.clear();
                 for (String url : post.getImageUrls()) selectedImages.add(Uri.parse(url));
+                selectedEditIndex = selectedImages.isEmpty() ? -1 : selectedImages.size() - 1;
                 etCaption.setText(post.getCaption());
                 StringBuilder tags = new StringBuilder();
                 for (String tag : post.getHashtags()) {
@@ -251,15 +267,17 @@ public class CreatePostActivity extends AppCompatActivity {
         btnEditSelectedImage.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
                 if (selectedImages.isEmpty()) return;
-                String scheme = selectedImages.get(0).getScheme();
+                ensureSelectedEditIndex();
+                Uri imageToEdit = selectedImages.get(selectedEditIndex);
+                String scheme = imageToEdit.getScheme();
                 if ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme)) {
                     Toast.makeText(CreatePostActivity.this,
-                            "Hãy thay ảnh đầu bằng ảnh trên máy trước khi chỉnh màu hoặc cắt.",
+                            "Hãy thay ảnh đã chọn bằng ảnh trên máy trước khi chỉnh màu hoặc cắt.",
                             Toast.LENGTH_LONG).show();
                     return;
                 }
                 Intent intent = new Intent(CreatePostActivity.this, PhotoEditorActivity.class);
-                intent.putExtra(PhotoEditorActivity.EXTRA_IMAGE_URI, selectedImages.get(0).toString());
+                intent.putExtra(PhotoEditorActivity.EXTRA_IMAGE_URI, imageToEdit.toString());
                 editorLauncher.launch(intent);
             }
         });
@@ -278,7 +296,8 @@ public class CreatePostActivity extends AppCompatActivity {
                 }
                 if (selectedImages.size() >= 10) return;
                 selectedImages.add(uri);
-                selectedImageUri = selectedImages.get(0);
+                selectedEditIndex = selectedImages.size() - 1;
+                selectedImageUri = selectedImages.get(selectedEditIndex);
                 showSelectedImage();
             }
         });
@@ -309,6 +328,16 @@ public class CreatePostActivity extends AppCompatActivity {
         tile.addView(image, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         Glide.with(this).load(selectedImages.get(position)).centerCrop().into(image);
+        if (!overflow) {
+            tile.setContentDescription("Chọn ảnh " + (position + 1) + " để chỉnh");
+            tile.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) {
+                    selectedEditIndex = position;
+                    selectedImageUri = selectedImages.get(position);
+                    updateEditButtonAccessibility();
+                }
+            });
+        }
 
         if (overflow) {
             View shade = new View(this);
@@ -348,9 +377,39 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private void removePhoto(int position) {
         if (posting || position < 0 || position >= selectedImages.size()) return;
+        int previousTarget = selectedEditIndex;
         selectedImages.remove(position);
-        selectedImageUri = selectedImages.isEmpty() ? null : selectedImages.get(0);
+        if (selectedImages.isEmpty()) {
+            selectedEditIndex = -1;
+            selectedImageUri = null;
+        } else if (position == previousTarget) {
+            selectedEditIndex = Math.max(0, position - 1);
+            selectedImageUri = selectedImages.get(selectedEditIndex);
+        } else {
+            if (position < previousTarget) selectedEditIndex = previousTarget - 1;
+            ensureSelectedEditIndex();
+        }
         showSelectedImage();
+    }
+
+    private void ensureSelectedEditIndex() {
+        if (selectedImages.isEmpty()) {
+            selectedEditIndex = -1;
+            selectedImageUri = null;
+            return;
+        }
+        if (selectedEditIndex < 0 || selectedEditIndex >= selectedImages.size()) {
+            selectedEditIndex = selectedImages.size() - 1;
+        }
+        selectedImageUri = selectedImages.get(selectedEditIndex);
+    }
+
+    private void updateEditButtonAccessibility() {
+        if (selectedEditIndex >= 0 && selectedEditIndex < selectedImages.size()) {
+            btnEditSelectedImage.setContentDescription("Chỉnh ảnh " + (selectedEditIndex + 1));
+        } else {
+            btnEditSelectedImage.setContentDescription("Chỉnh ảnh");
+        }
     }
 
     private void showRemovePhotoDialog() {
@@ -375,7 +434,7 @@ public class CreatePostActivity extends AppCompatActivity {
             btnAddMoreImages.setVisibility(View.GONE);
             btnEditSelectedImage.setVisibility(View.GONE);
         } else {
-            selectedImageUri = selectedImages.get(0);
+            ensureSelectedEditIndex();
             llImagePlaceholder.setVisibility(View.GONE);
             photoCollage.setVisibility(View.VISIBLE);
             photoCollage.setOrientation(count >= 4 ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
@@ -404,6 +463,7 @@ public class CreatePostActivity extends AppCompatActivity {
             btnAddMoreImages.setText(count == 1 ? "＋ Thêm ảnh thứ 2" : "＋ Thêm ảnh");
             btnAddMoreImages.setVisibility(count < 10 ? View.VISIBLE : View.GONE);
             btnEditSelectedImage.setVisibility(View.VISIBLE);
+            updateEditButtonAccessibility();
         }
         ViewGroup.LayoutParams frameParams = btnSelectImage.getLayoutParams();
         frameParams.height = dp(count >= 4 ? 320 : 260);
@@ -536,6 +596,7 @@ public class CreatePostActivity extends AppCompatActivity {
         for (Uri uri : selectedImages) savedUris.add(uri.toString());
         outState.putStringArrayList(KEY_IMAGE_URIS, savedUris);
         outState.putBoolean(KEY_EDIT_LOADED, editLoaded);
+        outState.putInt(KEY_EDIT_IMAGE_INDEX, selectedEditIndex);
     }
 
     @Override

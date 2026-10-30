@@ -3,6 +3,7 @@ package com.example.myapplication.service.impl;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.Transaction;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -29,15 +30,17 @@ public final class ReadableIdService {
     private static void next(String counterName, String prefix, Callback callback) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         DocumentReference counter = db.collection("counters").document(counterName);
-        db.runTransaction(transaction -> {
-                    Long lastValue = transaction.get(counter).getLong("lastValue");
-                    long nextValue = (lastValue == null ? 0L : lastValue) + 1L;
-                    Map<String, Object> values = new HashMap<>();
-                    values.put("lastValue", nextValue);
-                    values.put("description", "Bộ đếm mã quản lý " + prefix);
-                    transaction.set(counter, values, SetOptions.merge());
-                    return String.format(Locale.US, "%s-%03d", prefix, nextValue);
-                }).addOnSuccessListener(callback::onSuccess)
+        db.runTransaction(new Transaction.Function<String>() {
+            @Override public String apply(Transaction transaction) throws com.google.firebase.firestore.FirebaseFirestoreException {
+                Long lastValue = transaction.get(counter).getLong("lastValue");
+                long nextValue = (lastValue == null ? 0L : lastValue) + 1L;
+                Map<String, Object> values = new HashMap<>();
+                values.put("lastValue", nextValue);
+                values.put("description", "Bộ đếm mã quản lý " + prefix);
+                transaction.set(counter, values, SetOptions.merge());
+                return String.format(Locale.US, "%s-%03d", prefix, nextValue);
+            }
+        }).addOnSuccessListener(callback::onSuccess)
                 .addOnFailureListener(callback::onError);
     }
 }

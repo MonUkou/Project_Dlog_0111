@@ -17,7 +17,10 @@ import androidx.annotation.NonNull;
 
 import com.example.myapplication.model.Post;
 import com.example.myapplication.model.SavedPost;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -30,6 +33,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -423,7 +428,9 @@ public class PostService {
 
                 db.collection("posts").document(postId)
                         .update("caption", post.getCaption(), "updatedAt", post.getUpdatedAt())
-                        .addOnSuccessListener(aVoid -> callback.onSuccess(post))
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override public void onSuccess(Void unused) { callback.onSuccess(post); }
+                        })
                         .addOnFailureListener(callback::onError);
             }
 
@@ -536,7 +543,8 @@ public class PostService {
 
                 db.collection("posts").document(postId)
                         .delete()
-                        .addOnSuccessListener(aVoid -> {
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override public void onSuccess(Void unused) {
                             db.collection("users").document(post.getAuthorId())
                                     .update("postsCount", FieldValue.increment(-1));
 
@@ -547,6 +555,7 @@ public class PostService {
                             }
 
                             callback.onSuccess(null);
+                            }
                         })
                         .addOnFailureListener(callback::onError);
             }
@@ -566,13 +575,15 @@ public class PostService {
         }
 
         db.collection("posts").document(postId).get()
-                .addOnSuccessListener(documentSnapshot -> {
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot documentSnapshot) {
                     if (documentSnapshot.exists() && documentSnapshot.getData() != null
                             && !Boolean.TRUE.equals(documentSnapshot.getBoolean("hidden"))) {
                         Post post = Post.fromMap(documentSnapshot.getData());
                         callback.onSuccess(post);
                     } else {
                         callback.onError(new Exception("Bài viết không tồn tại."));
+                    }
                     }
                 })
                 .addOnFailureListener(callback::onError);
@@ -593,7 +604,8 @@ public class PostService {
         int batchSize = Math.max(20, Math.min(50, limit));
         Query query = db.collection("posts").orderBy("createdAt", Query.Direction.DESCENDING).limit(batchSize);
         if (cursor != null) query = query.startAfter(cursor);
-        query.get().addOnSuccessListener(snapshot -> {
+        query.get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+            @Override public void onSuccess(QuerySnapshot snapshot) {
             List<DocumentSnapshot> documents = snapshot.getDocuments();
             List<Post> raw = new ArrayList<>();
             for (DocumentSnapshot doc : documents) {
@@ -612,6 +624,7 @@ public class PostService {
             } else {
                 callback.onSuccess(new FeedResult(visible, next, hasMore));
             }
+            }
         }).addOnFailureListener(callback::onError);
     }
 
@@ -626,7 +639,8 @@ public class PostService {
                 .whereEqualTo("authorId", userId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
                     List<Post> posts = new ArrayList<>();
                     for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                         if (doc.getData() != null) {
@@ -637,12 +651,15 @@ public class PostService {
                         }
                     }
                     callback.onSuccess(posts);
+                    }
                 })
-                .addOnFailureListener(e -> {
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception e) {
                     db.collection("posts")
                             .whereEqualTo("authorId", userId)
                             .get()
-                            .addOnSuccessListener(queryDocumentSnapshots2 -> {
+                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                @Override public void onSuccess(QuerySnapshot queryDocumentSnapshots2) {
                                 List<Post> posts = new ArrayList<>();
                                 for (DocumentSnapshot doc : queryDocumentSnapshots2.getDocuments()) {
                                     if (doc.getData() != null) {
@@ -650,10 +667,16 @@ public class PostService {
                                         if (post != null && !post.isHidden()) posts.add(post);
                                     }
                                 }
-                                posts.sort((p1, p2) -> Long.compare(p2.getCreatedAt(), p1.getCreatedAt()));
+                                Collections.sort(posts, new Comparator<Post>() {
+                                    @Override public int compare(Post p1, Post p2) {
+                                        return Long.compare(p2.getCreatedAt(), p1.getCreatedAt());
+                                    }
+                                });
                                 callback.onSuccess(posts);
+                                }
                             })
                             .addOnFailureListener(callback::onError);
+                    }
                 });
     }
 
@@ -671,7 +694,8 @@ public class PostService {
         String docId = userId + "_" + postId;
 
         db.collection("saved_posts").document(docId).get()
-                .addOnSuccessListener(doc -> {
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot doc) {
                     if (doc.exists() && doc.getData() != null) {
                         SavedPost existing = SavedPost.fromMap(doc.getData());
                         existing.setCollectionName(collectionName);
@@ -694,8 +718,11 @@ public class PostService {
 
                     db.collection("saved_posts").document(docId)
                             .set(savedPost.toMap())
-                            .addOnSuccessListener(aVoid -> callback.onSuccess(savedPost))
+                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                @Override public void onSuccess(Void unused) { callback.onSuccess(savedPost); }
+                            })
                             .addOnFailureListener(callback::onError);
+                    }
                 })
                 .addOnFailureListener(callback::onError);
     }
@@ -710,7 +737,9 @@ public class PostService {
         String docId = userId + "_" + postId;
         db.collection("saved_posts").document(docId)
                 .delete()
-                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override public void onSuccess(Void unused) { callback.onSuccess(null); }
+                })
                 .addOnFailureListener(callback::onError);
     }
 
@@ -723,8 +752,12 @@ public class PostService {
 
         String docId = userId + "_" + postId;
         db.collection("saved_posts").document(docId).get()
-                .addOnSuccessListener(doc -> callback.onSuccess(doc.exists()))
-                .addOnFailureListener(e -> callback.onSuccess(false));
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override public void onSuccess(DocumentSnapshot doc) { callback.onSuccess(doc.exists()); }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override public void onFailure(@NonNull Exception error) { callback.onSuccess(false); }
+                });
     }
 
     // F23: Danh sách bài viết đã lưu
@@ -737,7 +770,8 @@ public class PostService {
         db.collection("saved_posts")
                 .whereEqualTo("userId", userId)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
                     List<String> postIds = new ArrayList<>();
                     for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                         String pId = doc.getString("postId");
@@ -750,6 +784,7 @@ public class PostService {
                     }
 
                     fetchPostsByIds(postIds, callback);
+                    }
                 })
                 .addOnFailureListener(callback::onError);
     }
@@ -766,7 +801,11 @@ public class PostService {
                     synchronized (posts) {
                         posts.add(post);
                         if (--remaining[0] == 0) {
-                            posts.sort((p1, p2) -> Long.compare(p2.getCreatedAt(), p1.getCreatedAt()));
+                            Collections.sort(posts, new Comparator<Post>() {
+                                @Override public int compare(Post p1, Post p2) {
+                                    return Long.compare(p2.getCreatedAt(), p1.getCreatedAt());
+                                }
+                            });
                             callback.onSuccess(posts);
                         }
                     }
@@ -791,7 +830,8 @@ public class PostService {
             return;
         }
 
-        IO_EXECUTOR.execute(() -> {
+        IO_EXECUTOR.execute(new Runnable() {
+            @Override public void run() {
             try {
                 Bitmap bitmap;
                 if (imageUrl.startsWith("content://") || imageUrl.startsWith("file://")) {
@@ -844,6 +884,7 @@ public class PostService {
                 }
             } catch (Exception e) {
                 callback.onError(e);
+            }
             }
         });
     }

@@ -33,11 +33,11 @@ public class FeedPageSelectorTest {
         assertTrue(page.posts.isEmpty()); assertEquals(2,page.lastConsumedIndex);
         assertEquals(-1, FeedPageSelector.select(Collections.emptyList(), "me", 10).lastConsumedIndex);
     }
-    @Test public void ownNewPostAppearsForFiveMinutesOnly() {
-        long now = 1_000_000L;
+    @Test public void ownNewPostAppearsForThirtyMinutesOnly() {
+        long now = 3_000_000L;
         Post recent = post("me"); recent.setCreatedAt(now - 1_000L);
-        Post boundary = post("me"); boundary.setCreatedAt(now - 300_000L);
-        Post friend = post("friend"); friend.setCreatedAt(now - 500_000L);
+        Post boundary = post("me"); boundary.setCreatedAt(now - 1_800_000L);
+        Post friend = post("friend"); friend.setCreatedAt(now - 2_000_000L);
         assertEquals(Arrays.asList(recent, friend), FeedPageSelector.select(
                 Arrays.asList(recent, boundary, friend), "me", 10, now).posts);
     }

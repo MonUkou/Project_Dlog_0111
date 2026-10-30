@@ -1,263 +1,146 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:minHeight="240dp"
-    android:layout_marginStart="8dp"
-    android:layout_marginTop="6dp"
-    android:layout_marginEnd="8dp"
-    android:layout_marginBottom="6dp"
-    android:background="@drawable/bg_post_card"
-    android:clipToOutline="true"
-    android:elevation="1dp"
-    android:orientation="horizontal">
-
+<?xml version='1.0' encoding='utf-8'?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_marginTop="8dp" android:layout_marginEnd="10dp" android:layout_marginBottom="8dp" android:background="@drawable/bg_post_card" android:clipToOutline="true" android:elevation="1dp" android:orientation="vertical">
+    <LinearLayout android:id="@+id/llAuthorHeader" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="12dp" android:paddingTop="11dp" android:paddingEnd="10dp" android:paddingBottom="11dp">
+        <ImageView android:id="@+id/ivAuthorAvatar" android:layout_width="36dp" android:layout_height="36dp" android:background="@drawable/bg_circle_avatar" android:contentDescription="Ảnh đại diện người đăng" android:scaleType="centerCrop" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:id="@+id/tvAuthorUsername" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:text="minh.anh" android:textColor="@color/dlog_navy" android:textSize="14sp" android:textStyle="bold" />
+            <TextView android:id="@+id/tvPostTime" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/dlog_muted_blue" android:textSize="12sp" />
+        </LinearLayout>
+        <TextView android:id="@+id/tvPostOptions" android:layout_width="40dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:clickable="true" android:contentDescription="Tùy chọn bài viết" android:focusable="true" android:gravity="center" android:text="•••" android:textColor="@color/dlog_navy" android:textSize="18sp" android:visibility="visible" />
+    </LinearLayout>
     <com.example.myapplication.view.PhotoCollageView
         android:id="@+id/photoContainer"
-        android:layout_width="0dp"
-        android:layout_height="240dp"
-        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/feed_photo_height"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:background="@drawable/bg_post_photo"
         android:clipToOutline="true" />
-
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="8dp" android:paddingTop="5dp" android:paddingEnd="8dp" android:paddingBottom="2dp" android:paddingHorizontal="12dp" android:paddingVertical="4dp">
+        <TextView android:id="@+id/btnLike" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="48dp" android:layout_marginEnd="8dp" android:paddingHorizontal="8dp" android:gravity="center" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true" android:drawableStart="@drawable/ic_heart_action" android:drawablePadding="6dp" android:drawableTint="@color/post_heart_tint" android:text="0" android:textColor="@color/dlog_ink" android:textSize="14sp" android:contentDescription="Thích" />
+        <TextView android:id="@+id/btnComment" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="48dp" android:layout_marginEnd="8dp" android:paddingHorizontal="8dp" android:gravity="center" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true" android:drawableStart="@drawable/ic_comment_24" android:drawablePadding="6dp" android:drawableTint="@color/dlog_ink" android:text="0" android:textColor="@color/dlog_ink" android:textSize="14sp" android:contentDescription="Bình luận" />
+        <TextView android:id="@+id/btnShare" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="48dp" android:layout_marginEnd="8dp" android:paddingHorizontal="8dp" android:gravity="center" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true" android:drawableStart="@drawable/ic_share_24" android:drawablePadding="6dp" android:drawableTint="@color/dlog_ink" android:text="" android:textColor="@color/dlog_ink" android:textSize="14sp" android:contentDescription="Chia sẻ" />
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <TextView android:id="@+id/btnSave" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="48dp" android:layout_marginEnd="0dp" android:paddingHorizontal="8dp" android:gravity="center" android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true" android:drawableStart="@drawable/ic_bookmark_action" android:drawablePadding="6dp" android:drawableTint="@color/post_bookmark_tint" android:text="" android:textColor="@color/dlog_ink" android:textSize="14sp" android:contentDescription="Lưu bài viết" />
+    </LinearLayout>
     <LinearLayout
-        android:layout_width="0dp"
+        android:id="@+id/commentsPanel"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="240dp"
-        android:layout_weight="1"
         android:orientation="vertical"
-        android:paddingStart="10dp"
-        android:paddingEnd="8dp">
-
-        <LinearLayout
-            android:id="@+id/llAuthorHeader"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <ImageView
-                android:id="@+id/ivAuthorAvatar"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@drawable/bg_circle_avatar"
-                android:contentDescription="Ảnh đại diện người đăng"
-                android:scaleType="centerCrop" />
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="9dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView
-                    android:id="@+id/tvAuthorUsername"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="@color/dlog_navy"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tvPostTime"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="@color/dlog_muted_blue"
-                    android:textSize="12sp" />
-            </LinearLayout>
-            <TextView
-                android:id="@+id/tvPostOptions"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:contentDescription="Tùy chọn ảnh"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="•••"
-                android:textColor="@color/dlog_navy"
-                android:textSize="18sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/captionRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="36dp"
-            android:gravity="top"
-            android:orientation="horizontal"
-            android:paddingTop="4dp"
-            android:paddingEnd="4dp">
-            <TextView
-                android:id="@+id/tvCaption"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textColor="@color/dlog_navy"
-                android:textSize="13sp" />
-            <TextView
-                android:id="@+id/btnCaptionMore"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:contentDescription="Xem đầy đủ mô tả"
-                android:focusable="true"
-                android:gravity="top|end"
-                android:minWidth="64dp"
-                android:paddingTop="1dp"
-                android:text="Xem thêm"
-                android:textColor="@color/dlog_muted_blue"
-                android:textSize="13sp"
-                android:visibility="gone" />
-        </LinearLayout>
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone">
 
         <TextView
-            android:id="@+id/tvLikesCount"
+            android:id="@+id/tvCommentsCacheStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="0 lượt thích"
+            android:background="@color/dlog_border"
+            android:gravity="center"
+            android:padding="6dp"
+            android:text="SQLite · Bình luận đã lưu"
             android:textColor="@color/dlog_navy"
-            android:textSize="13sp"
-            android:textStyle="bold"
+            android:textSize="12sp"
             android:visibility="gone" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="start|center_vertical"
-            android:orientation="horizontal">
-            <TextView
-                android:id="@+id/btnLike"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:contentDescription="Thích"
-                android:drawableStart="@drawable/ic_heart_action"
-                android:drawableTint="@color/post_heart_tint"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="0"
-                android:textColor="@color/dlog_ink"
-                android:textSize="13sp" />
-            <TextView
-                android:id="@+id/btnComment"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:contentDescription="Bình luận"
-                android:drawableStart="@drawable/ic_comment_24"
-                android:drawableTint="@color/dlog_ink"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="0"
-                android:textColor="@color/dlog_ink"
-                android:textSize="13sp" />
-            <TextView
-                android:id="@+id/btnShare"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:contentDescription="Chia sẻ"
-                android:drawableStart="@drawable/ic_share_24"
-                android:drawableTint="@color/dlog_ink"
-                android:focusable="true"
-                android:gravity="center" />
-            <TextView
-                android:id="@+id/btnSave"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:contentDescription="Lưu ảnh"
-                android:drawableStart="@drawable/ic_bookmark_action"
-                android:drawableTint="@color/post_bookmark_tint"
-                android:focusable="true"
-                android:gravity="center" />
-        </LinearLayout>
+        <ProgressBar
+            android:id="@+id/progressInlineComments"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:contentDescription="Đang tải bình luận" />
 
-        <LinearLayout
-            android:id="@+id/commentsPanel"
+        <TextView
+            android:id="@+id/tvCommentsEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingEnd="4dp"
-            android:paddingBottom="4dp"
-            android:visibility="gone">
-            <TextView
-                android:id="@+id/tvCommentsCacheStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/dlog_border"
-                android:gravity="center"
-                android:padding="5dp"
-                android:text="SQLite · Bình luận đã lưu"
-                android:textColor="@color/dlog_navy"
-                android:textSize="11sp"
-                android:visibility="gone" />
-            <ProgressBar
-                android:id="@+id/progressInlineComments"
-                style="?android:attr/progressBarStyleSmall"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_gravity="center"
-                android:contentDescription="Đang tải bình luận" />
-            <TextView
-                android:id="@+id/tvCommentsEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:padding="8dp"
-                android:text="Chưa có bình luận."
-                android:textColor="@color/dlog_muted_blue"
-                android:textSize="12sp"
-                android:visibility="gone" />
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvInlineComments"
-                android:layout_width="match_parent"
+            android:gravity="center"
+            android:padding="12dp"
+            android:text="Chưa có bình luận. Hãy bắt đầu cuộc trò chuyện."
+            android:textColor="@color/dlog_muted_blue"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvInlineComments"
+            android:layout_width="match_parent"
+            android:layout_height="144dp"
+            android:nestedScrollingEnabled="true"
+            android:overScrollMode="ifContentScrolls"
+            android:scrollbars="vertical" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <EditText
+                android:id="@+id/etInlineComment"
+                android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:nestedScrollingEnabled="true"
-                android:overScrollMode="ifContentScrolls"
-                android:scrollbars="vertical" />
-            <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_rounded_edittext"
+                android:hint="Viết bình luận..."
+                android:imeOptions="actionSend"
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="3"
+                android:paddingHorizontal="14dp"
+                android:textColor="@color/dlog_ink"
+                android:textColorHint="@color/dlog_muted_blue"
+                android:textSize="14sp" />
+            <TextView
+                android:id="@+id/btnSendInlineComment"
+                android:layout_width="64dp"
                 android:layout_height="48dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-                <EditText
-                    android:id="@+id/etInlineComment"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_rounded_edittext"
-                    android:hint="Viết bình luận..."
-                    android:imeOptions="actionSend"
-                    android:inputType="textCapSentences|textMultiLine"
-                    android:maxLines="2"
-                    android:paddingHorizontal="12dp"
-                    android:textColor="@color/dlog_ink"
-                    android:textColorHint="@color/dlog_muted_blue"
-                    android:textSize="13sp" />
-                <TextView
-                    android:id="@+id/btnSendInlineComment"
-                    android:layout_width="56dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="6dp"
-                    android:background="@drawable/bg_auth_button"
-                    android:clickable="true"
-                    android:contentDescription="Gửi bình luận"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="Gửi"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_auth_button"
+                android:clickable="true"
+                android:contentDescription="Gửi bình luận"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Gửi"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
+    <LinearLayout
+        android:id="@+id/captionRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="top"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="12dp">
+        <TextView
+            android:id="@+id/tvCaption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/dlog_navy"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/btnCaptionMore"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="Xem đầy đủ mô tả"
+            android:focusable="true"
+            android:gravity="top|end"
+            android:minWidth="64dp"
+            android:paddingTop="1dp"
+            android:text="Xem thêm"
+            android:textColor="@color/dlog_muted_blue"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+    <TextView android:id="@+id/tvLikesCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="14dp" android:paddingTop="3dp" android:paddingEnd="14dp" android:text="0 lượt thích" android:textColor="@color/dlog_navy" android:textSize="13sp" android:textStyle="bold" android:visibility="gone" />
 </LinearLayout>
