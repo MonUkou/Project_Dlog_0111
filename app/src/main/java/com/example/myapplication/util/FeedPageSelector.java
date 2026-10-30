@@ -6,7 +6,8 @@ import java.util.List;
 
 /** Selects a visible page while preserving the position in the unfiltered feed. */
 public final class FeedPageSelector {
-    public static final long OWN_POST_VISIBILITY_MS = 5L * 60L * 1000L;
+    /** Keep a newly published post in its author's feed for 30 minutes. */
+    public static final long OWN_POST_VISIBILITY_MS = 30L * 60L * 1000L;
     private FeedPageSelector() {}
     public static final class Selection {
         public final List<Post> posts;

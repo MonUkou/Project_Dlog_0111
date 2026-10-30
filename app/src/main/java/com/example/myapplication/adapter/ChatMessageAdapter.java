@@ -1,7 +1,11 @@
 package com.example.myapplication.adapter;
 
 import android.content.Context;
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -10,14 +14,18 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.myapplication.R;
+import com.example.myapplication.model.Post;
 import com.example.myapplication.service.impl.ChatService;
+import com.example.myapplication.service.impl.PostService;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Collections;
 
 public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.MessageHolder> {
     private final Context context;
@@ -66,7 +74,21 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         holder.bubble.setBackgroundResource(mine ? R.drawable.bg_chat_bubble_mine : R.drawable.bg_chat_bubble_theirs);
         holder.bubble.setTextColor(ContextCompat.getColor(context,
                 mine ? R.color.dlog_chat_bubble_mine_text : R.color.dlog_chat_bubble_theirs_text));
-        holder.bubble.setText(message.text);
+        if (message.postId != null && !message.postId.trim().isEmpty()) {
+            String caption = message.postCaption == null ? "" : message.postCaption.trim();
+            if (caption.length() > 120) caption = caption.substring(0, 117) + "…";
+            holder.bubble.setText("Bài viết được chia sẻ"
+                    + (caption.isEmpty() ? "" : "\n" + caption)
+                    + "\nNhấn để xem bài viết");
+            holder.bubble.setContentDescription("Bài viết được chia sẻ. Nhấn để xem bài viết");
+            holder.bubble.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) { openSharedPost(message.postId); }
+            });
+        } else {
+            holder.bubble.setText(message.text);
+            holder.bubble.setContentDescription(message.text);
+            holder.bubble.setOnClickListener(null);
+        }
         LinearLayout.LayoutParams timeParams = (LinearLayout.LayoutParams) holder.time.getLayoutParams();
         timeParams.gravity = mine ? Gravity.END : Gravity.START;
         holder.time.setLayoutParams(timeParams);
@@ -75,6 +97,37 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
     }
 
     @Override public int getItemCount() { return messages.size(); }
+
+    private void openSharedPost(String postId) {
+        PostService.getInstance().getPostDetail(postId, new PostService.Callback<Post>() {
+            @Override public void onSuccess(Post post) {
+                Dialog dialog = new Dialog(context);
+                RecyclerView postList = new RecyclerView(context);
+                postList.setLayoutManager(new LinearLayoutManager(context));
+                PostAdapter adapter = new PostAdapter(context);
+                postList.setAdapter(adapter);
+                adapter.setPosts(Collections.singletonList(post));
+                dialog.setContentView(postList);
+                if (dialog.getWindow() != null) {
+                    dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                    dialog.getWindow().setDimAmount(0.7f);
+                    dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+                }
+                dialog.setCanceledOnTouchOutside(true);
+                dialog.show();
+                if (dialog.getWindow() != null) {
+                    int width = Math.min(context.getResources().getDisplayMetrics().widthPixels - dp(32), dp(540));
+                    int height = (int) (context.getResources().getDisplayMetrics().heightPixels * 0.84f);
+                    dialog.getWindow().setLayout(width, height);
+                }
+            }
+
+            @Override public void onError(Exception error) {
+                android.widget.Toast.makeText(context,
+                        "Bài viết không còn khả dụng.", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 
     private int dp(int value) { return (int) (value * context.getResources().getDisplayMetrics().density + 0.5f); }
 

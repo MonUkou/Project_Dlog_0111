@@ -220,7 +220,7 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
-                    android:text="Chỉnh ảnh đầu"
+                    android:text="Chỉnh ảnh"
                     android:textColor="@color/dlog_blue"
                     android:textSize="14sp"
                     android:textStyle="bold"

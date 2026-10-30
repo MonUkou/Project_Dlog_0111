@@ -112,6 +112,7 @@ public class AuthService implements IAuthService {
                                 db.collection("users").document(uid).set(user.toMap())
                                         .addOnSuccessListener(unused -> {
                                             setCurrentUserId(uid);
+                                            beginOfflineSession(uid);
                                             if (callback != null) callback.onSuccess(user);
                                         })
                                         .addOnFailureListener(errorListener(callback));
@@ -154,9 +155,11 @@ public class AuthService implements IAuthService {
                                         }
                                         if (snapshot.exists() && snapshot.getData() != null) {
                                             User user = User.fromMap(snapshot.getData());
+                                            beginOfflineSession(uid);
                                             if (callback != null) callback.onSuccess(user);
                                         } else {
                                             if (callback != null) {
+                                                beginOfflineSession(uid);
                                                 callback.onSuccess(buildFallbackUser(uid, email));
                                             }
                                         }
@@ -166,6 +169,7 @@ public class AuthService implements IAuthService {
                                     @Override
                                     public void onFailure(@NonNull Exception e) {
                                         if (callback != null) {
+                                            beginOfflineSession(uid);
                                             callback.onSuccess(buildFallbackUser(uid, email));
                                         }
                                     }
@@ -211,6 +215,7 @@ public class AuthService implements IAuthService {
                                         // Đã có hồ sơ, trả về luôn.
                                         if (snapshot.exists() && snapshot.getData() != null) {
                                             if (callback != null) {
+                                                beginOfflineSession(uid);
                                                 callback.onSuccess(User.fromMap(snapshot.getData()));
                                             }
                                             return;
@@ -233,6 +238,7 @@ public class AuthService implements IAuthService {
                                                 user.setUserCode(code);
                                                 db.collection("users").document(uid).set(user.toMap())
                                                         .addOnSuccessListener(unused -> {
+                                                            beginOfflineSession(uid);
                                                             if (callback != null) callback.onSuccess(user);
                                                         })
                                                         .addOnFailureListener(errorListener(callback));
@@ -252,6 +258,7 @@ public class AuthService implements IAuthService {
 
     @Override
     public void logout() {
+        if (context != null) new OfflinePages(context).clearSession();
         auth.signOut();
         fallbackUserId = null;
         if (context != null) {
@@ -259,6 +266,12 @@ public class AuthService implements IAuthService {
                     .edit()
                     .remove(KEY_CURRENT_USER_ID)
                     .apply();
+        }
+    }
+
+    private void beginOfflineSession(String userId) {
+        if (context != null && userId != null) {
+            new OfflinePages(context).beginSession(userId);
         }
     }
 

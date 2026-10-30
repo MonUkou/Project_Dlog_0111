@@ -8,7 +8,10 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.text.format.DateUtils;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -30,6 +33,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.AggregateSource;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.AggregateQuerySnapshot;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -38,6 +42,8 @@ import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.text.Normalizer;
+import java.util.Collections;
 
 
 /** Admin dashboard backed by the existing Firestore collections. */
@@ -286,7 +292,12 @@ public class AdminActivity extends AppCompatActivity {
         final TextView loading = createText("Đang tải dữ liệu…", 14, MUTED, false);
         content.addView(loading);
 
-        db.collection(collection).limit(100).get()
+        Query collectionQuery = db.collection(collection);
+        if ("posts".equals(collection)) {
+            collectionQuery = collectionQuery
+                    .orderBy("createdAt", Query.Direction.DESCENDING);
+        }
+        collectionQuery.limit(100).get()
                 .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                     @Override
                     public void onSuccess(QuerySnapshot snapshot) {
@@ -297,10 +308,12 @@ public class AdminActivity extends AppCompatActivity {
                                     : "Chưa có dữ liệu trong mục này.");
                             return;
                         }
+                        if (collection.equals("users")) {
+                            showUserManagement(snapshot.getDocuments());
+                            return;
+                        }
                         for (DocumentSnapshot document : snapshot.getDocuments()) {
-                            if (collection.equals("users")) {
-                                addUserRow(document);
-                            } else if (collection.equals("posts")) {
+                            if (collection.equals("posts")) {
                                 addPostRow(document);
                             } else if (collection.equals("comments")) {
                                 addCommentRow(document);
@@ -319,7 +332,100 @@ public class AdminActivity extends AppCompatActivity {
                 });
     }
 
-    private void addUserRow(final DocumentSnapshot doc) {
+    private void showUserManagement(List<DocumentSnapshot> sourceDocuments) {
+        final List<DocumentSnapshot> users = new ArrayList<>(sourceDocuments);
+        Collections.sort(users, (first, second) -> {
+            int codeOrder = Integer.compare(userCodeNumber(second), userCodeNumber(first));
+            if (codeOrder != 0) return codeOrder;
+            return Long.compare(numberValue(second, "createdAt"), numberValue(first, "createdAt"));
+        });
+
+        final EditText search = new EditText(this);
+        search.setSingleLine(true);
+        search.setHint("Tìm theo tên, USR hoặc trạng thái");
+        search.setContentDescription("Tìm kiếm người dùng theo tên, mã hoặc trạng thái");
+        search.setTextColor(NAVY);
+        search.setHintTextColor(MUTED);
+        search.setTextSize(14);
+        search.setPadding(dp(14), 0, dp(14), 0);
+        search.setBackgroundResource(R.drawable.bg_rounded_edittext);
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(48));
+        searchParams.bottomMargin = dp(12);
+        content.addView(search, searchParams);
+
+        final LinearLayout results = new LinearLayout(this);
+        results.setOrientation(LinearLayout.VERTICAL);
+        content.addView(results, new LinearLayout.LayoutParams(-1, -2));
+        renderUserResults(users, "", results);
+
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                renderUserResults(users, text == null ? "" : text.toString(), results);
+            }
+            @Override public void afterTextChanged(Editable editable) { }
+        });
+    }
+
+    private void renderUserResults(List<DocumentSnapshot> users, String rawQuery,
+                                   LinearLayout results) {
+        results.removeAllViews();
+        String query = normalizeSearch(rawQuery);
+        int shown = 0;
+        for (DocumentSnapshot user : users) {
+            if (!matchesUserSearch(user, query)) continue;
+            addUserRow(user, results);
+            shown++;
+        }
+        if (shown == 0) {
+            TextView empty = createText("Không tìm thấy người dùng phù hợp.", 13, MUTED, false);
+            empty.setGravity(Gravity.CENTER);
+            empty.setPadding(dp(18), dp(24), dp(18), dp(24));
+            empty.setBackgroundResource(R.drawable.bg_admin_card);
+            results.addView(empty);
+        }
+    }
+
+    private boolean matchesUserSearch(DocumentSnapshot user, String query) {
+        if (query.isEmpty()) return true;
+        boolean locked = Boolean.TRUE.equals(user.getBoolean("locked"));
+        String searchable = firstValue(user, "fullName", "username") + " "
+                + firstValue(user, "username") + " "
+                + firstValue(user, "userCode") + " "
+                + userStatus(user) + " "
+                + (locked ? "đã khóa đã ẩn khóa ẩn" : "");
+        return normalizeSearch(searchable).contains(query);
+    }
+
+    private String normalizeSearch(String value) {
+        String text = value == null ? "" : value.trim().toLowerCase(new Locale("vi", "VN"));
+        return Normalizer.normalize(text, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd');
+    }
+
+    private int userCodeNumber(DocumentSnapshot user) {
+        String code = user.getString("userCode");
+        if (code == null) return 0;
+        String digits = code.replaceAll("\\D+", "");
+        if (digits.isEmpty()) return 0;
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    private String userStatus(DocumentSnapshot doc) {
+        boolean locked = Boolean.TRUE.equals(doc.getBoolean("locked"));
+        boolean online = Boolean.TRUE.equals(doc.getBoolean("online"));
+        boolean admin = "admin".equalsIgnoreCase(doc.getString("role"));
+        if (locked) return "Đã khóa";
+        if (online) return admin ? "Quản trị viên · Đang hoạt động" : "Đang hoạt động";
+        return admin ? "Quản trị viên · Ngoại tuyến" : offlineLabel(doc.getLong("lastSeenAt"));
+    }
+
+    private void addUserRow(final DocumentSnapshot doc, LinearLayout target) {
         LinearLayout row = createRow();
         ImageView avatar = createAvatar();
         String avatarUrl = doc.getString("avatarUrl");
@@ -331,10 +437,7 @@ public class AdminActivity extends AppCompatActivity {
         String userCode = firstValue(doc, "userCode");
         boolean locked = Boolean.TRUE.equals(doc.getBoolean("locked"));
         boolean online = Boolean.TRUE.equals(doc.getBoolean("online"));
-        boolean admin = "admin".equalsIgnoreCase(doc.getString("role"));
-        String status = locked ? "Đã khóa"
-                : online ? (admin ? "Quản trị viên · Đang hoạt động" : "Đang hoạt động")
-                  : (admin ? "Quản trị viên · Ngoại tuyến" : offlineLabel(doc.getLong("lastSeenAt")));
+        String status = userStatus(doc);
         int statusColor = locked ? RED : online ? GREEN : MUTED;
         row.addView(createTextColumn(name, userCode, status, statusColor));
         row.setBackgroundResource(R.drawable.bg_admin_card_clickable);
@@ -352,7 +455,7 @@ public class AdminActivity extends AppCompatActivity {
         if (!doc.getId().equals(com.example.myapplication.service.impl.AuthService.getInstance().getCurrentUserId())) {
             row.addView(actionMenu(doc, "users", name, locked));
         }
-        content.addView(row);
+        target.addView(row);
     }
 
     private void addPostRow(final DocumentSnapshot doc) {

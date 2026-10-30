@@ -30,14 +30,14 @@ public final class ReadableIdService {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         DocumentReference counter = db.collection("counters").document(counterName);
         db.runTransaction(transaction -> {
-                    Long lastValue = transaction.get(counter).getLong("lastValue");
-                    long nextValue = (lastValue == null ? 0L : lastValue) + 1L;
-                    Map<String, Object> values = new HashMap<>();
-                    values.put("lastValue", nextValue);
-                    values.put("description", "Bộ đếm mã quản lý " + prefix);
-                    transaction.set(counter, values, SetOptions.merge());
-                    return String.format(Locale.US, "%s-%03d", prefix, nextValue);
-                }).addOnSuccessListener(callback::onSuccess)
+            Long lastValue = transaction.get(counter).getLong("lastValue");
+            long nextValue = (lastValue == null ? 0L : lastValue) + 1L;
+            Map<String, Object> values = new HashMap<>();
+            values.put("lastValue", nextValue);
+            values.put("description", "Bộ đếm mã quản lý " + prefix);
+            transaction.set(counter, values, SetOptions.merge());
+            return String.format(Locale.US, "%s-%03d", prefix, nextValue);
+        }).addOnSuccessListener(callback::onSuccess)
                 .addOnFailureListener(callback::onError);
     }
 }

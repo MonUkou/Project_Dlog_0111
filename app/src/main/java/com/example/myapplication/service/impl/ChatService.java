@@ -51,12 +51,17 @@ public final class ChatService {
         public final String senderId;
         public final String text;
         public final long createdAt;
+        public final String postId;
+        public final String postCaption;
 
-        ChatMessage(String id, String senderId, String text, long createdAt) {
+        ChatMessage(String id, String senderId, String text, long createdAt,
+                    String postId, String postCaption) {
             this.id = id;
             this.senderId = senderId;
             this.text = text;
             this.createdAt = createdAt;
+            this.postId = postId;
+            this.postCaption = postCaption;
         }
     }
 
@@ -163,7 +168,8 @@ public final class ChatService {
                     if (snapshot != null) {
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
                             messages.add(new ChatMessage(doc.getId(), stringValue(doc.get("senderId")),
-                                    stringValue(doc.get("text")), timestampValue(doc.get("createdAt"))));
+                                    stringValue(doc.get("text")), timestampValue(doc.get("createdAt")),
+                                    stringValue(doc.get("postId")), stringValue(doc.get("postCaption"))));
                         }
                     }
                     callback.onSuccess(messages);
@@ -186,6 +192,38 @@ public final class ChatService {
 
         Map<String, Object> threadUpdate = new HashMap<>();
         threadUpdate.put("lastMessage", cleanText);
+        threadUpdate.put("lastSenderId", senderId);
+        threadUpdate.put("updatedAt", FieldValue.serverTimestamp());
+
+        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        batch.set(db.collection("chats").document(conversationId)
+                .collection("messages").document(), message);
+        batch.set(db.collection("chats").document(conversationId), threadUpdate, SetOptions.merge());
+        batch.commit().addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override public void onSuccess(Void unused) { callback.onSuccess(null); }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    /** Sends a reference to a DLog post so the receiver can reopen the full post card. */
+    public void sendPost(String conversationId, String senderId, String senderName,
+                         String postId, String postCaption, Callback<Void> callback) {
+        if (conversationId == null || senderId == null || postId == null || postId.trim().isEmpty()) {
+            callback.onError(new IllegalArgumentException("Bài viết chia sẻ không hợp lệ."));
+            return;
+        }
+        String caption = postCaption == null ? "" : postCaption.trim();
+        Map<String, Object> message = new HashMap<>();
+        message.put("senderId", senderId);
+        message.put("senderName", firstNonEmpty(senderName, null, "Người dùng DLog"));
+        message.put("text", "Đã chia sẻ một bài viết");
+        message.put("type", "post");
+        message.put("postId", postId);
+        message.put("postCaption", caption);
+        message.put("createdAt", FieldValue.serverTimestamp());
+
+        Map<String, Object> threadUpdate = new HashMap<>();
+        threadUpdate.put("lastMessage", "Đã chia sẻ một bài viết");
         threadUpdate.put("lastSenderId", senderId);
         threadUpdate.put("updatedAt", FieldValue.serverTimestamp());
 

@@ -11,6 +11,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.Transaction;
 
@@ -401,6 +402,43 @@ public class InteractionService {
                     @Override public void onFailure(@NonNull Exception e) {
                         if (callback != null) callback.onError("Lỗi tải bình luận: " + e.getMessage());
                     }
+                });
+    }
+
+    /**
+     * Observes the visible comments of one post. The first callback contains the current
+     * comments and later callbacks contain additions, deletions and moderation changes.
+     */
+    public ListenerRegistration observeComments(String postId,
+                                                 ServiceCallback<List<Comment>> callback) {
+        if (postId == null || postId.trim().isEmpty()) {
+            if (callback != null) callback.onError("Mã bài viết không hợp lệ.");
+            return null;
+        }
+
+        return dbRef.collection(COLLECTION_COMMENTS)
+                .whereEqualTo("postId", postId)
+                .addSnapshotListener((querySnapshot, error) -> {
+                    if (error != null) {
+                        if (callback != null) {
+                            callback.onError("Lỗi đồng bộ bình luận: " + error.getMessage());
+                        }
+                        return;
+                    }
+                    if (querySnapshot == null) return;
+
+                    List<Comment> comments = new ArrayList<>();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        if (Boolean.TRUE.equals(doc.getBoolean("hidden"))) continue;
+                        Comment comment = doc.toObject(Comment.class);
+                        if (comment != null) {
+                            comment.setId(doc.getId());
+                            comments.add(comment);
+                        }
+                    }
+                    Collections.sort(comments,
+                            (first, second) -> Long.compare(first.getCreatedAt(), second.getCreatedAt()));
+                    if (callback != null) callback.onSuccess(comments);
                 });
     }
 
