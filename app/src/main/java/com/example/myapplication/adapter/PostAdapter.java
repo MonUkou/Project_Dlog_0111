@@ -37,11 +37,14 @@ import com.example.myapplication.view.PhotoCollageView;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Date;
 import java.util.Locale;
 import java.text.SimpleDateFormat;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder> {
 
@@ -55,6 +58,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private int lastAnimatedPosition = -1;
     private final Set<String> expandedCaptionIds = new HashSet<>();
     private final Set<String> expandedCommentIds = new HashSet<>();
+    private final Map<String, String> currentAuthorAvatars = new HashMap<>();
+    private final Set<String> pendingAuthorAvatars = new HashSet<>();
 
     public interface OnPostChangeListener {
         void onPostUpdated();
@@ -91,6 +96,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         }
     }
 
+    /** Updates a post already visible in the feed when Firestore sends a realtime change. */
+    public void updatePostRealtime(Post updatedPost) {
+        if (updatedPost == null || updatedPost.getId() == null) return;
+        for (int i = 0; i < posts.size(); i++) {
+            if (updatedPost.getId().equals(posts.get(i).getId())) {
+                Post current = posts.get(i);
+                current.setLikesCount(updatedPost.getLikesCount());
+                current.setCommentsCount(updatedPost.getCommentsCount());
+                notifyItemChanged(i);
+                return;
+            }
+        }
+    }
+
     @NonNull
     @Override
     public PostViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -118,14 +137,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         holder.tvPostTime.setText(new SimpleDateFormat("HH:mm · dd/MM/yyyy", new Locale("vi", "VN"))
                 .format(new Date(post.getCreatedAt())));
 
-        if (post.getAuthorAvatarUrl() != null && !post.getAuthorAvatarUrl().isEmpty()) {
-            Glide.with(context)
-                    .load(post.getAuthorAvatarUrl())
-                    .placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop()
-                    .into(holder.ivAuthorAvatar);
-        } else {
-            holder.ivAuthorAvatar.setImageResource(R.drawable.bg_circle_avatar);
-        }
+        String authorId = post.getAuthorId();
+        String avatarUrl = currentAuthorAvatars.containsKey(authorId)
+                ? currentAuthorAvatars.get(authorId) : post.getAuthorAvatarUrl();
+        bindAuthorAvatar(holder.ivAuthorAvatar, avatarUrl);
+        refreshAuthorAvatar(authorId);
 
         // Likes count & caption
         holder.btnLike.setText(String.valueOf(post.getLikesCount()));
@@ -185,42 +201,42 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 holder.btnLike.setEnabled(false);
                 if (wasLiked) {
                     interactionService.unlike(post.getId(), new InteractionService.ServiceCallback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                if (!post.getId().equals(holder.itemView.getTag())) return;
-                        post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
-                        holder.btnLike.setSelected(false);
-                    holder.btnLike.setContentDescription("Thích bài viết, " + post.getLikesCount());
-                        holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_ink));
-                        holder.btnLike.setText(String.valueOf(post.getLikesCount()));
-                        holder.btnLike.setEnabled(true);
-                    }
+                        @Override
+                        public void onSuccess(Void result) {
+                            if (!post.getId().equals(holder.itemView.getTag())) return;
+                            post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
+                            holder.btnLike.setSelected(false);
+                            holder.btnLike.setContentDescription("Thích bài viết, " + post.getLikesCount());
+                            holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_ink));
+                            holder.btnLike.setText(String.valueOf(post.getLikesCount()));
+                            holder.btnLike.setEnabled(true);
+                        }
 
-                    @Override
-                    public void onError(String message) {
-                        holder.btnLike.setEnabled(true);
-                        Toast.makeText(context, "Lỗi thao tác thích: " + message, Toast.LENGTH_SHORT).show();
-                    }
-                });
+                        @Override
+                        public void onError(String message) {
+                            holder.btnLike.setEnabled(true);
+                            Toast.makeText(context, "Lỗi thao tác thích: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 } else {
                     interactionService.like(post.getId(), new InteractionService.ServiceCallback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                if (!post.getId().equals(holder.itemView.getTag())) return;
-                        post.setLikesCount(post.getLikesCount() + 1);
-                        holder.btnLike.setSelected(true);
-                    holder.btnLike.setContentDescription("Bỏ thích bài viết, " + post.getLikesCount());
-                        holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_error));
-                        holder.btnLike.setText(String.valueOf(post.getLikesCount()));
-                        holder.btnLike.setEnabled(true);
+                        @Override
+                        public void onSuccess(Void result) {
+                            if (!post.getId().equals(holder.itemView.getTag())) return;
+                            post.setLikesCount(post.getLikesCount() + 1);
+                            holder.btnLike.setSelected(true);
+                            holder.btnLike.setContentDescription("Bỏ thích bài viết, " + post.getLikesCount());
+                            holder.btnLike.setTextColor(ContextCompat.getColor(context, R.color.dlog_error));
+                            holder.btnLike.setText(String.valueOf(post.getLikesCount()));
+                            holder.btnLike.setEnabled(true);
 
-                    }
+                        }
 
-                    @Override
-                    public void onError(String message) {
-                        holder.btnLike.setEnabled(true);
-                        Toast.makeText(context, "Lỗi thao tác thích: " + message, Toast.LENGTH_SHORT).show();
-                    }
+                        @Override
+                        public void onError(String message) {
+                            holder.btnLike.setEnabled(true);
+                            Toast.makeText(context, "Lỗi thao tác thích: " + message, Toast.LENGTH_SHORT).show();
+                        }
                     });
                 }
             }
@@ -234,22 +250,22 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 if (wasSaved) {
                     holder.btnSave.setEnabled(false);
                     postService.unsavePost(currentUserId, post.getId(), new PostService.Callback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                        holder.btnSave.setEnabled(true);
-                if (!post.getId().equals(holder.itemView.getTag())) return;
-                        holder.btnSave.setSelected(false);
-                    holder.btnSave.setContentDescription("Lưu bài viết");
-                        holder.btnSave.setTextColor(ContextCompat.getColor(context, R.color.dlog_ink));
-                        Toast.makeText(context, "Đã bỏ lưu bài viết", Toast.LENGTH_SHORT).show();
-                    }
+                        @Override
+                        public void onSuccess(Void result) {
+                            holder.btnSave.setEnabled(true);
+                            if (!post.getId().equals(holder.itemView.getTag())) return;
+                            holder.btnSave.setSelected(false);
+                            holder.btnSave.setContentDescription("Lưu bài viết");
+                            holder.btnSave.setTextColor(ContextCompat.getColor(context, R.color.dlog_ink));
+                            Toast.makeText(context, "Đã bỏ lưu bài viết", Toast.LENGTH_SHORT).show();
+                        }
 
-                    @Override
-                    public void onError(Exception e) {
-                        holder.btnSave.setEnabled(true);
-                        Toast.makeText(context, "Lỗi bỏ lưu bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+                        @Override
+                        public void onError(Exception e) {
+                            holder.btnSave.setEnabled(true);
+                            Toast.makeText(context, "Lỗi bỏ lưu bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 } else {
                     savePostDirectly(holder, post, currentUserId);
                 }
@@ -312,19 +328,50 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-                showPostOptionsDialog(post, currentUserId, position);
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition == RecyclerView.NO_POSITION) return false;
+                showPostOptionsDialog(post, currentUserId, adapterPosition);
                 return true;
             }
         });
         holder.itemView.findViewById(R.id.tvPostOptions).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
-                showPostOptionsDialog(post, currentUserId, position);
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition == RecyclerView.NO_POSITION) return;
+                showPostOptionsDialog(post, currentUserId, adapterPosition);
             }
         });
-        if (position > lastAnimatedPosition) {
-            UiMotion.reveal(holder.itemView, position);
-            lastAnimatedPosition = position;
+        int adapterPosition = holder.getBindingAdapterPosition();
+        if (adapterPosition != RecyclerView.NO_POSITION && adapterPosition > lastAnimatedPosition) {
+            UiMotion.reveal(holder.itemView, adapterPosition);
+            lastAnimatedPosition = adapterPosition;
         }
+    }
+
+    private void bindAuthorAvatar(ImageView avatar, String url) {
+        if (url == null || url.trim().isEmpty()) {
+            Glide.with(context).clear(avatar);
+            avatar.setImageResource(R.drawable.bg_circle_avatar);
+        } else {
+            Glide.with(context).load(url.trim())
+                    .placeholder(R.drawable.bg_circle_avatar)
+                    .error(R.drawable.bg_circle_avatar).circleCrop().into(avatar);
+        }
+    }
+
+    private void refreshAuthorAvatar(String authorId) {
+        if (authorId == null || authorId.isEmpty() || currentAuthorAvatars.containsKey(authorId)
+                || !pendingAuthorAvatars.add(authorId)) return;
+        FirebaseFirestore.getInstance().collection("users").document(authorId).get()
+                .addOnSuccessListener(document -> {
+                    pendingAuthorAvatars.remove(authorId);
+                    String url = document.getString("avatarUrl");
+                    currentAuthorAvatars.put(authorId, url == null ? "" : url);
+                    for (int i = 0; i < posts.size(); i++) {
+                        if (authorId.equals(posts.get(i).getAuthorId())) notifyItemChanged(i);
+                    }
+                })
+                .addOnFailureListener(error -> pendingAuthorAvatars.remove(authorId));
     }
 
     private void loadInlineComments(final PostViewHolder holder, final Post post) {
@@ -333,7 +380,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         if (hasCache) {
             holder.commentAdapter.setComments(cachedComments);
             holder.tvCommentsCacheStatus.setText("SQLite · Đang hiển thị bình luận đã lưu và kiểm tra dữ liệu mới…");
-            holder.tvCommentsCacheStatus.setVisibility(View.VISIBLE);
+            holder.tvCommentsCacheStatus.setVisibility(View.GONE);
             holder.tvCommentsEmpty.setVisibility(cachedComments.isEmpty() ? View.VISIBLE : View.GONE);
         } else {
             holder.tvCommentsCacheStatus.setVisibility(View.GONE);
@@ -364,7 +411,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         if (hasCache) {
                             holder.commentAdapter.setComments(cachedComments);
                             holder.tvCommentsCacheStatus.setText("Ngoại tuyến · Bình luận đang đọc từ SQLite");
-                            holder.tvCommentsCacheStatus.setVisibility(View.VISIBLE);
+                            holder.tvCommentsCacheStatus.setVisibility(View.GONE);
                             holder.tvCommentsEmpty.setVisibility(cachedComments.isEmpty()
                                     ? View.VISIBLE : View.GONE);
                         } else {
@@ -529,20 +576,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         postService.deletePost(authService.getCurrentUserId(), post.getId(), new PostService.Callback<Void>() {
-                        @Override
-                        public void onSuccess(Void result) {
-                            if (position >= 0 && position < posts.size()) {
-                                posts.remove(position);
-                                notifyItemRemoved(position);
+                            @Override
+                            public void onSuccess(Void result) {
+                                if (position >= 0 && position < posts.size()) {
+                                    posts.remove(position);
+                                    notifyItemRemoved(position);
+                                }
+                                Toast.makeText(context, "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
+                                if (onPostChangeListener != null) onPostChangeListener.onPostDeleted(post.getId());
                             }
-                            Toast.makeText(context, "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
-                            if (onPostChangeListener != null) onPostChangeListener.onPostDeleted(post.getId());
-                        }
 
-                        @Override
-                        public void onError(Exception e) {
-                            Toast.makeText(context, "Lỗi xóa bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
+                            @Override
+                            public void onError(Exception e) {
+                                Toast.makeText(context, "Lỗi xóa bài viết: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
                         });
                     }
                 })

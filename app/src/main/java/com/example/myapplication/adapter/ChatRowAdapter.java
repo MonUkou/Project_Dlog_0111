@@ -56,28 +56,43 @@ public class ChatRowAdapter extends RecyclerView.Adapter<ChatRowAdapter.RowHolde
 
     @Override
     public void onBindViewHolder(@NonNull RowHolder holder, int position) {
-        String name;
-        String subtitle;
-        String avatar;
         if (showingUsers) {
-            User user = users.get(position);
-            name = value(user.getFullName(), value(user.getUsername(), "Người dùng DLog"));
-            subtitle = "@" + value(user.getUsername(), "dlog_user") + " · Nhấn để nhắn tin";
-            avatar = user.getAvatarUrl();
-            holder.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View view) { listener.onUser(user); }
-            });
+            bindUser(holder, users.get(position));
         } else {
-            ChatService.Conversation conversation = conversations.get(position);
-            name = conversation.otherName;
-            subtitle = conversation.lastMessage.isEmpty() ? "Bắt đầu trò chuyện" : conversation.lastMessage;
-            avatar = conversation.otherAvatar;
-            holder.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View view) { listener.onThread(conversation); }
-            });
+            bindConversation(holder, conversations.get(position));
         }
-        holder.name.setText(name);
-        holder.subtitle.setText(subtitle);
+    }
+
+    private void bindUser(@NonNull RowHolder holder, @NonNull User user) {
+        holder.name.setText(value(user.getFullName(), value(user.getUsername(), "Người dùng DLog")));
+        holder.subtitle.setText("@" + value(user.getUsername(), "dlog_user") + " · Nhấn để nhắn tin");
+        bindAvatar(holder, user.getAvatarUrl());
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition == RecyclerView.NO_POSITION || adapterPosition >= users.size()) return;
+                listener.onUser(users.get(adapterPosition));
+            }
+        });
+    }
+
+    private void bindConversation(@NonNull RowHolder holder,
+                                  @NonNull ChatService.Conversation conversation) {
+        holder.name.setText(conversation.otherName);
+        holder.subtitle.setText(conversation.lastMessage.isEmpty()
+                ? "Bắt đầu trò chuyện" : conversation.lastMessage);
+        bindAvatar(holder, conversation.otherAvatar);
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition == RecyclerView.NO_POSITION
+                        || adapterPosition >= conversations.size()) return;
+                listener.onThread(conversations.get(adapterPosition));
+            }
+        });
+    }
+
+    private void bindAvatar(@NonNull RowHolder holder, String avatar) {
         if (avatar != null && !avatar.trim().isEmpty()) {
             Glide.with(context).load(avatar).placeholder(R.drawable.bg_circle_avatar).error(R.drawable.bg_circle_avatar).circleCrop().placeholder(R.drawable.bg_circle_avatar).into(holder.avatar);
         } else {

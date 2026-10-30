@@ -4,6 +4,7 @@ import com.example.myapplication.BaseEntity;
 import java.util.Map;
 
 public class User extends BaseEntity {
+    private String userCode;
     private String username;
     private String fullName;
     private String email;
@@ -35,6 +36,9 @@ public class User extends BaseEntity {
     public String getUsername() {
         return username;
     }
+
+    public String getUserCode() { return userCode; }
+    public void setUserCode(String userCode) { this.userCode = userCode; }
 
     public void setUsername(String username) {
         this.username = username;
@@ -112,6 +116,7 @@ public class User extends BaseEntity {
     @Override
     public Map<String, Object> toMap() {
         Map<String, Object> map = baseMap();
+        if (userCode != null && !userCode.trim().isEmpty()) map.put("userCode", userCode);
         map.put("username", username);
         map.put("fullName", fullName);
         map.put("email", email);
@@ -128,6 +133,7 @@ public class User extends BaseEntity {
     public static User fromMap(Map<String, Object> map) {
         if (map == null) return null;
         User user = new User();
+        if (map.get("userCode") instanceof String) user.setUserCode((String) map.get("userCode"));
         if (map.containsKey("id") && map.get("id") != null) user.setId((String) map.get("id"));
         if (map.containsKey("username") && map.get("username") != null) user.setUsername((String) map.get("username"));
         if (map.containsKey("fullName") && map.get("fullName") != null) user.setFullName((String) map.get("fullName"));

@@ -77,9 +77,10 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         } else {
             holder.ivCommentAvatar.setImageResource(R.drawable.bg_circle_avatar);
         }
-        if (position > lastAnimatedPosition) {
-            UiMotion.reveal(holder.itemView, position);
-            lastAnimatedPosition = position;
+        int adapterPosition = holder.getBindingAdapterPosition();
+        if (adapterPosition != RecyclerView.NO_POSITION && adapterPosition > lastAnimatedPosition) {
+            UiMotion.reveal(holder.itemView, adapterPosition);
+            lastAnimatedPosition = adapterPosition;
         }
     }
 

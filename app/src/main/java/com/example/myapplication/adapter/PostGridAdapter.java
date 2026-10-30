@@ -1,7 +1,6 @@
 package com.example.myapplication.adapter;
 
 import android.content.Context;
-import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +11,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.example.myapplication.PhotoViewerActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.model.Post;
 
@@ -23,9 +21,15 @@ public class PostGridAdapter extends RecyclerView.Adapter<PostGridAdapter.GridVi
 
     private final Context context;
     private final List<Post> posts = new ArrayList<>();
+    public interface OnPostClickListener { void onPostClick(Post post); }
+    private OnPostClickListener onPostClickListener;
 
     public PostGridAdapter(Context context) {
         this.context = context;
+    }
+
+    public void setOnPostClickListener(OnPostClickListener listener) {
+        this.onPostClickListener = listener;
     }
 
     public void setPosts(List<Post> newPosts) {
@@ -61,7 +65,8 @@ public class PostGridAdapter extends RecyclerView.Adapter<PostGridAdapter.GridVi
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                PhotoViewerActivity.open(context, post, 0);
+                if (onPostClickListener != null) onPostClickListener.onPostClick(post);
+                else com.example.myapplication.PhotoViewerActivity.open(context, post, 0);
             }
         });
     }
