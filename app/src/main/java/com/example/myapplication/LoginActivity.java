@@ -51,6 +51,19 @@ public class LoginActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
+        showAccountLockNoticeIfNeeded();
+    }
+
+    private void showAccountLockNoticeIfNeeded() {
+        String message = getIntent().getStringExtra(DLogApplication.EXTRA_ACCOUNT_LOCKED_MESSAGE);
+        if (message == null || message.trim().isEmpty()) return;
+        getIntent().removeExtra(DLogApplication.EXTRA_ACCOUNT_LOCKED_MESSAGE);
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Tài khoản đã bị khóa")
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton("Đã hiểu", null)
+                .show();
     }
 
     private void initViews() {

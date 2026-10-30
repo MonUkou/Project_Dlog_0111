@@ -41,12 +41,17 @@ public class ChatsActivity extends AppCompatActivity {
     private String currentUserId;
     private String currentQuery = "";
     private List<ChatService.Conversation> conversationCache = new ArrayList<>();
+    private boolean blockedOffline;
     private final Runnable clearSearch = new Runnable() {
         @Override public void run() { showThreads(); }
     };
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!com.example.myapplication.util.NetworkState.requireOnline(this, "Hộp thư")) {
+            blockedOffline = true;
+            return;
+        }
         setContentView(R.layout.activity_chats);
         AuthService auth = AuthService.getInstance();
         auth.init(getApplicationContext());
@@ -81,6 +86,11 @@ public class ChatsActivity extends AppCompatActivity {
 
     @Override protected void onStart() {
         super.onStart();
+        if (blockedOffline
+                || !com.example.myapplication.util.NetworkState.requireOnline(this, "Hộp thư")) {
+            blockedOffline = true;
+            return;
+        }
         conversationsListener = chatService.listenConversations(currentUserId, new ChatService.Callback<List<ChatService.Conversation>>() {
             @Override public void onSuccess(List<ChatService.Conversation> items) {
                 if (currentQuery.trim().isEmpty()) {
@@ -97,6 +107,14 @@ public class ChatsActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (!blockedOffline
+                && !com.example.myapplication.util.NetworkState.requireOnline(this, "Hộp thư")) {
+            blockedOffline = true;
+        }
     }
 
     private void onSearchChanged(String raw) {

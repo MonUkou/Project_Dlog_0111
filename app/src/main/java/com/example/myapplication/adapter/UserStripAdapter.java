@@ -51,13 +51,15 @@ public class UserStripAdapter extends RecyclerView.Adapter<UserStripAdapter.User
         LinearLayout item = new LinearLayout(context);
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER_HORIZONTAL);
-        item.setLayoutParams(new RecyclerView.LayoutParams(dp(80), ViewGroup.LayoutParams.WRAP_CONTENT));
+        int itemWidth = context.getResources().getDimensionPixelSize(R.dimen.people_strip_item_width);
+        int avatarSize = context.getResources().getDimensionPixelSize(R.dimen.people_strip_avatar_size);
+        item.setLayoutParams(new RecyclerView.LayoutParams(itemWidth, ViewGroup.LayoutParams.WRAP_CONTENT));
         item.setPadding(dp(3), dp(2), dp(3), 0);
 
         FrameLayout avatarFrame = new FrameLayout(context);
         avatarFrame.setBackgroundResource(R.drawable.bg_story_ring);
         avatarFrame.setPadding(dp(3), dp(3), dp(3), dp(3));
-        item.addView(avatarFrame, new LinearLayout.LayoutParams(dp(58), dp(58)));
+        item.addView(avatarFrame, new LinearLayout.LayoutParams(avatarSize, avatarSize));
 
         ImageView avatar = new ImageView(context);
         avatar.setBackgroundResource(R.drawable.bg_story_avatar);

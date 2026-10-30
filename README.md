@@ -1,189 +1,235 @@
-# 📱 DLog – Ứng dụng mạng xã hội chia sẻ ảnh
+# 📱 DLog - Ứng dụng chia sẻ ảnh trên Android
 
-DLog là ứng dụng mạng xã hội dành cho việc chia sẻ hình ảnh và tương tác giữa người dùng. 
-Ứng dụng hỗ trợ đăng bài viết, theo dõi người dùng, thích, bình luận, lưu bài viết và nhận thông báo.
+DLog là ứng dụng Android dành cho việc chia sẻ và khám phá hình ảnh. Người dùng có thể đăng một hoặc nhiều ảnh, theo dõi tài khoản khác, tương tác trên bảng tin, trò chuyện riêng và quản lý bộ sưu tập đã lưu. Ứng dụng sử dụng Firebase cho tài khoản và dữ liệu, Cloudinary để lưu ảnh, đồng thời có bộ nhớ SQLite hỗ trợ xem lại nội dung đã tải khi mất kết nối.
 
-Hệ thống được tổ chức thành **5 module chính**, gồm **13 nhóm chức năng và 34 chức năng (F01–F34)**.
+## ✨ Chức năng nổi bật
 
----
+### 🔐 Tài khoản và bảo mật
 
-# 1. 📌 Giới thiệu
+- Đăng ký, đăng nhập bằng email và mật khẩu.
+- Đăng nhập và đăng ký bằng tài khoản Google.
+- Gửi email đặt lại mật khẩu.
+- Duy trì phiên đăng nhập trên thiết bị.
+- Đăng xuất và kiểm tra tài khoản bị quản trị viên khóa.
 
-DLog tập trung vào các chức năng cơ bản của một ứng dụng mạng xã hội chia sẻ ảnh:
+### 👤 Hồ sơ và kết nối người dùng
 
-- Quản lý tài khoản và đăng nhập.
-- Quản lý hồ sơ cá nhân.
-- Theo dõi và tìm kiếm người dùng.
-- Đăng, sửa, xóa và xem bài viết.
-- Thích và bình luận bài viết.
-- Lưu bài viết.
-- Nhận và quản lý thông báo.
+- Xem và chỉnh sửa hồ sơ cá nhân.
+- Cập nhật tên hiển thị, tên tài khoản, phần giới thiệu, ảnh đại diện và ảnh bìa.
+- Xem hồ sơ của người dùng khác.
+- Theo dõi hoặc bỏ theo dõi tài khoản.
+- Xem danh sách người theo dõi và danh sách đang theo dõi.
+- Mở cuộc trò chuyện trực tiếp từ trang hồ sơ.
 
----
+### 🖼️ Chia sẻ và quản lý ảnh
 
-# 2. 🎯 Mục tiêu
+- Đăng một hoặc nhiều ảnh trong cùng một nội dung chia sẻ.
+- Chọn ảnh từ thiết bị hoặc thư viện ảnh mẫu có sẵn trong ứng dụng.
+- Tải ảnh lên Cloudinary và lưu đường dẫn trong Firestore.
+- Chỉnh ảnh trước khi đăng: xoay, cắt theo tỉ lệ và áp dụng bộ lọc màu.
+- Gắn mô tả ngắn và hashtag cho ảnh.
+- Sửa hoặc xóa nội dung do chính người dùng đăng.
+- Hiển thị nhiều ảnh theo bố cục collage và chỉ báo số ảnh còn lại.
+- Xem ảnh toàn màn hình, chuyển qua lại giữa các ảnh, phóng to và vuốt xuống để đóng.
+- Xem thông tin ảnh và tải ảnh đang xem về thiết bị.
+- Báo cáo ảnh để quản trị viên kiểm tra.
 
-DLog được xây dựng nhằm cung cấp một ứng dụng mạng xã hội đơn giản, trong đó người dùng có thể:
+### 📰 Bảng tin và khám phá
 
-- Tạo và quản lý tài khoản.
-- Chia sẻ hình ảnh và nội dung.
-- Theo dõi những người dùng khác.
-- Tương tác với bài viết thông qua Like và Comment.
-- Lưu lại những bài viết yêu thích.
-- Theo dõi các hoạt động thông qua hệ thống thông báo.
+- Bảng tin ưu tiên nội dung từ các tài khoản đang theo dõi.
+- Tải thêm nội dung theo từng trang.
+- Thu gọn mô tả dài và mở rộng bằng thao tác "Xem thêm".
+- Tìm kiếm tài khoản và hashtag.
+- Lọc kết quả ảnh theo nội dung mới nhất, cũ nhất hoặc phổ biến.
+- Hiển thị lưới ảnh trên trang hồ sơ.
+- Nút quay nhanh lên đầu bảng tin.
 
----
+### ❤️ Tương tác
 
-# 3. ✨ Tính năng
+- Thích và bỏ thích ảnh.
+- Bình luận và xóa bình luận của chính mình.
+- Xem bình luận ngay bên dưới nội dung trên bảng tin.
+- Lưu hoặc bỏ lưu nội dung.
+- Xem danh sách nội dung đã lưu trên trang cá nhân.
+- Chia sẻ nội dung qua các ứng dụng khác trên thiết bị.
 
-## 3.1 🔐 Tài khoản & xác thực
+### 🔔 Thông báo và tin nhắn
 
-### Đăng ký & đăng nhập
+- Nhận thông báo khi có người theo dõi, thích hoặc bình luận.
+- Hiển thị tên người gửi, trạng thái đã đọc và số thông báo chưa đọc.
+- Làm mới và đánh dấu thông báo đã đọc.
+- Xem danh sách cuộc trò chuyện.
+- Tìm người dùng để bắt đầu trò chuyện.
+- Gửi và nhận tin nhắn riêng.
 
-| Mã | Chức năng |
-|---|---|
-| F01 | Đăng ký tài khoản |
-| F02 | Đăng nhập |
-| F03 | Đăng xuất |
+### 🌙 Giao diện và trải nghiệm sử dụng
 
-### Phiên đăng nhập
+- Hỗ trợ giao diện sáng và tối.
+- Màu sắc, biểu tượng và thanh điều hướng được đồng bộ giữa các màn hình.
+- Hỗ trợ bố cục dọc và ngang.
+- Khi xoay ngang, thanh điều hướng chuyển sang cạnh phải; bảng tin và hồ sơ được chia thành hai vùng để tận dụng chiều rộng màn hình.
+- Chuyển động giao diện tuân theo thiết lập giảm chuyển động của thiết bị.
+- Hiển thị trạng thái ngoại tuyến và hạn chế các thao tác cần kết nối mạng.
 
-| Mã | Chức năng |
-|---|---|
-| F04 | Kiểm tra trạng thái đăng nhập |
-| F05 | Lấy mã người dùng hiện tại |
+### 🗄️ Dữ liệu ngoại tuyến
 
----
+- Lưu các trang đã tải vào cơ sở dữ liệu SQLite cục bộ.
+- Có bộ nhớ đệm cho bảng tin, hồ sơ, nội dung đã lưu và bình luận đã xem.
+- Hiển thị lại dữ liệu đã lưu khi thiết bị mất mạng.
+- Cập nhật bản lưu cục bộ sau khi tải được dữ liệu mới từ máy chủ.
 
-## 3.2 👤 Hồ sơ & theo dõi
+### 🛡️ Quản trị hệ thống
 
-### Hồ sơ cá nhân
+- Phân quyền tài khoản người dùng và quản trị viên.
+- Xem thống kê tổng quan về người dùng, nội dung, bình luận, báo cáo và tương tác.
+- Khóa hoặc mở khóa tài khoản.
+- Ẩn hoặc hiện nội dung và bình luận.
+- Xem danh sách báo cáo ảnh do người dùng gửi.
 
-| Mã | Chức năng |
-|---|---|
-| F06 | Xem hồ sơ |
-| F07 | Cập nhật hồ sơ |
-| F08 | Đổi ảnh đại diện |
+## 🧰 Công nghệ sử dụng
 
-### Theo dõi
+| Thành phần | Công nghệ |
+| --- | --- |
+| Ngôn ngữ | Java 11 |
+| Nền tảng | Android SDK, minSdk 30, targetSdk 37 |
+| Giao diện | XML Layout, Material Components, AppCompat |
+| Xác thực | Firebase Authentication, Google Identity |
+| Cơ sở dữ liệu trực tuyến | Cloud Firestore |
+| Lưu trữ ảnh | Cloudinary; Firebase Storage được cấu hình trong dự án |
+| Dữ liệu cục bộ | SQLite |
+| Tải và hiển thị ảnh | Glide |
+| Kiểm thử | JUnit, AndroidX Test, Espresso |
+| Hệ thống build | Gradle Kotlin DSL |
 
-| Mã | Chức năng |
-|---|---|
-| F09 | Theo dõi người dùng |
-| F10 | Bỏ theo dõi |
-| F11 | Kiểm tra đang theo dõi |
-| F12 | Danh sách người theo dõi |
-| F13 | Danh sách đang theo dõi |
+## 🏗️ Kiến trúc ứng dụng
 
-### Tìm kiếm
-
-| Mã | Chức năng |
-|---|---|
-| F14 | Tìm kiếm người dùng |
-
----
-
-## 3.3 📝 Bài viết
-
-### Quản lý bài viết
-
-| Mã | Chức năng |
-|---|---|
-| F15 | Đăng bài viết |
-| F16 | Sửa bài viết |
-| F17 | Xóa bài viết |
-| F18 | Xem chi tiết bài viết |
-
-### Bảng tin & trang cá nhân
-
-| Mã | Chức năng |
-|---|---|
-| F19 | Xem bảng tin |
-| F20 | Xem bài viết của một người |
-
-### Lưu bài viết
-
-| Mã | Chức năng |
-|---|---|
-| F21 | Lưu bài viết |
-| F22 | Bỏ lưu bài viết |
-| F23 | Danh sách bài đã lưu |
-
-### Tiện ích
-
-| Mã | Chức năng |
-|---|---|
-| F24 | Lưu ảnh về thiết bị |
-
----
-
-## 3.4 ❤️ Tương tác
-
-### Thích bài viết
-
-| Mã | Chức năng |
-|---|---|
-| F25 | Thích bài viết |
-| F26 | Bỏ thích |
-| F27 | Kiểm tra đã thích |
-
-### Bình luận
-
-| Mã | Chức năng |
-|---|---|
-| F28 | Bình luận bài viết |
-| F29 | Xem bình luận |
-| F30 | Xóa bình luận |
-
----
-
-## 3.5 🔔 Thông báo
-
-### Tạo thông báo
-
-| Mã | Chức năng |
-|---|---|
-| F31 | Tạo thông báo |
-
-Thông báo được tạo khi xảy ra các hoạt động:
-
-- Theo dõi người dùng.
-- Thích bài viết.
-- Bình luận bài viết.
-
-### Xem & quản lý thông báo
-
-| Mã | Chức năng |
-|---|---|
-| F32 | Danh sách thông báo |
-| F33 | Đánh dấu đã đọc |
-| F34 | Đếm thông báo chưa đọc |
-
----
-
-# 4. 🏗️ Kiến trúc hệ thống
-
-DLog được tổ chức theo các thành phần **Entity – Service – Interface**.
+Mã nguồn được tổ chức theo các lớp `Activity`, `Adapter`, `Model`, `Service`, `Interface`, `Util` và `View`.
 
 ```text
-                         DLog
-                          │
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-        ▼                 ▼                 ▼
-     Entity            Service          Interface
-        │                 │                 │
-        │                 ├─ AuthService    ├─ IAuthService
-        │                 ├─ UserService    └─ INotificationService
-        │                 ├─ PostService
-        │                 ├─ InteractionService
-        │                 └─ NotificationService
-        │
-        ├─ BaseEntity
-        ├─ User
-        ├─ Follow
-        ├─ Post
-        ├─ Comment
-        ├─ Like
-        ├─ SavedPost
-        └─ Notification
+DLog
+├── Activity
+│   ├── Xác thực và hồ sơ
+│   ├── Bảng tin và khám phá
+│   ├── Đăng, chỉnh sửa và xem ảnh
+│   ├── Thông báo và tin nhắn
+│   └── Quản trị hệ thống
+├── Adapter
+│   ├── PostAdapter
+│   ├── CommentAdapter
+│   ├── NotificationAdapter
+│   ├── ChatMessageAdapter
+│   └── FollowUserAdapter
+├── Model
+│   ├── User
+│   ├── Follow
+│   ├── Post
+│   ├── Comment
+│   ├── Like
+│   ├── SavedPost
+│   └── Notification
+├── Service
+│   ├── AuthService
+│   ├── UserService
+│   ├── PostService
+│   ├── InteractionService
+│   ├── NotificationService
+│   ├── ChatService
+│   ├── CloudinaryUploader
+│   └── OfflinePages
+├── Interface
+│   ├── IAuthService
+│   └── INotificationService
+├── Util
+│   ├── HashtagParser
+│   ├── FeedPageSelector
+│   ├── PhotoLibrary
+│   ├── ImagePickerDialog
+│   ├── BottomNavHelper
+│   └── UiMotion
+└── View
+    ├── PhotoCollageView
+    └── ZoomDismissImageView
+```
+
+Luồng dữ liệu chính:
+
+```text
+Giao diện → Activity/Adapter → Service → Firebase hoặc Cloudinary
+                              ↓
+                         SQLite cache
+```
+
+## 📂 Cấu trúc thư mục
+
+```text
+app/src/main/
+├── java/com/example/myapplication/
+│   ├── adapter/
+│   ├── model/
+│   ├── service/
+│   ├── ui/
+│   ├── util/
+│   └── view/
+├── res/
+│   ├── drawable/
+│   ├── drawable-nodpi/
+│   ├── layout/
+│   ├── layout-land/
+│   ├── values/
+│   └── values-night/
+└── AndroidManifest.xml
+```
+
+## 🚀 Cài đặt và chạy ứng dụng
+
+### Yêu cầu
+
+- Android Studio có Android SDK phù hợp.
+- JDK đi kèm Android Studio hoặc JDK tương thích Java 11.
+- Thiết bị thật hoặc máy ảo chạy Android 11 (API 30) trở lên.
+- Kết nối Internet để sử dụng Firebase, Google Sign-In và Cloudinary.
+
+### Tải mã nguồn
+
+```bash
+git clone https://github.com/MonUkou/Project_Dlog_0111.git
+cd Project_Dlog_0111
+git switch main
+```
+
+### Chạy trong Android Studio
+
+1. Chọn **Open** và mở thư mục `Project_Dlog_0111`.
+2. Chọn **Trust Project** khi Android Studio yêu cầu.
+3. Chờ Gradle Sync hoàn tất.
+4. Chọn thiết bị hoặc máy ảo Android.
+5. Chọn cấu hình `app` và nhấn **Run**.
+
+File `local.properties` không được lưu trên GitHub. Android Studio sẽ tạo file này theo đường dẫn Android SDK trên từng máy.
+
+## 🧪 Kiểm thử
+
+Dự án có kiểm thử cho model người dùng, model nội dung, tuần tự hóa dữ liệu, xử lý hashtag và phân trang bảng tin.
+
+Chạy unit test bằng lệnh:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Trên Windows:
+
+```cmd
+gradlew.bat testDebugUnitTest
+```
+
+## 🔒 Lưu ý về cấu hình
+
+- `app/google-services.json` dùng để kết nối ứng dụng với Firebase.
+- Cấu hình Cloudinary sử dụng cloud name và unsigned upload preset của dự án.
+- Không đưa mật khẩu, private key, service-account key hoặc `local.properties` lên repository.
+- Các thao tác tải dữ liệu mới, đăng ảnh, thích, bình luận, theo dõi và nhắn tin cần kết nối mạng.
+
+## 📄 Trạng thái dự án
+
+Phiên bản hiện tại là sản phẩm đồ án Android hoàn chỉnh, tập trung vào trải nghiệm chia sẻ ảnh, tương tác cộng đồng, khả năng sử dụng khi ngoại tuyến và giao diện thích ứng theo hướng màn hình.

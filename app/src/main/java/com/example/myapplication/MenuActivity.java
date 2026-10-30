@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.activity.OnBackPressedCallback;
@@ -70,6 +71,11 @@ public class MenuActivity extends AppCompatActivity {
         });
         findViewById(R.id.rowMenuChats).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View view) {
+                if (!com.example.myapplication.util.NetworkState.isOnline(MenuActivity.this)) {
+                    Toast.makeText(MenuActivity.this,
+                            "Hộp thư cần kết nối mạng.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 startActivity(new Intent(MenuActivity.this, ChatsActivity.class));
             }
         });

@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,9 +27,16 @@ public final class ReadableCodeMigration {
 
     public static void run(FirebaseFirestore db, Callback callback) {
         db.collection("users").get()
-                .addOnSuccessListener(users -> db.collection("posts").get()
-                        .addOnSuccessListener(posts -> migrate(db, users, posts, callback))
-                        .addOnFailureListener(callback::onError))
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override public void onSuccess(QuerySnapshot users) {
+                        db.collection("posts").get()
+                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                    @Override public void onSuccess(QuerySnapshot posts) {
+                                        migrate(db, users, posts, callback);
+                                    }
+                                }).addOnFailureListener(callback::onError);
+                    }
+                })
                 .addOnFailureListener(callback::onError);
     }
 
@@ -66,7 +74,11 @@ public final class ReadableCodeMigration {
         batch.set(db.collection("counters").document("posts"), postCounter, SetOptions.merge());
 
         batch.commit()
-                .addOnSuccessListener(unused -> callback.onSuccess(users.size(), posts.size()))
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override public void onSuccess(Void unused) {
+                        callback.onSuccess(users.size(), posts.size());
+                    }
+                })
                 .addOnFailureListener(callback::onError);
     }
 

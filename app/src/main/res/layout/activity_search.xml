@@ -41,7 +41,7 @@
             android:background="?attr/selectableItemBackground" />
         <TextView android:id="@+id/tabSearchTags" android:layout_width="0dp"
             android:layout_height="match_parent" android:layout_weight="1"
-            android:gravity="center" android:text="Ảnh / Hashtag" android:textSize="14sp"
+            android:gravity="center" android:text="Hashtag" android:textSize="14sp"
             android:textColor="@color/dlog_muted_blue"
             android:background="?attr/selectableItemBackground" />
     </LinearLayout>

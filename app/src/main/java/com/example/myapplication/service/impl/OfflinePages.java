@@ -21,12 +21,20 @@ import java.util.Map;
 
 /** A small, per-account snapshot of pages the user has actually opened. */
 public final class OfflinePages extends SQLiteOpenHelper {
-    public OfflinePages(Context context) { super(context.getApplicationContext(), "dlog_pages.db", null, 1); }
+    public static final int MAX_OFFLINE_FEED_POSTS = 5;
+    private static final int DATABASE_VERSION = 2;
+    public OfflinePages(Context context) {
+        super(context.getApplicationContext(), "dlog_pages.db", null, DATABASE_VERSION);
+    }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE pages (page_key TEXT PRIMARY KEY, body TEXT NOT NULL, saved_at INTEGER NOT NULL)");
     }
-    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) { }
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // Version 2 starts the strict per-login-session cache and removes legacy snapshots.
+        db.execSQL("DROP TABLE IF EXISTS pages");
+        onCreate(db);
+    }
 
     private void put(String key, String body) {
         ContentValues values = new ContentValues();
@@ -47,11 +55,21 @@ public final class OfflinePages extends SQLiteOpenHelper {
             return cursor.moveToFirst();
         }
     }
+
+    /** Starts a clean SQLite snapshot for one explicit sign-in session. */
+    public synchronized void beginSession(String userId) {
+        getWritableDatabase().delete("pages", null, null);
+    }
+
+    /** Removes private offline data when the current session ends. */
+    public synchronized void clearSession() {
+        getWritableDatabase().delete("pages", null, null);
+    }
     public void saveFeed(String viewerId, List<Post> posts) {
         saveFeedPage(viewerId, posts, true);
     }
 
-    /** Stores every page the user has reached, preserving order and replacing updated posts by id. */
+    /** Stores at most five feed posts for the current sign-in session. */
     public synchronized void saveFeedPage(String viewerId, List<Post> posts, boolean reset) {
         if (viewerId == null || posts == null) return;
         LinkedHashMap<String, Post> merged = new LinkedHashMap<>();
@@ -64,9 +82,14 @@ public final class OfflinePages extends SQLiteOpenHelper {
             if (post != null && post.getId() != null) merged.put(post.getId(), post);
         }
         JSONArray array = new JSONArray();
-        for (Post post : merged.values()) array.put(new JSONObject(post.toMap()));
+        List<Post> retained = new ArrayList<>();
+        for (Post post : merged.values()) {
+            if (retained.size() >= MAX_OFFLINE_FEED_POSTS) break;
+            retained.add(post);
+            array.put(new JSONObject(post.toMap()));
+        }
         put("feed:" + viewerId, array.toString());
-        for (Post post : posts) {
+        for (Post post : retained) {
             if (post != null && post.getId() != null) put("post:" + post.getId(), new JSONObject(post.toMap()).toString());
         }
     }
@@ -249,6 +272,9 @@ public final class OfflinePages extends SQLiteOpenHelper {
     }
     public void saveProfile(String userId, User user) {
         if (userId != null && user != null) put("profile:" + userId, new JSONObject(user.toMap()).toString());
+    }
+    public boolean hasProfile(String userId) {
+        return userId != null && contains("profile:" + userId);
     }
     public User profile(String userId) {
         if (userId == null) return null;
